@@ -1,12 +1,11 @@
 <?php
-// admin/manage_tech_specs.php - Create and Manage Lore/Tech Entries
-session_start();
-require_once '../db.php';
-require_once '../terms.php';
+// admin/manage_tech_specs.php
+require_once '../auth.php'; // Correct path to auth.php
+require_once '../terms.php'; // Correct path to terms.php
 
 // Restrict access to Admins
-if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['admin', 'system_admin'])) {
-    die("Access Denied.");
+if (!isset($current_user) || !in_array($current_user['role'], ['admin', 'system_admin'])) {
+    die("Access Denied. You do not have permission to view this page.");
 }
 
 $success = '';
@@ -65,25 +64,15 @@ $specs = $pdo->query("SELECT * FROM tech_specs ORDER BY category ASC, title ASC"
 <head>
     <meta charset="UTF-8">
     <title>Tech Specs & Lore Manager</title>
+<!-- Notice the ../ to point back to the root folder -->
+    <link rel="stylesheet" href="../style.css"> 
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f4f9; padding: 20px; color: #333; }
-        .admin-container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; border-top: 5px solid #2c3e50; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h2, h3 { color: #2c3e50; }
-        .form-block { background: #f8f9fa; border: 1px solid #ddd; padding: 20px; margin-bottom: 30px; border-radius: 4px; border-left: 5px solid #18bc9c; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
-        input[type="text"], select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        textarea { height: 80px; resize: vertical; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        button { padding: 10px 15px; background: #18bc9c; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        button.btn-danger { background: #e74c3c; padding: 6px 10px; font-size: 0.9em; }
-        button:hover { opacity: 0.9; }
-        .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 4px; margin-bottom: 15px; border: 1px solid #c3e6cb; }
-        .error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 4px; margin-bottom: 15px; border: 1px solid #f5c6cb; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
-        th { background-color: #f8f9fa; color: #2c3e50; }
-        a.back-btn { color: #18bc9c; text-decoration: none; font-weight: bold; display: inline-block; margin-bottom: 15px; }
+        :root {
+            --bg-color: <?php echo htmlspecialchars($bg_color); ?>;
+            --text-color: <?php echo htmlspecialchars($text_color); ?>;
+            --primary-color: <?php echo htmlspecialchars($primary_color); ?>;
+            --accent-color: <?php echo htmlspecialchars($accent_color); ?>;
+        }
     </style>
 </head>
 <body>

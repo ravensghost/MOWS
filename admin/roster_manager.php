@@ -57,20 +57,15 @@ foreach ($positions_raw as $pos) {
 <head>
     <meta charset="UTF-8">
     <title>Roster Manager - MOWS Admin</title>
+	<!-- Notice the ../ to point back to the root folder -->
+    <link rel="stylesheet" href="../style.css"> 
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; color: #333; }
-        .admin-container { max-width: 800px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-top: 5px solid #2c3e50; }
-        .dept-block { background: #f8f9fa; border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
-        .dept-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; margin-bottom: 10px; }
-        .pos-list { list-style: none; padding: 0; }
-        .pos-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; align-items: center; }
-        input[type="text"], input[type="number"] { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 8px 12px; background: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        button:hover { opacity: 0.9; }
-        button.danger { background: #e74c3c; padding: 4px 8px; font-size: 12px; }
-        .form-row { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
-        .success { color: green; margin-bottom: 15px; font-weight: bold; }
-        a.back-btn { display: inline-block; margin-bottom: 15px; color: #18bc9c; text-decoration: none; font-weight: bold; }
+        :root {
+            --bg-color: <?php echo htmlspecialchars($bg_color); ?>;
+            --text-color: <?php echo htmlspecialchars($text_color); ?>;
+            --primary-color: <?php echo htmlspecialchars($primary_color); ?>;
+            --accent-color: <?php echo htmlspecialchars($accent_color); ?>;
+        }
     </style>
 </head>
 <body>

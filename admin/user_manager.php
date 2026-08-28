@@ -71,30 +71,15 @@ $users = $pdo->query("SELECT id, username, email, role, status, created_at FROM 
 <head>
     <meta charset="UTF-8">
     <title>User Manager - Admin</title>
+    <!-- Notice the ../ to point back to the root folder -->
+    <link rel="stylesheet" href="../style.css"> 
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f4f9; padding: 20px; color: #333; }
-        .admin-container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; border-top: 5px solid #2c3e50; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h2 { color: #2c3e50; margin-top: 0; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
-        th { background-color: #f8f9fa; color: #2c3e50; font-weight: bold; }
-        
-        select { padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em; }
-        button { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.9em; color: white; }
-        .btn-update { background: #3498db; }
-        .btn-update:hover { background: #2980b9; }
-        .btn-danger { background: #e74c3c; }
-        .btn-danger:hover { background: #c0392b; }
-        
-        .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #c3e6cb; }
-        .error { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 4px; margin-bottom: 20px; border: 1px solid #f5c6cb; }
-        .badge { padding: 3px 8px; border-radius: 12px; font-size: 0.8em; font-weight: bold; text-transform: uppercase; }
-        .badge-banned { background: #f8d7da; color: #721c24; }
-        .badge-active { background: #d4edda; color: #155724; }
-        
-        a.back-btn { color: #18bc9c; text-decoration: none; font-weight: bold; display: inline-block; margin-bottom: 20px; }
-        .action-form { display: flex; gap: 5px; margin-bottom: 5px; }
+        :root {
+            --bg-color: <?php echo htmlspecialchars($bg_color); ?>;
+            --text-color: <?php echo htmlspecialchars($text_color); ?>;
+            --primary-color: <?php echo htmlspecialchars($primary_color); ?>;
+            --accent-color: <?php echo htmlspecialchars($accent_color); ?>;
+        }
     </style>
 </head>
 <body>
