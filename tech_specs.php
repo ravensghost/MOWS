@@ -1,8 +1,9 @@
 <?php
-// tech_specs.php - Public Database Directory
-session_start();
-require_once 'db.php';
+// tech_specs.php
+require_once 'auth.php';
 require_once 'terms.php';
+
+$user_id = $current_user['id'];
 
 $user_lang = 'en';
 if (isset($_SESSION['user_id'])) {
@@ -12,9 +13,11 @@ if (isset($_SESSION['user_id'])) {
     if ($user) $user_lang = $user['language_preference'];
 }
 
-// Fetch theme settings
+// Fetch theme settings safely
 $theme_stmt = $pdo->query("SELECT setting_value FROM platform_settings WHERE setting_key = 'platform_theme'");
-$theme_data = json_decode($theme_stmt->fetch()['setting_value'], true);
+$theme_row = $theme_stmt->fetch();
+$theme_data = $theme_row ? json_decode($theme_row['setting_value'], true) : [];
+
 $bg_color      = $theme_data['bg_color']      ?? '#f4f4f9';
 $text_color    = $theme_data['text_color']    ?? '#333333';
 $primary_color = $theme_data['primary_color'] ?? '#2c3e50';
@@ -33,6 +36,8 @@ foreach ($specs_raw as $row) {
 <head>
     <meta charset="UTF-8">
     <title>Database & Lore - MOWS</title>
+<!-- Notice the ../ to point back to the root folder -->
+    <link rel="stylesheet" href="style.css"> 
     <style>
         :root {
             --bg-color: <?php echo htmlspecialchars($bg_color); ?>;
@@ -40,19 +45,6 @@ foreach ($specs_raw as $row) {
             --primary-color: <?php echo htmlspecialchars($primary_color); ?>;
             --accent-color: <?php echo htmlspecialchars($accent_color); ?>;
         }
-        body { font-family: Arial, sans-serif; background-color: var(--bg-color); color: var(--text-color); padding: 20px; }
-        .directory-container { max-width: 900px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        h1 { color: var(--primary-color); border-bottom: 2px solid var(--accent-color); padding-bottom: 10px; margin-top: 0; }
-        .category-block { margin-bottom: 30px; }
-        .category-title { background: #f8f9fa; padding: 10px 15px; border-left: 5px solid var(--primary-color); color: var(--primary-color); font-size: 1.2em; margin-bottom: 15px; font-weight: bold; border-radius: 0 4px 4px 0; }
-        
-        .entry-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
-        .entry-card { border: 1px solid #eee; padding: 15px; border-radius: 6px; transition: 0.2s; background: #fff; }
-        .entry-card:hover { border-color: var(--accent-color); box-shadow: 0 2px 8px rgba(0,0,0,0.05); transform: translateY(-2px); }
-        .entry-card a { color: var(--primary-color); text-decoration: none; font-weight: bold; display: block; font-size: 1.1em; }
-        .entry-card a:hover { color: var(--accent-color); }
-        
-        a.back-btn { display: inline-block; margin-bottom: 20px; color: var(--accent-color); text-decoration: none; font-weight: bold; }
     </style>
 </head>
 <body>

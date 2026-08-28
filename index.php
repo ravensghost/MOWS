@@ -66,7 +66,10 @@ if ($is_logged_in) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo get_term($pdo, 'library', $user_lang); ?> Home</title>
+	<!-- Link to global styles -->
+    <link rel="stylesheet" href="style.css">
     
+    <!-- Dynamic Theme Injection -->
     <style>
         :root {
             --bg-color: <?php echo htmlspecialchars($bg_color); ?>;
@@ -74,47 +77,6 @@ if ($is_logged_in) {
             --primary-color: <?php echo htmlspecialchars($primary_color); ?>;
             --accent-color: <?php echo htmlspecialchars($accent_color); ?>;
         }
-
-        body { font-family: Arial, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
-        header { background-color: var(--primary-color); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-        header .logo { font-size: 1.5rem; font-weight: bold; }
-        nav a { color: white; text-decoration: none; margin-left: 15px; font-weight: bold; }
-        nav a:hover { color: var(--accent-color); }
-        
-        main { flex: 1; padding: 2rem; display: flex; gap: 2rem; max-width: 1200px; margin: 0 auto; width: 100%; box-sizing: border-box; }
-        
-        /* Dashboard Styles */
-        aside { flex: 0 0 250px; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        aside ul { list-style-type: none; padding-left: 0; }
-        aside ul li { margin-bottom: 10px; }
-        aside a { color: var(--primary-color); text-decoration: none; }
-        aside a:hover { color: var(--accent-color); }
-        
-        section { flex: 1; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        h2 { margin-top: 0; color: var(--primary-color); border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        
-        .char-card { background: #f8f9fa; border: 1px solid #ddd; padding: 15px; margin-top: 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
-        .char-info strong { display: block; font-size: 1.2rem; color: var(--primary-color); margin-bottom: 3px; }
-        .char-info span { color: #666; font-size: 0.95rem; }
-        .char-actions a { padding: 8px 12px; font-size: 0.9rem; text-decoration: none; border-radius: 4px; font-weight: bold; margin-left: 5px; }
-        .btn-view { background: var(--primary-color); color: white; }
-        .btn-edit { background: var(--accent-color); color: white; }
-        .char-actions a:hover { opacity: 0.9; }
-        
-        .create-btn { display: inline-block; margin-top: 25px; padding: 12px 20px; background: var(--primary-color); color: white; text-decoration: none; border-radius: 4px; font-weight: bold; }
-        .create-btn:hover { opacity: 0.9; }
-
-        /* Public Landing Styles */
-        .hero-section { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: white; padding: 4rem 2rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .hero-section h1 { font-size: 3rem; color: var(--primary-color); margin-bottom: 1rem; }
-        .hero-section p { font-size: 1.2rem; color: #555; max-width: 600px; margin-bottom: 2rem; line-height: 1.6; }
-        .cta-buttons { display: flex; gap: 15px; }
-        .btn-primary { padding: 12px 25px; background: var(--primary-color); color: white; text-decoration: none; font-size: 1.1rem; border-radius: 4px; font-weight: bold; }
-        .btn-secondary { padding: 12px 25px; background: transparent; color: var(--primary-color); border: 2px solid var(--primary-color); text-decoration: none; font-size: 1.1rem; border-radius: 4px; font-weight: bold; }
-        .btn-primary:hover { background: var(--accent-color); color: white; border-color: var(--accent-color); }
-        .btn-secondary:hover { border-color: var(--accent-color); color: var(--accent-color); }
-        
-        footer { text-align: center; padding: 1rem; background-color: #e0e0e0; color: #555; margin-top: auto; }
     </style>
 </head>
 <body>

@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .links a:hover { text-decoration: underline; }
     </style>
 </head>
-<body>
+<body class="auth-page">
 
 <div class="login-box">
     <h2>System Login</h2>

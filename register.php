@@ -62,21 +62,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - MOWS</title>
+	<!-- Link to global styles -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Dynamic Theme Injection -->
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; }
-        .register-container { max-width: 400px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], input[type="email"], input[type="password"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-        button { width: 100%; padding: 10px; background: #0056b3; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #004494; }
-        .error { color: red; margin-bottom: 15px; }
-        .success { color: green; margin-bottom: 15px; }
+        :root {
+            --bg-color: <?php echo htmlspecialchars($bg_color); ?>;
+            --text-color: <?php echo htmlspecialchars($text_color); ?>;
+            --primary-color: <?php echo htmlspecialchars($primary_color); ?>;
+            --accent-color: <?php echo htmlspecialchars($accent_color); ?>;
+        }
     </style>
 </head>
-<body>
+<body class="auth-page">
 
-<div class="register-container">
+<div class="login-box">
     <h2>Create an Account</h2>
     
     <?php if ($error): ?>
