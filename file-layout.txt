@@ -180,7 +180,6 @@
   [public]
     .htaccess
     favicon.ico
-    hot
     index.php
     robots.txt
     [build]
@@ -251,6 +250,7 @@
         awardManager.js
         colourPicker.js
         deleteAction.js
+        dropzoneManager.js
         lexiconManager.js
         navOptionsManager.js
         navigationManager.js
@@ -309,8 +309,10 @@
         chapter-modal.blade.php
         chapter-ratings.blade.php
         colour-picker.blade.php
+        dropzone.blade.php
         dynamic-field.blade.php
         form-input.blade.php
+        image-card.blade.php
         message-thread-item.blade.php
         messenger-modal.blade.php
         modal.blade.php
@@ -355,6 +357,7 @@
             install-select.blade.php
       [widgets]
         awards.blade.php
+        character_avatar.blade.php
         character_biography.blade.php
         character_career_record.blade.php
         character_demographics.blade.php
@@ -367,6 +370,7 @@
         form.blade.php
         html.blade.php
         image.blade.php
+        image_gallery.blade.php
         local_media.blade.php
         manifest_descriptions.blade.php
         message.blade.php

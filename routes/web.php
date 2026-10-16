@@ -15,7 +15,6 @@ DB::listen(function ($query) {
 });
 
 Route::middleware('auth')->group(function () {
-    // User Dashboard (Invokable)
     // User Dashboard (Invokable) & LOA Toggle
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::post('/dashboard/loa', [DashboardController::class, 'updateLoa'])->name('dashboard.loa');
@@ -33,10 +32,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/messenger/new', [MessengerController::class, 'store'])->name('messenger.store');
     Route::post('/messenger/{thread}/reply', [MessengerController::class, 'reply'])->name('messenger.reply');
 
+    // Character Avatar & Portrait Gallery Management (AJAX via Bio Page)
+    Route::post('/bio/{character}/avatar', [PublicController::class, 'uploadCharacterAvatar'])->name('bio.avatar.upload');
+    Route::post('/bio/{character}/avatar/primary', [PublicController::class, 'setPrimaryCharacterAvatar'])->name('bio.avatar.primary');
+    Route::delete('/bio/{character}/avatar', [PublicController::class, 'deleteCharacterAvatar'])->name('bio.avatar.delete');
+
     // Explicit Form Submission
     Route::post('/form/submit/{identifier}', [PublicFormController::class, 'submit']);
-
-    
 });
 
 require __DIR__ . '/auth.php';

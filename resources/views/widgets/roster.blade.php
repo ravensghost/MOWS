@@ -48,12 +48,12 @@
                             
                             <div class="bg-panel-header rounded-input flex-shrink-0 flex items-center justify-center overflow-hidden w-16 h-16">
                                 @if(!empty($character->avatar))
-                                    <a href="{{ asset('storage/'.$character->avatar) }}" 
+                                    <a href="{{ asset('images/characters/'.$character->avatar) }}" 
                                        class="glightbox block w-full h-full"
                                        data-glightbox="title: {{ $character->name }}"
                                        aria-label="{{ $character->name }}"
                                        x-tooltip="'{{ addslashes($character->name) }}'">
-                                        <img src="{{ asset('storage/'.$character->avatar) }}" alt="{{ $character->name }}" class="w-full h-full object-cover">
+                                        <img src="{{ asset('images/characters/'.$character->avatar) }}" alt="{{ $character->name }}" class="w-full h-full object-cover">
                                     </a>
                                 @else
                                     <i class="bi bi-person text-2xl text-muted" aria-hidden="true"></i>

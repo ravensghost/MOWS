@@ -50,6 +50,7 @@ import navigationManager from './components/navigationManager';
 import navOptionsManager from './components/navOptionsManager';
 import ajaxForm from './components/ajaxForm';
 import sortableManager from './components/sortableManager';
+import dropzoneManager from './components/dropzoneManager';
 import deleteAction from './components/deleteAction';
 import themeUploader from './components/themeUploader';
 import themeManager from './components/themeManager';
@@ -61,6 +62,7 @@ import settingsManager from './components/settingsManager';
 import roleManager from './components/roleManager';
 import sectionManager from './components/sectionManager';
 import newsManager from './components/newsManager';
+import characterAvatarManager from './components/characterAvatarManager';
 
 // Alpine plugins & directives
 Alpine.plugin(collapse);
@@ -117,6 +119,7 @@ Alpine.data('navigationManager', navigationManager);
 Alpine.data('navOptionsManager', navOptionsManager);
 Alpine.data('ajaxForm', ajaxForm);
 Alpine.data('sortableManager', sortableManager);
+Alpine.data('dropzoneComponent', dropzoneManager);
 Alpine.data('deleteAction', deleteAction);
 Alpine.data('themeUploader', themeUploader);
 Alpine.data('themeManager', themeManager);
@@ -128,5 +131,6 @@ Alpine.data('settingsManager', settingsManager);
 Alpine.data('roleManager', roleManager);
 Alpine.data('sectionManager', sectionManager);
 Alpine.data('newsManager', newsManager);
+Alpine.data('characterAvatarManager', characterAvatarManager);
 
 Alpine.start();
