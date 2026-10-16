@@ -1,0 +1,6 @@
+2026-08-29T09:09:22.042415Z 0 [System] [MY-015017] [Server] MySQL Server Initialization - start.
+2026-08-29T09:09:22.047515Z 0 [System] [MY-013169] [Server] C:\Users\atmat\AppData\Local\com.tinyapp.DBngin\Binaries\mysql\9.7.1\bin\mysqld.exe (mysqld 9.7.1) initializing of server in progress as process 10868
+2026-08-29T09:09:22.098319Z 1 [System] [MY-013576] [InnoDB] InnoDB initialization has started.
+2026-08-29T09:09:32.890328Z 1 [System] [MY-013577] [InnoDB] InnoDB initialization has ended.
+2026-08-29T09:09:54.367969Z 6 [Warning] [MY-010453] [Server] root@localhost is created with an empty password ! Please consider switching off the --initialize-insecure option.
+2026-08-29T09:10:16.754480Z 0 [System] [MY-015018] [Server] MySQL Server Initialization - end.

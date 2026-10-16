@@ -1,0 +1,58 @@
+/* =========================================
+   AWARDS: BASE & MIDDLE LAYERS (award-ml-*)
+   ========================================= */
+
+.ui-award-badge {
+    background-color: var(--badge-base, #1a1a1a);
+}
+
+.award-ml-stripe-ribbon {
+    background: linear-gradient(to right,
+            transparent 0%, transparent 15%,
+            var(--theme-award-ml-c1, #5bc0de) 15%, var(--theme-award-ml-c1, #5bc0de) 35%,
+            var(--theme-award-ml-c2, #f0ad4e) 35%, var(--theme-award-ml-c2, #f0ad4e) 65%,
+            var(--theme-award-ml-c1, #5bc0de) 65%, var(--theme-award-ml-c1, #5bc0de) 85%,
+            transparent 85%, transparent 100%);
+}
+
+.award-ml-star {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.award-ml-star::after {
+    content: '';
+    width: 2.5rem;
+    height: 2.5rem;
+    background-color: var(--theme-award-ml-c1, #fbd01e);
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+    filter: drop-shadow(0 2px 3px var(--theme-shadow-award-heavy, #0000004D));
+}
+
+/* =========================================
+   AWARDS: TOP LAYERS (award-tl-*)
+   ========================================= */
+
+.award-tl-crest {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.award-tl-crest::after {
+    content: '';
+    width: 2rem;
+    height: 2.5rem;
+    background: linear-gradient(135deg, var(--theme-award-tl-c1, #e0e0e0) 0%, var(--theme-award-tl-c2, #999999) 100%);
+    clip-path: polygon(0% 0%, 100% 0%, 100% 75%, 50% 100%, 0% 75%);
+    filter: drop-shadow(0 4px 3px var(--theme-shadow-award-md, #00000033));
+}
+
+.award-tl-wreath {
+    background-image:
+        radial-gradient(ellipse at 25% 50%, transparent 60%, var(--theme-award-tl-c1, #ffd700) 61%, var(--theme-award-tl-c1, #ffd700) 65%, transparent 66%),
+        radial-gradient(ellipse at 75% 50%, transparent 60%, var(--theme-award-tl-c1, #ffd700) 61%, var(--theme-award-tl-c1, #ffd700) 65%, transparent 66%);
+    background-size: 100% 100%;
+    opacity: 0.85;
+}

@@ -1,0 +1,178 @@
+/* Input Background Utilities */
+.bg-input {
+    background-color: var(--theme-bg-input-colour, #1f2937);
+}
+
+.bg-accent-light {
+    background-color: var(--theme-bg-accent-light-colour, #3B82F633);
+}
+
+/* Input Text Colour Utilities */
+.text-input {
+    color: var(--theme-text-input-colour, #ffffff);
+}
+
+.text-input-muted {
+    color: var(--theme-text-muted-colour, #d1d5db);
+}
+
+.text-input-file {
+    color: var(--theme-text-file-colour, #9ca3af);
+}
+
+/* Input Border & Padding Utilities */
+.border-input {
+    border: 1px solid var(--theme-border-input-colour, #4b5563);
+}
+
+.border-t-actions {
+    border-top: 1px solid var(--theme-border-colour, #374151);
+}
+
+.p-input {
+    padding: var(--theme-padding-input, 0.5rem 0.75rem);
+}
+
+.rounded-input {
+    border-radius: var(--theme-border-radius, 0.375rem);
+}
+
+.rounded-input-sm {
+    border-radius: var(--theme-border-radius-sm, 0.25rem);
+}
+
+/* State & Interaction Utilities */
+.outline-none {
+    outline: none;
+}
+
+.appearance-none {
+    appearance: none;
+}
+
+.focus-border-accent:focus,
+.focus-within-border-accent:focus-within {
+    border-color: var(--theme-border-accent-colour, #3b82f6);
+}
+
+.focus-shadow-accent:focus,
+.focus-within-shadow-accent:focus-within {
+    box-shadow: 0 0 0 1px var(--theme-shadow-accent-colour, #3b82f6);
+}
+
+/* Custom Checkbox Engine (Houses complex clip-path only) */
+/* Compose this with .appearance-none .bg-input .border-input .w-4 .h-4 */
+.checkbox-engine {
+    font: inherit;
+    color: currentColor;
+}
+
+.checkbox-engine::before {
+    content: "";
+    width: 0.65em;
+    height: 0.65em;
+    transform: scale(0);
+    box-shadow: inset 1em 1em var(--theme-bg-accent-colour, #3b82f6);
+    transform-origin: center;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    transition: 120ms transform ease-in-out;
+}
+
+.checkbox-engine:checked::before {
+    transform: scale(1);
+}
+
+/* File Input Engine (Houses file-selector-button pseudo only) */
+.file-input-engine::file-selector-button {
+    border-radius: var(--theme-border-radius-sm, 0.25rem);
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    background-color: var(--theme-bg-panel-header-colour, #1f2937);
+    color: var(--theme-text-main-colour, #ffffff);
+}
+
+.file-input-engine::file-selector-button:hover {
+    background-color: var(--theme-border-colour, #374151);
+}
+
+/* =========================================
+   3RD-PARTY INJECTED DOM (Visual Mapping Only) 
+   ========================================= */
+
+/* TipTap */
+.editor-container {
+    border: 1px solid var(--theme-border-colour, #374151);
+    border-radius: var(--theme-border-radius, 0.375rem);
+    box-shadow: 0 1px 2px 0 var(--theme-shadow-input-colour, #0000000D);
+    background-color: var(--theme-bg-panel-header-colour, #1f2937);
+    transition: var(--theme-transition-base, all 0.2s ease);
+}
+
+.editor-content {
+    background-color: var(--theme-bg-panel-header-colour, #1f2937);
+    color: var(--theme-text-main-colour, #ffffff);
+}
+
+.ProseMirror {
+    outline: none;
+    min-height: 250px;
+    cursor: text;
+}
+
+.ProseMirror p,
+.tiptap-content p {
+    color: var(--theme-text-muted-colour, #9ca3af);
+}
+
+.ProseMirror h3,
+.tiptap-content h3 {
+    color: var(--theme-text-heading-colour, #ffffff);
+}
+
+/* Tom Select */
+.ts-wrapper {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+.ts-control {
+    background-color: var(--theme-bg-panel-header-colour, #1f2937) !important;
+    color: var(--theme-text-main-colour, #ffffff) !important;
+    border: 1px solid var(--theme-border-input-colour, #4b5563) !important;
+    border-radius: var(--theme-border-radius, 0.375rem) !important;
+    min-height: var(--theme-input-height, 2.25rem) !important;
+    padding: 0.35rem 0.75rem !important;
+    box-shadow: none !important;
+}
+
+.ts-control input {
+    color: var(--theme-text-main-colour, #ffffff) !important;
+}
+
+.ts-control .item {
+    background-color: var(--theme-bg-accent-colour, #3b82f6) !important;
+    color: var(--theme-text-main-colour, #ffffff) !important;
+    border-radius: var(--theme-border-radius-sm, 0.25rem) !important;
+    border: none !important;
+    padding: 0.15rem 0.5rem !important;
+}
+
+.ts-dropdown {
+    background-color: var(--theme-bg-panel-header-colour, #1f2937) !important;
+    color: var(--theme-text-main-colour, #ffffff) !important;
+    border: 1px solid var(--theme-border-input-colour, #4b5563) !important;
+    border-radius: var(--theme-border-radius, 0.375rem) !important;
+    box-shadow: 0 10px 15px -3px var(--theme-shadow-dropdown-colour, #00000080) !important;
+}
+
+.ts-dropdown .option {
+    color: var(--theme-text-main-colour, #ffffff) !important;
+}
+
+.ts-dropdown .active,
+.ts-dropdown .option:hover {
+    background-color: var(--theme-bg-accent-light-colour, #3B82F633) !important;
+    color: var(--theme-text-accent-colour, #3b82f6) !important;
+}

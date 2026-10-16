@@ -1,0 +1,15 @@
+.bg-banner-image {
+    background-image: var(--theme-banner-image, url('/public/skins/default/images/site/banner.png'));
+}
+
+.bg-banner-pos {
+    background-position: var(--theme-banner-position-x, center) var(--theme-banner-position-y, 10px);
+}
+
+.bg-cover {
+    background-size: cover;
+}
+
+.bg-no-repeat {
+    background-repeat: no-repeat;
+}

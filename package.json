@@ -1,0 +1,39 @@
+{
+    "$schema": "https://www.schemastore.org/package.json",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "vite build",
+        "dev": "vite"
+    },
+    "devDependencies": {
+        "@tiptap/core": "^3.31.3",
+        "@tiptap/starter-kit": "^3.31.3",
+        "alpinejs": "^3.17.4",
+        "autoprefixer": "^10.4.2",
+        "concurrently": "^10.0.3",
+        "fontaine": "^0.8.1",
+        "laravel-vite-plugin": "^3.1",
+        "postcss": "^8.4.31",
+        "vite": "^8.0.0"
+    },
+    "optionalDependencies": {
+        "@laravel/multiplex": "^0.4.1"
+    },
+    "dependencies": {
+        "@alpinejs/collapse": "^3.17.4",
+        "autosize": "^6.0.1",
+        "chart.js": "^4.5.1",
+        "clipboard": "^2.0.11",
+        "dompurify": "^3.4.16",
+        "dropzone": "^6.3.5",
+        "flatpickr": "^4.6.13",
+        "fuse.js": "^7.5.0",
+        "glightbox": "^3.3.1",
+        "modern-normalize": "^3.0.1",
+        "sortablejs": "^1.15.7",
+        "sweetalert2": "^11.26.25",
+        "tippy.js": "^6.3.7",
+        "tom-select": "^2.6.2"
+    }
+}

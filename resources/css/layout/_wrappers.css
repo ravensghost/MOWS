@@ -1,0 +1,35 @@
+/* Wrapper Background Utilities */
+.bg-auth-backdrop {
+    background-color: var(--theme-bg-auth-colour, #111827E6);
+}
+
+.bg-widget {
+    background-color: var(--theme-bg-widget-colour, #1f2937);
+}
+
+/* Wrapper Sizing Utilities */
+.max-w-content {
+    max-width: var(--theme-width-content-max, 1200px);
+}
+
+.min-h-auth {
+    min-height: var(--theme-height-auth-min, 100vh);
+}
+
+/* Wrapper Padding & Border Utilities */
+.p-widget {
+    padding: var(--theme-padding-widget, 1.5rem);
+}
+
+.border-widget {
+    border: 1px solid var(--theme-border-widget-colour, #374151);
+}
+
+.rounded-widget {
+    border-radius: var(--theme-radius-widget, 0.375rem);
+}
+
+/* Wrapper Shadow Utilities */
+.shadow-widget {
+    box-shadow: 0 4px 6px -1px var(--theme-shadow-widget-colour, #0000001A);
+}

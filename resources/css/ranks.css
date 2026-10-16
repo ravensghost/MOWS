@@ -1,0 +1,80 @@
+/* ==========================================================================
+   RANK BADGE STYLES (ranks.css)
+   ========================================================================== */
+
+.ui-rank-badge {
+    background-color: var(--badge-dept, #991b1bFF);
+}
+
+.layer-texture {
+    /* Pure CSS static noise generated via Base64 SVG */
+    background-image: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+    opacity: 0.15;
+    mix-blend-mode: overlay;
+}
+
+.layer-fade {
+    /* Adds the shading/gradient effect over the colour and texture */
+    background: linear-gradient(135deg, var(--theme-rank-fade-light, #FFFFFF26) 0%, var(--theme-rank-fade-dark, #0000004D) 100%);
+    mix-blend-mode: multiply;
+}
+
+.layer-shaped {
+    background-color: var(--badge-mid-color, var(--badge-base, #1a1a1aFF));
+}
+
+.layer-top-css {
+    background-color: var(--badge-top-color, var(--badge-base, #ffffffFF));
+}
+
+/* Middle Layer Predefined Shapes */
+.shape-mid-slant {
+    clip-path: polygon(0 0, 80% 0, 100% 100%, 0 100%);
+}
+
+.shape-mid-chevron {
+    clip-path: polygon(0 0, 85% 0, 100% 50%, 85% 100%, 0 100%);
+}
+
+.shape-mid-solid {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+}
+
+.shape-mid-original {
+    background-color: var(--theme-rank-original-bg, #708090FF);
+    clip-path: polygon(85% 100%, 0% 100%, 0% 40%, 5% 60%, 10% 70%, 15% 75%, 20% 80%, 30% 80%, 40% 80%, 50% 80%, 60% 80%, 70% 80%, 80% 85%, 85% 95%);
+    overflow: hidden;
+}
+
+.shape-mid-original::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    clip-path: polygon(85% 100%, 0% 100%, 0% 40%, 5% 60%, 10% 70%, 15% 75%, 20% 80%, 30% 80%, 40% 80%, 50% 80%, 60% 80%, 70% 80%, 80% 85%, 85% 95%);
+    background-color: var(--theme-rank-original-inner, #7393B3FF);
+    background-image: repeating-linear-gradient(to right,
+            transparent,
+            transparent 16px,
+            var(--theme-rank-original-stripe-dark, #36454FFF) 16px,
+            var(--theme-rank-original-stripe-light, #6082B6FF) 18px);
+}
+
+/* Top Layer Predefined Shapes */
+.shape-top-accent-right {
+    clip-path: polygon(85% 0, 100% 0, 100% 100%, 70% 100%);
+}
+
+.shape-top-stripe {
+    clip-path: polygon(60% 0, 75% 0, 60% 100%, 45% 100%);
+}
+
+.shape-top-triangle {
+    clip-path: polygon(100% 0, 100% 100%, 80% 100%);
+}
+
+.shape-top-blank {
+    clip-path: polygon(0 0%, 0% 0%, 0% 0%, 0 0%);
+}

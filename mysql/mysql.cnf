@@ -1,0 +1,10 @@
+[mysqld]
+
+[mysqld]
+port=3306
+basedir="C:/Users/atmat/AppData/Local/com.tinyapp.DBngin/Binaries/mysql/9.7.1"
+datadir="D:/Downloads/mows-engine/mysql"
+plugin-dir="C:/Users/atmat/AppData/Local/com.tinyapp.DBngin/Binaries/mysql/9.7.1/lib/plugin"
+log-error="D:/Downloads/mows-engine/mysql/mysqld.local.err"
+pid-file="D:/Downloads/mows-engine/mysql/mysql.pid"
+skip-log-bin

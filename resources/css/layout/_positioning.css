@@ -1,0 +1,125 @@
+/* Display & Visibility */
+.hidden {
+    display: none !important;
+}
+
+/* Responsive Visibility */
+@media (max-width: 768px) {
+    .hidden-mobile {
+        display: none !important;
+    }
+}
+
+.inline-block {
+    display: inline-block;
+}
+
+/* Positioning & Z-Index */
+/* Positioning & Z-Index */
+.relative {
+    position: relative;
+}
+
+.absolute {
+    position: absolute;
+}
+
+.z-0 {
+    z-index: 0;
+}
+
+.z-10 {
+    z-index: 10;
+}
+
+.z-20 {
+    z-index: 20;
+}
+
+.z-100 {
+    z-index: var(--theme-z-max, 100);
+}
+
+/* Overflow & Box Model */
+.overflow-hidden {
+    overflow: hidden;
+}
+
+.overflow-y-auto {
+    overflow-y: auto;
+}
+
+.box-border {
+    box-sizing: border-box;
+}
+
+/* Object Fit */
+.object-cover {
+    object-fit: cover;
+}
+
+.object-contain {
+    object-fit: contain;
+}
+
+/* Interactivity & Opacity */
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.cursor-not-allowed {
+    cursor: not-allowed;
+}
+
+.select-none {
+    user-select: none;
+}
+
+.opacity-50 {
+    opacity: 0.5;
+}
+
+/* Extracted Branding Positioning Utilities */
+.h-logo {
+    height: var(--theme-height-logo, 5rem);
+}
+
+.w-auto {
+    width: auto;
+}
+
+.translate-y-logo {
+    top: var(--theme-pos-logo-y, 0px);
+}
+
+.translate-x-logo {
+    left: var(--theme-pos-logo-x, 15px);
+}
+
+.translate-y-title {
+    top: var(--theme-pos-title-y, 83%);
+}
+
+.translate-x-title {
+    right: var(--theme-pos-title-x, 45%);
+}
+/* Fixed Positioning */
+.fixed {
+    position: fixed;
+}
+
+/* Inset & Coordinates */
+.inset-0 {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+}
+
+.top-4 {
+    top: 1rem;
+}
+
+.right-4 {
+    right: 1rem;
+}

@@ -1,0 +1,134 @@
+@import url('https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap');
+
+body {
+    -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/* Core Theme Application */
+.bg-body {
+    background-color: var(--theme-bg, #111827);
+}
+
+.font-base {
+    font-family: var(--theme-font, 'Figtree', sans-serif);
+}
+
+/* Atomic Text Colours */
+.text-main,
+.text-p {
+    color: var(--theme-text-p, #f3f4f6);
+}
+
+.text-h {
+    color: var(--theme-text-h, #ffffff);
+}
+
+.text-muted,
+.text-body {
+    color: var(--theme-text-muted, #9ca3af);
+}
+
+.text-accent {
+    color: var(--theme-text-accent, #3b82f6);
+}
+
+.text-required,
+.text-danger {
+    color: var(--theme-text-danger, #ef4444);
+}
+
+.text-warning {
+    color: var(--theme-text-warning, #facc15);
+}
+
+/* Atomic Font Sizes */
+.text-xs {
+    font-size: var(--theme-text-s75, 0.75rem);
+}
+
+.text-sm {
+    font-size: var(--theme-text-s875, 0.875rem);
+}
+
+.text-base {
+    font-size: var(--theme-text-s1, 1rem);
+}
+
+.text-lg {
+    font-size: var(--theme-text-s1125, 1.125rem);
+}
+
+.text-xl {
+    font-size: var(--theme-text-s125, 1.25rem);
+}
+
+/* Extracted from purged monolith components */
+.text-2xl {
+    font-size: var(--theme-text-s15, 1.5rem);
+}
+
+.text-3xl {
+    font-size: var(--theme-text-s1875, 1.875rem);
+}
+
+.text-4xl {
+    font-size: var(--theme-text-s2, 2rem);
+}
+
+/* Atomic Font Weights & Styles */
+.font-bold {
+    font-weight: var(--theme-text-w7, 700);
+}
+
+.italic {
+    font-style: italic;
+}
+
+.uppercase {
+    text-transform: uppercase;
+}
+
+.tracking-wider {
+    letter-spacing: 0.05em;
+}
+
+.font-mono {
+    font-family: var(--theme-font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+}
+
+.shadow-text-title {
+    text-shadow: 0 2px 4px var(--theme-shadow-text-colour, #00000099);
+}
+
+/* Hover States */
+.hover-text-accent:hover {
+    color: var(--theme-text-accent, #3b82f6);
+}
+
+/* Text Colour Utilities */
+.text-btn-secondary {
+    color: var(--theme-text-btn-secondary-colour, #d1d5db);
+}
+
+.text-btn-danger {
+    color: var(--theme-text-btn-danger-colour, #fca5a5);
+}
+.text-success {
+    color: var(--theme-text-success-colour, #16a34a);
+}
+
+.text-danger-light {
+    color: var(--theme-text-danger-light-colour, #fca5a5);
+}
+.no-underline {
+    text-decoration: none;
+}
+.whitespace-nowrap {
+    white-space: nowrap;
+}

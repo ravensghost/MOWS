@@ -1,0 +1,18 @@
+/* Table Background Utilities */
+.bg-table-head {
+    background-color: var(--theme-bg-table-head-colour, #1f2937);
+}
+
+/* Table Border Utilities */
+.border-b-table-head {
+    border-bottom: 1px solid var(--theme-border-table-head-colour, #374151);
+}
+
+.border-b-table-row {
+    border-bottom: 1px solid var(--theme-border-table-row-colour, #1f2937);
+}
+
+/* Table State Utilities */
+.hover-bg-table-row:hover {
+    background-color: var(--theme-bg-row-hover-colour, #1F293780);
+}

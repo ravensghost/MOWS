@@ -1,0 +1,163 @@
+/* Border Utilities */
+.border-b {
+    border-bottom: 1px solid var(--theme-border-colour, #374151);
+}
+
+.border-t {
+    border-top: 1px solid var(--theme-border-colour, #374151);
+}
+
+.border-t-0 {
+    border-top: 0 !important;
+}
+
+.border-b-0 {
+    border-bottom: 0 !important;
+}
+
+.border-l-2 {
+    border-left: 2px solid var(--theme-border-colour, #374151);
+}
+
+.border-dashed {
+    border-style: dashed !important;
+}
+
+/* Radius Utilities */
+.rounded {
+    border-radius: var(--theme-border-radius, 0.25rem);
+}
+
+.rounded-t-none {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+/* Typography Structure */
+.leading-none {
+    line-height: 1;
+}
+
+.truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.whitespace-nowrap {
+    white-space: nowrap;
+}
+
+.whitespace-pre-wrap {
+    white-space: pre-wrap;
+}
+
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Icon & Dimension Utilities */
+.w-icon {
+    width: var(--theme-width-icon, 1.25rem);
+}
+
+.h-icon {
+    height: var(--theme-height-icon, 1.25rem);
+}
+
+.pl-full {
+    padding-left: 100%;
+}
+
+/* Object Fit & Position Utilities */
+.object-cover {
+    object-fit: cover;
+}
+
+.object-contain {
+    object-fit: contain;
+}
+
+.object-right {
+    object-position: right;
+}
+
+/* Transform & Transition Utilities */
+.transition-transform {
+    transition: transform var(--theme-transition-speed, 0.2s ease);
+}
+
+.rotate-180 {
+    transform: rotate(180deg);
+}
+
+.scale-75 {
+    transform: scale(0.75);
+}
+
+.origin-left {
+    transform-origin: left;
+}
+
+.will-change-transform {
+    will-change: transform;
+}
+
+/* Shadow & Filter Utilities */
+.shadow-inner {
+    box-shadow: inset 0 2px 4px 0 var(--theme-shadow-inner-colour, #0000000F);
+}
+
+.shadow {
+    box-shadow: 0 1px 3px 0 var(--theme-shadow-sm-colour, #0000001A), 0 1px 2px 0 var(--theme-shadow-xs-colour, #0000000F);
+}
+
+.shadow-lg {
+    box-shadow: 0 10px 15px -3px var(--theme-shadow-lg-colour, #0000001A), 0 4px 6px -2px var(--theme-shadow-md-colour, #0000000D);
+}
+
+.drop-shadow-badge {
+    filter: drop-shadow(0 4px 3px var(--theme-shadow-award-light, #00000012));
+}
+
+/* Animation Utilities */
+.animate-spin-base {
+    animation: spin var(--theme-anim-speed-spin, 1s) linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-marquee {
+    animation: marquee-scroll var(--theme-anim-speed-marquee, 25s) linear infinite;
+}
+
+.group-hover-pause:hover .animate-marquee {
+    animation-play-state: paused;
+}
+
+@keyframes marquee-scroll {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-100%);
+    }
+}
+
+/* Display Structure */
+.block {
+    display: block;
+}

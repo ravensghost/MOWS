@@ -1,0 +1,14 @@
+/* --------------------------------------------------------------------------
+   1. LIBRARY IMPORTS
+   -------------------------------------------------------------------------- */
+
+@import 'tom-select/dist/css/tom-select.default.css';
+@import 'flatpickr/dist/flatpickr.min.css';
+@import 'tippy.js/dist/tippy.css';
+@import 'dropzone/dist/dropzone.css';
+@import 'glightbox/dist/css/glightbox.css';
+@import './bootstrap-icons.min.css';
+@import './layout.css';
+@import './visual.css';
+@import './awards.css';
+@import './ranks.css';

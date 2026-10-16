@@ -1,0 +1,68 @@
+/* Background Utilities */
+.bg-panel {
+    background-color: var(--theme-bg-panel-colour, #111827);
+}
+
+.bg-panel-header {
+    background-color: var(--theme-bg-panel-header-colour, #1f2937);
+}
+
+.bg-panel-sub {
+    background-color: var(--theme-bg-panel-sub-colour, #1F293766);
+}
+
+.bg-danger-light {
+    background-color: var(--theme-bg-danger-light-colour, #EF44441A);
+}
+
+.bg-backdrop {
+    background-color: var(--theme-bg-backdrop-colour, #00000080);
+}
+
+/* Padding Utilities */
+.p-panel-header {
+    padding: var(--theme-padding-panel-header, 1rem 1.5rem);
+}
+
+.p-panel {
+    padding: var(--theme-padding-panel, 1.5rem);
+}
+
+/* Border Utilities */
+.border-panel {
+    border: 1px solid var(--theme-border-colour, #374151);
+}
+
+.border-b-panel {
+    border-bottom: 1px solid var(--theme-border-colour, #374151);
+}
+
+.border-l-panel {
+    border-left: 1px solid var(--theme-border-colour, #374151);
+}
+
+.border-dashed-panel {
+    border: 1px dashed var(--theme-border-colour, #374151);
+}
+
+.border-b-danger {
+    border-bottom: 1px solid var(--theme-border-danger-colour, #ef4444);
+}
+
+/* Shadow & Blur Utilities */
+.shadow-panel {
+    box-shadow: 0 10px 15px -3px var(--theme-shadow-panel-colour, #0000001A), 0 4px 6px -2px var(--theme-shadow-panel-sm-colour, #0000000D);
+}
+
+.shadow-drawer {
+    box-shadow: -10px 0 25px -5px var(--theme-shadow-drawer-colour, #00000033);
+}
+
+.backdrop-blur {
+    backdrop-filter: blur(4px);
+}
+
+/* Radius Utilities */
+.rounded-panel {
+    border-radius: var(--theme-border-radius, 0.375rem);
+}
