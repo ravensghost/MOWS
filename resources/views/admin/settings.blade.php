@@ -32,6 +32,8 @@
         ['key' => 'ai_local_endpoint', 'group' => 'ai', 'label' => lexicon('label_setting_AILocalEndpoint', 'Local API Endpoint URL') . ' ' . lexicon('msg_setting_EndpointHint', 'e.g., http://127.0.0.1:1234/v1 (LM Studio)')],
         ['key' => 'ai_local_model', 'group' => 'ai', 'label' => lexicon('label_setting_AILocalModel', 'Local Model Identifier') . ' ' . lexicon('msg_setting_LocalModelHint', 'e.g., llama-3-8b-instruct')],
         ['key' => 'ai_local_api_key', 'group' => 'ai', 'label' => lexicon('label_setting_AILocalApiKey', 'Local API Key (Optional)')],
+        ['key' => 'game_setting', 'group' => 'general', 'label' => lexicon('label_setting_GameSetting', 'Game Setting / Franchise')],
+        ['key' => 'lore_context', 'group' => 'general', 'label' => lexicon('label_setting_LoreContext', 'Lore & Era Context')],
     ];
 @endphp
 
@@ -103,6 +105,21 @@
                                            :label="lexicon('label_settings_GlobalLanguage', 'Global Site Language')"
                                            editClick="openModal('global_lexicon_setting', '{{ addslashes(lexicon('label_settings_GlobalLanguage', 'Global Site Language')) }}', '{{ $globalSettings['global_lexicon_setting'] ?? 'auto' }}', 'select', {{ json_encode($langOptions) }})">
                                 {{ ($globalSettings['global_lexicon_setting'] ?? 'auto') == 'auto' ? lexicon('label_setting_OptLangAuto', 'Auto-Detect (Browser Default)') : ($customLanguages[$globalSettings['global_lexicon_setting']] ?? $globalSettings['global_lexicon_setting']) }}
+                            </x-setting-row>
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('game_setting')"
+                                x-cloak
+                                :label="lexicon('label_setting_GameSetting', 'Game Setting / Franchise')"
+                                :tooltip="lexicon('tooltip_setting_GameSetting', 'The primary universe or franchise setting')"
+                                editClick="openModal('game_setting', '{{ addslashes(lexicon('label_setting_GameSetting', 'Game Setting / Franchise')) }}', '{{ addslashes($globalSettings['game_setting'] ?? '') }}', 'text')">
+                                {{ $globalSettings['game_setting'] ?? $notConfiguredText }}
+                            </x-setting-row>
+
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('lore_context')"
+                                            x-cloak
+                                            :label="lexicon('label_setting_LoreContext', 'Lore & Era Context')"
+                                            :tooltip="lexicon('tooltip_setting_LoreContext', 'Brief era, tone, and station premise injected into AI prompts')"
+                                            editClick="openModal('lore_context', '{{ addslashes(lexicon('label_setting_LoreContext', 'Lore & Era Context')) }}', '{{ addslashes($globalSettings['lore_context'] ?? '') }}', 'text')">
+                                {{ $globalSettings['lore_context'] ?? $notConfiguredText }}
                             </x-setting-row>
                         </tbody>
 

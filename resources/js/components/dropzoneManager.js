@@ -1,4 +1,4 @@
-export default (uploadUrl, maxFiles = 1, acceptedFiles = null) => ({
+export default (uploadUrl, maxFiles = 1, acceptedFiles = null, maxFilesize = 10) => ({
     init() {
         const initDropzone = () => {
             if (window.Dropzone) {
@@ -9,6 +9,7 @@ export default (uploadUrl, maxFiles = 1, acceptedFiles = null) => ({
                     let options = {
                         url: uploadUrl,
                         maxFiles: maxFiles,
+                        maxFilesize: maxFilesize, // Enforces InfinityFree 10 MB limit
                         paramName: 'file',
                         headers: {
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')

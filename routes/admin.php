@@ -33,6 +33,7 @@ use App\Http\Controllers\Admin\AwardController;
 use App\Http\Controllers\Admin\AwardCategoryController;
 use App\Http\Controllers\Admin\LexiconTermController;
 use App\Http\Controllers\Admin\LexiconLanguageController;
+use App\Http\Controllers\Admin\GeneralImageController;
 
 
 Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
@@ -74,6 +75,10 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::put('/time-systems/{timeSystem}', [TimeSystemController::class, 'update']);
     Route::delete('/time-systems/{timeSystem}', [TimeSystemController::class, 'destroy']);
 
+    // General Site Asset Manager (Dropzone & Library)
+    Route::get('/general-images', [GeneralImageController::class, 'index'])->name('general-images.index');
+    Route::post('/general-images', [GeneralImageController::class, 'store'])->name('general-images.store');
+    Route::delete('/general-images', [GeneralImageController::class, 'destroy'])->name('general-images.destroy');
     // ==========================================
     // 3. LEXICON & TRANSLATIONS
     // ==========================================

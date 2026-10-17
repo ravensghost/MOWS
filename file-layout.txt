@@ -47,6 +47,7 @@
           CharacterAssignmentController.php
           DashboardController.php
           FormManagerController.php
+          GeneralImageController.php
           LayoutController.php
           LexiconLanguageController.php
           LexiconTermController.php
@@ -143,7 +144,6 @@
     install.php
     logging.php
     mail.php
-    media-library.php
     permission.php
     purify.php
     queue.php
@@ -157,7 +157,7 @@
     [factories]
       UserFactory.php
     [migrations]
-      2026_10_16_233905_create_mows_base_tables_schema.php
+      2026_10_17_100000_phase_1_database_normalisation_and_settings.php
     [schema]
       database.sql
       mysql-schema.sql
@@ -181,6 +181,7 @@
       [characters]
         char_2_1792189266_zxvwe.jpg
         char_2_1792189908_b8idz.jpg
+        char_2_1792207509_ixufl.jpg
       [general]
       [ranks]
         [roles]
@@ -240,6 +241,7 @@
         colourPicker.js
         deleteAction.js
         dropzoneManager.js
+        generalImageManager.js
         lexiconManager.js
         navOptionsManager.js
         navigationManager.js
@@ -270,6 +272,7 @@
         awards.blade.php
         dashboard.blade.php
         forms.blade.php
+        general-images.blade.php
         lexicon.blade.php
         nav-options.blade.php
         nav.blade.php
@@ -298,6 +301,7 @@
         chapter-modal.blade.php
         chapter-ratings.blade.php
         colour-picker.blade.php
+        context-select.blade.php
         dropzone.blade.php
         dynamic-field.blade.php
         form-input.blade.php

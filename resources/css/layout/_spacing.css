@@ -164,6 +164,10 @@
     width: var(--theme-width-12, 3rem);
 }
 
+.w-14 {
+    width: var(--theme-width-14, 3.5rem);
+}
+
 .w-16 {
     width: var(--theme-width-16, 4rem);
 }
@@ -213,6 +217,10 @@
 
 .h-12 {
     height: var(--theme-height-12, 3rem);
+}
+
+.h-14 {
+    height: var(--theme-height-14, 3.5rem);
 }
 
 .h-16 {

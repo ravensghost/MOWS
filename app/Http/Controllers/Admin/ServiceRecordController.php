@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use App\Models\ServiceRecord;
 use App\Models\Award;
 use App\Models\User;
@@ -28,6 +29,7 @@ class ServiceRecordController extends Controller
 
         $ranks = Ranks::orderBy('sort_order', 'desc')->get();
         $positions = Position::with('section')->orderBy('name')->get();
+        $eventTypeGroups = ServiceRecord::eventTypeGroups();
 
         $recentRecords = ServiceRecord::select('service_records.*')
             ->with(['award', 'user', 'character.user', 'issuer'])
@@ -42,16 +44,17 @@ class ServiceRecordController extends Controller
             'characters',
             'recentRecords',
             'ranks',
-            'positions'
+            'positions',
+            'eventTypeGroups'
         ));
     }
 
     public function issueAward(Request $request)
     {
         $request->validate([
-            'award_id' => 'required|exists:awards,id',
-            'reason' => 'required|string',
-            'user_id' => 'nullable|exists:users,id',
+            'award_id'     => 'required|exists:awards,id',
+            'reason'       => 'required|string',
+            'user_id'      => 'nullable|exists:users,id',
             'character_id' => 'nullable|exists:characters,id',
         ]);
 
@@ -83,12 +86,12 @@ class ServiceRecordController extends Controller
         }
 
         ServiceRecord::create([
-            'user_id' => $targetUserId,
-            'character_id' => $request->character_id,
-            'award_id' => $award->id,
-            'event_type' => 'award',
-            'description' => $request->reason,
-            'issued_by' => auth()->id(),
+            'user_id'        => $targetUserId,
+            'character_id'   => $request->character_id,
+            'award_id'       => $award->id,
+            'event_type'     => 'award',
+            'description'    => $request->reason,
+            'issued_by'      => auth()->id(),
             'display_target' => $award->master_group,
         ]);
 
@@ -102,12 +105,12 @@ class ServiceRecordController extends Controller
         ]);
 
         ServiceRecord::create([
-            'user_id' => $serviceRecord->user_id,
-            'character_id' => $serviceRecord->character_id,
-            'award_id' => $serviceRecord->award_id,
-            'event_type' => $serviceRecord->event_type,
-            'description' => 'REVOKED: ' . $request->reason,
-            'issued_by' => auth()->id(),
+            'user_id'        => $serviceRecord->user_id,
+            'character_id'   => $serviceRecord->character_id,
+            'award_id'       => $serviceRecord->award_id,
+            'event_type'     => $serviceRecord->event_type,
+            'description'    => 'REVOKED: ' . $request->reason,
+            'issued_by'      => auth()->id(),
             'display_target' => $serviceRecord->display_target ?? 'BOTH',
         ]);
 
@@ -116,15 +119,22 @@ class ServiceRecordController extends Controller
 
     public function updateRecord(Request $request, ServiceRecord $serviceRecord)
     {
-        $request->validate([
-            'description' => 'required|string',
+        $validated = $request->validate([
+            'description'    => 'required|string',
             'display_target' => 'required|in:IC,OOC,BOTH',
+            'event_type'     => ['nullable', 'string', Rule::in(ServiceRecord::allEventTypes())],
         ]);
 
-        $serviceRecord->update([
-            'description' => $request->description,
-            'display_target' => $request->display_target,
-        ]);
+        $updateData = [
+            'description'    => $validated['description'],
+            'display_target' => $validated['display_target'],
+        ];
+
+        if (!empty($validated['event_type']) && !$serviceRecord->award_id) {
+            $updateData['event_type'] = $validated['event_type'];
+        }
+
+        $serviceRecord->update($updateData);
 
         return response()->json(['success' => true, 'message' => 'Service record updated successfully.']);
     }
@@ -132,8 +142,10 @@ class ServiceRecordController extends Controller
     public function issueManualEntry(Request $request)
     {
         $validated = $request->validate([
-            'character_id' => 'required|exists:characters,id',
-            'description' => 'required|string',
+            'character_id'   => 'required|exists:characters,id',
+            'event_type'     => ['nullable', 'string', Rule::in(ServiceRecord::allEventTypes())],
+            'display_target' => 'nullable|in:IC,OOC,BOTH',
+            'description'    => 'required|string',
         ]);
 
         $character = Character::findOrFail($validated['character_id']);
@@ -141,10 +153,10 @@ class ServiceRecordController extends Controller
         ServiceRecord::create([
             'user_id'        => $character->user_id,
             'character_id'   => $character->id,
-            'event_type'     => 'manual_entry',
+            'event_type'     => $validated['event_type'] ?? 'manual_entry',
             'description'    => $validated['description'],
             'issued_by'      => auth()->id(),
-            'display_target' => 'BOTH',
+            'display_target' => $validated['display_target'] ?? 'BOTH',
         ]);
 
         return response()->json(['success' => true, 'message' => 'Service record entry added.']);

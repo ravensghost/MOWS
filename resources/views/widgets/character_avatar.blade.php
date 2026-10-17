@@ -22,7 +22,7 @@
 
     $canEditAvatar = $char && $user && (
         (int) $user->id === (int) $char->user_id ||
-        $user->role === 'webmaster' ||
+        $user->hasRole('webmaster') ||
         $user->can('manage_roster_assignments') ||
         $user->can('manage_users')
     );
@@ -189,14 +189,15 @@
                                     <span class="text-xs text-muted">{{ lexicon('msg_CharacterAvatar_PrimaryNote', 'Displayed at the top of the biography and roster.') }}</span>
                                 </div>
                             </div>
-                            <x-button variant="danger"
-                                      class="text-xs"
-                                      @click="removePortrait('primary')"
-                                      ::disabled="isBusy"
-                                      x-tooltip="'{{ addslashes(lexicon('tooltip_CharacterAvatar_DeletePrimary', 'Remove primary portrait')) }}'">
-                                <i class="bi bi-trash"></i>
-                                <span>{{ lexicon('btn_common_Delete', 'Delete') }}</span>
-                            </x-button>
+                            <form action="{{ route('bio.avatar.delete', $char) }}" method="POST" x-data="ajaxForm" @submit.prevent="submit" @ajax-success.window="syncPortraits($event.detail.portraits)">
+                                @csrf
+                                @method('DELETE')
+                                <input type="hidden" name="type" value="primary">
+                                <x-button variant="danger" class="text-xs" type="submit" x-tooltip="'Remove primary portrait'">
+                                    <i class="bi bi-trash"></i>
+                                    <span>{{ lexicon('btn_common_Delete', 'Delete') }}</span>
+                                </x-button>
+                            </form>
                         </div>
                     </template>
 
@@ -219,21 +220,23 @@
                                          :alt="characterName"
                                          class="w-14 h-14 object-cover rounded-input border border-panel block">
                                     <div class="flex flex-row items-center gap-xs">
-                                        <x-button variant="primary"
-                                                  class="text-xs"
-                                                  @click="setAsPrimary(item.id)"
-                                                  ::disabled="isBusy"
-                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_CharacterAvatar_SetPrimary', 'Promote to primary character avatar')) }}'">
-                                            <i class="bi bi-star-fill"></i>
-                                            <span>{{ lexicon('btn_CharacterAvatar_SetPrimary', 'Make Primary') }}</span>
-                                        </x-button>
-                                        <x-button variant="danger"
-                                                  class="text-xs"
-                                                  @click="removePortrait('gallery', item.id)"
-                                                  ::disabled="isBusy"
-                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_CharacterAvatar_DeleteGalleryItem', 'Delete this portrait')) }}'">
-                                            <i class="bi bi-trash"></i>
-                                        </x-button>
+                                        <form action="{{ route('bio.avatar.primary', $char) }}" method="POST" x-data="ajaxForm" @submit.prevent="submit" @ajax-success.window="syncPortraits($event.detail.portraits)">
+                                            @csrf
+                                            <input type="hidden" name="attribute_id" :value="item.id">
+                                            <x-button variant="primary" class="text-xs" type="submit" x-tooltip="'Promote to primary character avatar'">
+                                                <i class="bi bi-star-fill"></i>
+                                                <span>{{ lexicon('btn_CharacterAvatar_SetPrimary', 'Make Primary') }}</span>
+                                            </x-button>
+                                        </form>
+                                        <form action="{{ route('bio.avatar.delete', $char) }}" method="POST" x-data="ajaxForm" @submit.prevent="submit" @ajax-success.window="syncPortraits($event.detail.portraits)">
+                                            @csrf
+                                            @method('DELETE')
+                                            <input type="hidden" name="type" value="gallery">
+                                            <input type="hidden" name="attribute_id" :value="item.id">
+                                            <x-button variant="danger" class="text-xs" type="submit" x-tooltip="'Delete this portrait'">
+                                                <i class="bi bi-trash"></i>
+                                            </x-button>
+                                        </form>
                                     </div>
                                 </div>
                             </template>

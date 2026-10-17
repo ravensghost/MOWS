@@ -21,7 +21,7 @@ class UserController extends Controller
             }])
             ->firstOrFail();
 
-        $users = User::with('roles')->orderBy('name')->get();
+        $users = User::with(['roles', 'attributes'])->orderBy('name')->get();
         $roles = Role::orderBy('name')->get();
 
         return view('admin.users', compact('users', 'roles', 'systemPage'));
@@ -42,12 +42,6 @@ class UserController extends Controller
         }
 
         $roleName = $validated['role'];
-
-        // Maintain backwards compatibility with legacy enum column while syncing Spatie role
-        $allowedEnumRoles = ['user', 'senior user', 'admin', 'webmaster'];
-        $enumRole = in_array(strtolower($roleName), $allowedEnumRoles, true) ? strtolower($roleName) : 'user';
-
-        $user->update(['role' => $enumRole]);
 
         if (Role::where('name', $roleName)->where('guard_name', 'web')->exists()) {
             $user->syncRoles([$roleName]);
