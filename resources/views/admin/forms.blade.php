@@ -277,30 +277,32 @@
                                       :label="lexicon('label_FormsHub_DropdownOptions', 'Dropdown Options')"
                                       :placeholder="lexicon('label_FormsHub_DropdownPlaceholder', 'Option 1, Option 2, Option 3')"
                                       :tooltip="lexicon('tooltip_FormsHub_OptionsInput', 'Comma-separated options for dropdown menus')"
-                                      xModel="modals.field.options" />
+                                      xModel="modals.field.options"
+                                      x-bind:disabled="modals.field.type !== 'dropdown'" />
                         <span class="text-xs text-muted" x-show="modals.field.mode === 'create'">{{ lexicon('msg_FormsHub_DropdownHelp', 'Only required if using a Dropdown Menu. Separate items with a comma.') }}</span>
                     </div>
 
                     <!-- Service Record Optgroup Checkboxes -->
                     <div class="flex flex-col gap-sm mt-2" x-cloak x-show="modals.field.type === 'service_record'">
+                        <input type="hidden" name="options" :value="JSON.stringify(modals.field.serviceRecordGroups)" x-bind:disabled="modals.field.type !== 'service_record'">
                         <label class="text-xs font-bold text-input-muted">
                             {{ lexicon('label_FormsHub_ServiceRecordGroups', 'Allowed Event Optgroups') }}
                         </label>
                         <div class="grid grid-cols-2 gap-sm bg-panel-sub border border-panel rounded-panel p-3">
                             <div class="flex flex-row items-center gap-sm">
-                                <input type="checkbox" value="career" x-model="modals.field.serviceRecordGroups" id="grp_career" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                                <input type="checkbox"  name="career" value="career" x-model="modals.field.serviceRecordGroups" id="grp_career" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
                                 <label for="grp_career" class="text-xs text-p cursor-pointer">{{ lexicon('label_ServiceRecords_GroupCareer', 'Career & Duty') }}</label>
                             </div>
                             <div class="flex flex-row items-center gap-sm">
-                                <input type="checkbox" value="biographical" x-model="modals.field.serviceRecordGroups" id="grp_bio" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                                <input type="checkbox" name="biographical" value="biographical" x-model="modals.field.serviceRecordGroups" id="grp_bio" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
                                 <label for="grp_bio" class="text-xs text-p cursor-pointer">{{ lexicon('label_ServiceRecords_GroupBiographical', 'Biographical History') }}</label>
                             </div>
                             <div class="flex flex-row items-center gap-sm">
-                                <input type="checkbox" value="personal" x-model="modals.field.serviceRecordGroups" id="grp_pers" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                                <input type="checkbox" name="personal" value="personal" x-model="modals.field.serviceRecordGroups" id="grp_pers" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
                                 <label for="grp_pers" class="text-xs text-p cursor-pointer">{{ lexicon('label_ServiceRecords_GroupPersonal', 'Personal & Family') }}</label>
                             </div>
                             <div class="flex flex-row items-center gap-sm">
-                                <input type="checkbox" value="medical_factional" x-model="modals.field.serviceRecordGroups" id="grp_med" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                                <input type="checkbox" name="medical_factional" value="medical_factional" x-model="modals.field.serviceRecordGroups" id="grp_med" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
                                 <label for="grp_med" class="text-xs text-p cursor-pointer">{{ lexicon('label_ServiceRecords_GroupMedicalFactional', 'Medical & Factional') }}</label>
                             </div>
                         </div>

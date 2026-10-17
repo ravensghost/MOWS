@@ -1,6 +1,5 @@
 export default (initialLayouts = [], availableWidgets = [], widgetRegistry = {}) => ({
     availableLayouts: initialLayouts,
-    // Use the new registry if available, fallback to old widget scan if not
     widgetData: Object.keys(widgetRegistry).length > 0 ? widgetRegistry : availableWidgets,
     isSyncing: false,
 
@@ -70,29 +69,24 @@ export default (initialLayouts = [], availableWidgets = [], widgetRegistry = {})
     },
 
     async refreshDOM() {
-        window.updateDOM(this.$refs, ['pagesTableContent', 'layoutsTableContent', 'widgetsTableContent'], (doc) => {
-            const freshDataEl = doc.getElementById('pb-fresh-data');
-            if (freshDataEl) {
-                this.availableLayouts = JSON.parse(freshDataEl.getAttribute('data-layouts') || '[]');
-                this.widgetData = JSON.parse(freshDataEl.getAttribute('data-widgets') || '{}');
-            }
-            this.modals.page.open = false;
-            this.modals.layout.open = false;
-            this.modals.widget.open = false;
-        });
+        this.modals.page.open = false;
+        this.modals.layout.open = false;
+        this.modals.widget.open = false;
+
+        const updater = window.updateDOM || window.updateDOM_US;
+        if (typeof updater === 'function') {
+            updater(this.$refs, ['pagesTableContent', 'layoutsTableContent', 'widgetsTableContent'], (doc) => {
+                const freshDataEl = doc?.getElementById('pb-fresh-data');
+                if (freshDataEl) {
+                    this.availableLayouts = JSON.parse(freshDataEl.getAttribute('data-layouts') || '[]');
+                    this.widgetData = JSON.parse(freshDataEl.getAttribute('data-widgets') || '{}');
+                }
+            });
+        }
     },
 
     async refreshDOM_US() {
-        window.updateDOM_US(this.$refs, ['pagesTableContent', 'layoutsTableContent', 'widgetsTableContent'], (doc) => {
-            const freshDataEl = doc.getElementById('pb-fresh-data');
-            if (freshDataEl) {
-                this.availableLayouts = JSON.parse(freshDataEl.getAttribute('data-layouts') || '[]');
-                this.widgetData = JSON.parse(freshDataEl.getAttribute('data-widgets') || '{}');
-            }
-            this.modals.page.open = false;
-            this.modals.layout.open = false;
-            this.modals.widget.open = false;
-        });
+        return this.refreshDOM();
     },
 
     // --- Page Logic ---
@@ -119,14 +113,12 @@ export default (initialLayouts = [], availableWidgets = [], widgetRegistry = {})
                 this.modals.page.requiredPermissions[w.id] = w.required_permission || '';
 
                 let opts = w.instance_options || {};
-
                 if (typeof opts === 'string') {
                     try { opts = JSON.parse(opts); } catch (e) { opts = {}; }
                 }
                 if (Array.isArray(opts) || typeof opts !== 'object') {
                     opts = {};
                 }
-
                 this.modals.page.instanceOptions[w.id] = opts;
             });
         }
@@ -214,7 +206,13 @@ export default (initialLayouts = [], availableWidgets = [], widgetRegistry = {})
         this.modals.widget.id = data.id || '';
         this.modals.widget.name = data.name || '';
         this.modals.widget.widgetKey = data.widgetKey || '';
-        this.modals.widget.options = (data.options && typeof data.options === 'object') ? data.options : {};
+
+        let rawOpts = data.options || '';
+        if (typeof rawOpts === 'object') {
+            try { rawOpts = JSON.stringify(rawOpts, null, 2); } catch (e) { rawOpts = ''; }
+        }
+        this.modals.widget.options = rawOpts;
+
         this.modals.widget.action = mode === 'edit' ? `/admin/widgets/${data.id}` : '/admin/widgets';
         this.modals.widget.method = mode === 'edit' ? 'PUT' : 'POST';
 

@@ -17,10 +17,18 @@ export default () => ({
     },
 
     async refreshDOM() {
-        window.updateDOM(this.$refs, ['formsTableContent', 'fieldsTableContent'], () => {
-            this.modals.form.open = false;
-            this.modals.field.open = false;
-        });
+        // Close modals immediately on success
+        this.modals.form.open = false;
+        this.modals.field.open = false;
+
+        if (typeof window.updateDOM === 'function') {
+            window.updateDOM(this.$refs, ['formsTableContent', 'fieldsTableContent']);
+        }
+    },
+
+    // Alias in case a Blade view calls refreshDOM_US()
+    async refreshDOM_US() {
+        return this.refreshDOM();
     },
 
     openForm(mode, data = {}) {
