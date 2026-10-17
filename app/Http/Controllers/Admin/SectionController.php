@@ -4,11 +4,22 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache; // <-- 1. Add Cache import
 use App\Models\Section;
 use App\Models\Page;
 
 class SectionController extends Controller
 {
+    /**
+     * Clear cached section colors and roster manifest data.
+     */
+    private function clearSectionCaches(): void
+    {
+        Cache::forget('global_section_colors');
+        Cache::forget('widget_roster_sections');
+        Cache::forget('widget_manifest_sections'); // In case manifest_descriptions caches sections too
+    }
+
     public function index()
     {
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
@@ -48,6 +59,8 @@ class SectionController extends Controller
             'order'       => $validated['order'] ?? 0,
         ]);
 
+        $this->clearSectionCaches(); // <-- 2. Clear cache on create
+
         return response()->json([
             'status'  => 'success',
             'success' => true,
@@ -69,6 +82,8 @@ class SectionController extends Controller
 
         $section->update($validated);
 
+        $this->clearSectionCaches(); // <-- 3. Clear cache on update
+
         return response()->json([
             'status'  => 'success',
             'success' => true,
@@ -82,6 +97,8 @@ class SectionController extends Controller
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
 
         $section->delete();
+
+        $this->clearSectionCaches(); // <-- 4. Clear cache on delete
 
         return response()->json([
             'status'  => 'success',

@@ -21,7 +21,21 @@
     
     <!-- Skin CSS (Currently Disabled) -->
     <!-- <link rel="stylesheet" href="{{ asset('skins/' . $currentSkin . '/css/theme.css') }}?v={{ $themeVersion }}"> -->
-    
+
+    @php
+        $sectionColors = \Illuminate\Support\Facades\Cache::rememberForever('global_section_colors', function() { 
+            return \App\Models\Section::all(['id', 'color'])->toArray(); 
+        });
+
+        $sectionCss = collect($sectionColors)
+            ->map(fn($sec) => ".section-theme-{$sec['id']} { --section-color: {$sec['color']}; }")
+            ->implode("\n        ");
+    @endphp
+
+    @if(!empty($sectionCss))
+        {!! "<style>\n        {$sectionCss}\n    </style>" !!}
+    @endif
+
     <!-- Vite handles 3rd-party vendor styles & core JS -->
     @vite([
         'resources/css/app.css',

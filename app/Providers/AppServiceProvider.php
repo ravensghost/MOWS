@@ -38,7 +38,6 @@ class AppServiceProvider extends ServiceProvider
             'layouts.app',
             'layouts.partials.navigation',
             'errors.minimal',
-            'errors.layout'
         ], function ($view) {
             try {
                 // 1. Settings & Skins (Cached primitive arrays)

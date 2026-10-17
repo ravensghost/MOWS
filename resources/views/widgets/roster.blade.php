@@ -39,9 +39,9 @@
 
 <div class="flex flex-col gap-lg w-full mb-6" x-data>
     @forelse($sections as $section)
-        <x-accordion-panel :title="$section->name" :expanded="true">
+    <x-accordion-panel :title="$section->name" :expanded="true" headerClass="panel-l-accent section-theme-{{ $section->id }}">
             {{-- 3-column macro grid --}}
-            <div class="grid grid-cols-1 lg-grid-cols-3 gap-md w-full">
+            <div class="grid grid-cols-1 lg-grid-cols-3 gap-md w-full ">
                 @foreach($section->positions as $position)
                     @forelse($position->characters as $character)
                         <div class="bg-panel border border-panel rounded-input shadow-panel overflow-hidden hover-bg-panel-hover flex flex-row flex-wrap items-center p-3 gap-md {{ strtolower($character->character_type ?? 'pc') === 'pc' ? 'border-pc shadow-pc' : (in_array(strtolower($character->character_type ?? ''), ['sc', 'snpc']) ? 'border-success shadow-success' : 'border-warning shadow-warning') }}">

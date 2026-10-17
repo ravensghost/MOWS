@@ -1,7 +1,19 @@
 export default () => ({
     modals: {
         form: { open: false, mode: 'create', id: '', name: '', action: '/admin/forms', method: 'POST' },
-        field: { open: false, mode: 'create', id: '', name: '', type: 'text', isRequired: false, options: '', formLinked: '', action: '/admin/forms/fields', method: 'POST' }
+        field: {
+            open: false,
+            mode: 'create',
+            id: '',
+            name: '',
+            type: 'text',
+            isRequired: false,
+            options: '',
+            formLinked: '',
+            serviceRecordGroups: [],
+            action: '/admin/forms/fields',
+            method: 'POST'
+        }
     },
 
     async refreshDOM() {
@@ -28,6 +40,19 @@ export default () => ({
         this.modals.field.isRequired = data.isRequired || false;
         this.modals.field.options = data.options || '';
         this.modals.field.formLinked = data.formLinked || '';
+
+        // Parse service record optgroups from options if field type is service_record
+        if (data.type === 'service_record') {
+            try {
+                let parsed = typeof data.options === 'string' ? JSON.parse(data.options) : data.options;
+                this.modals.field.serviceRecordGroups = Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                this.modals.field.serviceRecordGroups = [];
+            }
+        } else {
+            this.modals.field.serviceRecordGroups = [];
+        }
+
         this.modals.field.action = mode === 'edit' ? `/admin/forms/fields/${data.id}` : '/admin/forms/fields';
         this.modals.field.method = mode === 'edit' ? 'PUT' : 'POST';
         this.modals.field.open = true;

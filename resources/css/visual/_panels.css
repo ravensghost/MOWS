@@ -66,3 +66,7 @@
 .rounded-panel {
     border-radius: var(--theme-border-radius, 0.375rem);
 }
+.panel-l-accent {
+    border-left: 3px solid var(--section-color, #dc2626);
+    border-bottom: 3px solid var(--section-color, #dc2626);
+}

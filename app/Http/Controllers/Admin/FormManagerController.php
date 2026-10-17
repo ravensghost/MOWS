@@ -53,13 +53,17 @@ class FormManagerController extends Controller
 
     public function storeField(Request $request)
     {
+        $options = $request->type === 'service_record'
+            ? json_encode($request->input('service_record_groups', []))
+            : $request->options;
+
         FormField::create([
             'name' => $request->name,
             'type' => $request->type,
             'form_type' => 'application',
             'form_linked' => $request->form_linked,
             'is_required' => $request->has('is_required'),
-            'options' => $request->options,
+            'options' => $options,
             'order' => 0
         ]);
         return response()->json(['success' => true]);
@@ -67,12 +71,16 @@ class FormManagerController extends Controller
 
     public function updateField(Request $request, $id)
     {
+        $options = $request->type === 'service_record'
+            ? json_encode($request->input('service_record_groups', []))
+            : $request->options;
+
         FormField::where('id', $id)->update([
             'name' => $request->name,
             'type' => $request->type,
             'form_linked' => $request->form_linked,
             'is_required' => $request->has('is_required'),
-            'options' => $request->options
+            'options' => $options
         ]);
         return response()->json(['success' => true]);
     }

@@ -1,10 +1,11 @@
 @props([
     'title',
     'expanded' => false,
+    'headerClass' => '',
 ])
 
-<div {{ $attributes->merge(['class' => 'bg-panel border-panel rounded-panel shadow-panel flex flex-col overflow-hidden']) }} x-data="{ expanded: @js($expanded) }">
-    <div class="bg-panel-header text-h border-b-panel p-panel-header font-bold flex flex-row flex-wrap gap-md justify-between items-center cursor-pointer select-none"
+<div {{ $attributes->except('headerClass')->merge(['class' => 'bg-panel border-panel rounded-panel shadow-panel flex flex-col overflow-hidden']) }} x-data="{ expanded: @js($expanded) }">
+    <div class="bg-panel-header text-h border-b-panel p-panel-header font-bold flex flex-row flex-wrap gap-md justify-between items-center cursor-pointer select-none {{ $headerClass }}"
          @click="expanded = !expanded"
          x-tooltip="'{{ addslashes(lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel')) }}'">
         <div class="flex flex-row flex-wrap items-center gap-sm">

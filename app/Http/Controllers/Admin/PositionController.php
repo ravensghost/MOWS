@@ -4,10 +4,20 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache; // <-- 1. Add Cache import
 use App\Models\Position;
 
 class PositionController extends Controller
 {
+    /**
+     * Clear cached roster and manifest position data.
+     */
+    private function clearPositionCaches(): void
+    {
+        Cache::forget('widget_roster_sections');
+        Cache::forget('widget_manifest_sections');
+    }
+
     public function store(Request $request, $id)
     {
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
@@ -26,6 +36,8 @@ class PositionController extends Controller
             'capacity'    => $validated['capacity'] ?? 1,
             'is_open'     => $request->boolean('is_open', true),
         ]);
+
+        $this->clearPositionCaches(); // <-- 2. Clear cache on create
 
         return response()->json([
             'status'  => 'success',
@@ -55,6 +67,8 @@ class PositionController extends Controller
             'is_open'     => $request->boolean('is_open', false),
         ]);
 
+        $this->clearPositionCaches(); // <-- 3. Clear cache on update
+
         return response()->json([
             'status'  => 'success',
             'success' => true,
@@ -68,6 +82,8 @@ class PositionController extends Controller
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
 
         $position->delete();
+
+        $this->clearPositionCaches(); // <-- 4. Clear cache on delete
 
         return response()->json([
             'status'  => 'success',

@@ -102,11 +102,25 @@ class ApplicationController extends Controller
         ]);
 
         // Integrate Applicant's Submitted Service Record Timeline Entries
-        $allowedEvents = ['background', 'academy', 'assignment', 'commendation', 'milestone', 'incident'];
+        $groupToEventTypes = ServiceRecord::eventTypeGroups();
 
         foreach ($application->answers as $answer) {
             if ($answer->formField && $answer->formField->type === 'service_record' && !empty($answer->answer)) {
                 $entries = json_decode($answer->answer, true);
+                $fieldGroups = json_decode($answer->formField->options, true) ?: [];
+
+                // Build allowed event types for this specific form field based on selected optgroups
+                $allowedEvents = [];
+                foreach ($fieldGroups as $groupKey) {
+                    if (isset($groupToEventTypes[$groupKey])) {
+                        $allowedEvents = array_merge($allowedEvents, array_keys($groupToEventTypes[$groupKey]));
+                    }
+                }
+                // Fallback if none configured
+                if (empty($allowedEvents)) {
+                    $allowedEvents = ServiceRecord::allEventTypes();
+                }
+
                 if (is_array($entries)) {
                     foreach ($entries as $entry) {
                         $desc = trim($entry['description'] ?? '');
@@ -116,7 +130,7 @@ class ApplicationController extends Controller
                         $era = trim($entry['era'] ?? '');
                         $eventType = in_array($entry['event_type'] ?? '', $allowedEvents, true)
                             ? $entry['event_type']
-                            : 'background';
+                            : ($allowedEvents[0] ?? 'background');
 
                         $fullDescription = $era !== '' ? "[{$era}] {$desc}" : $desc;
 
