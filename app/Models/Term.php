@@ -13,6 +13,7 @@ class Term extends Model
         'code_key',
         'master_group',
         'subgroup',
+        'display_value',
         'translations'
     ];
 

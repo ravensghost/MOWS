@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\News;
 use App\Models\Page;
+use Stevebauman\Purify\Facades\Purify;
 
 class NewsController extends Controller
 {
@@ -35,7 +36,7 @@ class NewsController extends Controller
 
         News::create([
             'title' => $validated['title'],
-            'content' => purify($validated['content']),
+            'content' => Purify::clean($validated['content']),
             'author_id' => $request->user()->id,
             'published_at' => now(),
         ]);
@@ -50,7 +51,7 @@ class NewsController extends Controller
             'content' => 'required|string'
         ]);
 
-        $validated['content'] = purify($validated['content']);
+        $validated['content'] = Purify::clean($validated['content']);
         News::where('id', $id)->update($validated);
 
         return response()->json(['success' => true]);

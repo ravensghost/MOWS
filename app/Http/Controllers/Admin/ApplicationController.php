@@ -16,8 +16,31 @@ use App\Models\ServiceRecord;
 
 class ApplicationController extends Controller
 {
+    protected function authorizeApplicationAccess(array $permissions): void
+    {
+        $user = auth()->user();
+
+        if (!$user) {
+            abort(403, lexicon('msg_Applications_Unauthorised', 'Unauthorised access to Application Management.'));
+        }
+
+        // Allow webmaster role column or Spatie webmaster role automatically
+        if ($user->role === 'webmaster' || (method_exists($user, 'hasRole') && $user->hasRole('webmaster'))) {
+            return;
+        }
+
+        foreach ($permissions as $permission) {
+            if ($user->can($permission)) {
+                return;
+            }
+        }
+
+        abort(403, lexicon('msg_Applications_Unauthorised', 'Unauthorised access to Application Management.'));
+    }    
+
     public function index()
     {
+        $this->authorizeApplicationAccess(['applications_view', 'manage_applications']);
         $systemPage = Page::where('slug', 'admin/applications')
             ->where('is_published', true)
             ->with([
@@ -50,8 +73,11 @@ class ApplicationController extends Controller
         return view('admin.applications', compact('applications', 'activeCharacters', 'sections', 'rankSets', 'systemPage'));
     }
 
+
+
     public function approve(Request $request, $id)
     {
+        $this->authorizeApplicationAccess(['applications_approve', 'manage_applications']);
         $validated = $request->validate([
             'position_id' => 'required|exists:positions,id',
             'rank_id'     => 'required|exists:ranks,id',
@@ -134,6 +160,7 @@ class ApplicationController extends Controller
 
     public function reject(Request $request, $id)
     {
+        $this->authorizeApplicationAccess(['applications_approve', 'manage_applications']);
         $application = Application::findOrFail($id);
         $application->update(['status' => 'Rejected']);
 

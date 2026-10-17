@@ -5,6 +5,7 @@
   .gitignore
   .mcp.json
   .npmrc
+  .phpunit.result.cache
   AGENTS.md
   CLAUDE.md
   README.md
@@ -14,6 +15,7 @@
   composer.lock
   database.sql
   file-layout.txt
+  mows_db
   package-lock.json
   package.json
   phpunit.xml
@@ -155,25 +157,9 @@
     [factories]
       UserFactory.php
     [migrations]
-      2026_10_06_173124_create_widget_system_tables.php
-      2026_10_06_173447_migrate_widget_data_to_new_schema.php
-      2026_10_09_120000_create_navigation_options_table.php
-      2026_10_09_184329_normalize_meta_data_blobs.php
-      2026_10_09_213026_update_awards_table_for_flexible_layers.php.php
-      2026_10_10_015825_create_award_categories_table.php
-      2026_10_10_015826_add_grouping_to_awards_table.php
-      2026_10_10_023008_make_character_id_nullable_on_service_records.php
-      2026_10_10_024809_add_issued_by_to_service_records_table.php
-      2026_10_10_030456_add_display_target_to_service_records_table.php
-      2026_10_10_142156_create_time_systems_table.php
-      2026_10_11_000001_add_loa_statuses_to_characters_table.php
-      2026_10_11_000002_expand_event_type_on_service_records_table.php
-      2026_10_11_170453_add_parent_id_to_navigation_links.php
-      2026_10_13_143340_add_colors_to_ranks_table.php
-      2026_10_13_150123_add_social_handles_to_users_table.php
-      2026_10_14_190159_add_required_permission_to_navigation_links_table.php
+      2026_10_16_233905_create_mows_base_tables_schema.php
     [schema]
-      mows_db.sql
+      database.sql
       mysql-schema.sql
     [seeders]
       DatabaseSeeder.php
@@ -193,6 +179,8 @@
     [images]
       [awards]
       [characters]
+        char_2_1792189266_zxvwe.jpg
+        char_2_1792189908_b8idz.jpg
       [general]
       [ranks]
         [roles]
@@ -248,6 +236,7 @@
         ajaxForm.js
         applicationManager.js
         awardManager.js
+        characterAvatarManager.js
         colourPicker.js
         deleteAction.js
         dropzoneManager.js
@@ -393,14 +382,30 @@
   [tests]
     TestCase.php
     [Feature]
-      ExampleTest.php
-      ProfileTest.php
-      [Auth]
-        AuthenticationTest.php
-        EmailVerificationTest.php
-        PasswordConfirmationTest.php
-        PasswordResetTest.php
-        PasswordUpdateTest.php
-        RegistrationTest.php
+      AiIntegrationTest.php
+      ApplicationAndRosterTest.php
+      AwardsAndServiceRecordsTest.php
+      BookAndChapterHierarchyTest.php
+      DiscordIntegrationTest.php
+      EmailIntegrationTest.php
+      FormManagerManagementTest.php
+      FormSubmissionAndAnswersTest.php
+      GlobalSettingsManagementTest.php
+      LeaveOfAbsenceTest.php
+      LexiconManagementTest.php
+      MessagingSecurityTest.php
+      MowsSecurityAndProfileTest.php
+      MultiChannelNotificationIntegrationTest.php
+      NavigationManagementTest.php
+      NewsManagementTest.php
+      PageManagementTest.php
+      RankManagementTest.php
+      RoleAndPermissionManagementTest.php
+      SectionsAndPositionsTest.php
+      SecurityPermissionTest.php
+      SkinManagementTest.php
+      StoryAndSanitisationTest.php
+      TimeSystemManagementTest.php
+      UserManagementTest.php
+      WidgetManagementTest.php
     [Unit]
-      ExampleTest.php

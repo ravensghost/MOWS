@@ -27,9 +27,17 @@ class UserFactory extends Factory
         return [
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
+            'twitter_handle' => fake()->userName(),
+            'facebook_handle' => fake()->userName(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'selected_skin' => null,
+            'is_on_loa' => false,
+            'loa_return_date' => null,
+            'app_status' => 'pending',
+            'role' => 'user',
+            'content_shield_bypass' => false,
         ];
     }
 
@@ -38,7 +46,7 @@ class UserFactory extends Factory
      */
     public function unverified(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn(array $attributes) => [
             'email_verified_at' => null,
         ]);
     }

@@ -61,7 +61,13 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($terms as $term) {
-            Term::updateOrCreate(['code_key' => $term['code_key']], ['translations' => $term['translations']]);
+            Term::updateOrCreate(
+                ['code_key' => $term['code_key']],
+                [
+                    'display_value' => $term['display_value'] ?? $term['translations'],
+                    'translations' => $term['translations']
+                ]
+            );
         }
 
         // 3. Application Form Defaults
