@@ -116,6 +116,8 @@
                             <th class="p-4 w-48 text-left">{{ lexicon('label_PageBuilder_GridBlock', 'Grid Area (Block)') }}</th>
                             <th class="p-4 w-48 text-left">{{ lexicon('label_PageBuilder_RequiredPermission', 'Required Permission') }}</th>
                             <th class="p-4 w-24 text-center">{{ lexicon('label_common_SortOrder', 'Sort Order') }}</th>
+                            <th class="p-4 w-24 text-center">{{ lexicon('label_common_ShowOnSite', 'Show on Site') }}</th>
+
                         </x-slot:headers>
 
                         @forelse($widgets ?? [] as $widget)
@@ -166,6 +168,13 @@
                                            class="bg-input text-input border-input rounded-input p-input outline-none h-input w-16 box-border focus-border-accent focus-shadow-accent p-2 text-center mx-auto" 
                                            x-model="modals.page.sortOrders[{{ $widget->id }}]"
                                            x-tooltip="'{{ addslashes(lexicon('tooltip_PageBuilder_WidgetSortOrder', 'Numeric display order inside the assigned block')) }}'">
+                                </td>
+                                <td class="p-4 text-center">
+                                    <input type="hidden" :name="`widgets[{{ $widget->id }}][is_visible]`" value="0">
+                                    <input type="checkbox" :name="`widgets[{{ $widget->id }}][is_visible]`" value="1" 
+                                           class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer mx-auto" 
+                                           x-model="modals.page.selectedVisible[{{ $widget->id }}]"
+                                           x-init="modals.page.selectedVisible[{{ $widget->id }}] = true">
                                 </td>
                             </tr>
                         @empty

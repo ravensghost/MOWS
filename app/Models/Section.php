@@ -8,10 +8,17 @@ class Section extends Model
 {
     protected $guarded = [];
 
-    public function positions() {
+    protected $casts = [
+        'is_visible' => 'boolean',
+    ];
+
+    public function positions()
+    {
         return $this->hasMany(Position::class);
     }
-    public function rankSet() { 
-        return $this->belongsTo(RankSet::class); 
+
+    public function rankSet()
+    {
+        return $this->belongsTo(RankSet::class);
     }
 }

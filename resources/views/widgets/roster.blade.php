@@ -16,13 +16,30 @@
 @php
     // 1. Cache the 5-table query as a plain array to prevent Incomplete Class errors
     $sectionsArray = \Illuminate\Support\Facades\Cache::rememberForever('widget_roster_sections', function() {
-        return \App\Models\Section::with(['positions.characters' => function($q) {
-            $q->where('status', 'active');
-        }, 'positions.characters.rank.rankSet'])->orderBy('order')->get()->toArray();
+        return \App\Models\Section::where('is_visible', true)
+            ->with([
+                'positions' => function($q) {
+                    $q->where('is_visible', true);
+                },
+                'positions.characters' => function($q) {
+                    $q->where('status', 'active');
+                },
+                'positions.characters.rank' => function($q) {
+                    $q->where('is_visible', true);
+                },
+                'positions.characters.rank.rankSet' => function($q) {
+                    $q->where('is_visible', true);
+                },
+            ])
+            ->orderBy('order')
+            ->get()
+            ->toArray();
     });
     
     // Re-wrap the array into standard objects so Blade syntax ($section->name) works
-    $sections = json_decode(json_encode($sectionsArray));
+    $sections = collect(json_decode(json_encode($sectionsArray)))
+        ->filter(fn($s) => (bool) ($s->is_visible ?? true))
+        ->values();
     
     // 2. Reuse the settings cache from AppServiceProvider (0 database queries)
     $skinSettings = \Illuminate\Support\Facades\Cache::get('skin_settings', []);
@@ -43,6 +60,7 @@
             {{-- 3-column macro grid --}}
             <div class="grid grid-cols-1 lg-grid-cols-3 gap-md w-full ">
                 @foreach($section->positions as $position)
+                    @continue(!($position->is_visible ?? true))
                     @forelse($position->characters as $character)
                         <div class="bg-panel border border-panel rounded-input shadow-panel overflow-hidden hover-bg-panel-hover flex flex-row flex-wrap items-center p-3 gap-md {{ strtolower($character->character_type ?? 'pc') === 'pc' ? 'border-pc shadow-pc' : (in_array(strtolower($character->character_type ?? ''), ['sc', 'snpc']) ? 'border-success shadow-success' : 'border-warning shadow-warning') }}">
                             
@@ -62,9 +80,11 @@
                             
                             <div class="flex flex-col flex-grow gap-xs">
                                 @php
-                                    $rank = $character->rank ?? null;
-                                    $rankSetObj = $rank->rank_set ?? $rank->rankSet ?? null;
-                                    $rankSetName = $rankSetObj->name ?? 'default';
+                                    $rawRank = $character->rank ?? null;
+                                    $rawRankSet = $rawRank ? ($rawRank->rank_set ?? $rawRank->rankSet ?? null) : null;
+                                    $rankVisible = $rawRank && ($rawRank->is_visible ?? true) && (!$rawRankSet || ($rawRankSet->is_visible ?? true));
+                                    $rank = $rankVisible ? $rawRank : null;
+                                    $rankSetName = ($rank && $rawRankSet) ? ($rawRankSet->name ?? 'default') : 'default';
                                 @endphp
                             
                                 <a href="/bio/{{ $character->id }}" 
@@ -78,22 +98,24 @@
                                 </a>
                                 <span class="block text-sm text-muted">{{ $position->name }}</span>
                                 
-                                <div class="inline-block"
-                                     aria-label="{{ !empty($rank->name) ? $rank->name : lexicon('tooltip_common_CharacterRank', 'Character Rank') }}"
-                                     x-tooltip="'{{ addslashes(!empty($rank->name) ? $rank->name : lexicon('tooltip_common_CharacterRank', 'Character Rank')) }}'">
-                                    <x-rank-badge 
-                                        :rankSet="$rankSetName" 
-                                        baseLayer="{{ $skinSettings['theme_base_color'] ?? '#1a1a1a' }}" 
-                                        departmentColor="{{ $section->color ?? '' }}" 
-                                        :midType="$rank->mid_type ?? 'css'"
-                                        :midImage="$rank->mid_image ?? null"
-                                        :midCss="$rank->mid_css ?? ''"
-                                        :topType="$rank->top_type ?? 'image'"
-                                        :topImage="$rank->top_image ?? null"
-                                        :topCss="$rank->top_css ?? ''"
-                                        skin="{{ $activeSkin }}" 
-                                    />
-                                </div>
+                                @if($rank)
+                                    <div class="inline-block"
+                                         aria-label="{{ !empty($rank->name) ? $rank->name : lexicon('tooltip_common_CharacterRank', 'Character Rank') }}"
+                                         x-tooltip="'{{ addslashes(!empty($rank->name) ? $rank->name : lexicon('tooltip_common_CharacterRank', 'Character Rank')) }}'">
+                                        <x-rank-badge 
+                                            :rankSet="$rankSetName" 
+                                            baseLayer="{{ $skinSettings['theme_base_color'] ?? '#1a1a1a' }}" 
+                                            departmentColor="{{ $section->color ?? '' }}" 
+                                            :midType="$rank->mid_type ?? 'css'"
+                                            :midImage="$rank->mid_image ?? null"
+                                            :midCss="$rank->mid_css ?? ''"
+                                            :topType="$rank->top_type ?? 'image'"
+                                            :topImage="$rank->top_image ?? null"
+                                            :topCss="$rank->top_css ?? ''"
+                                            skin="{{ $activeSkin }}" 
+                                        />
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     @empty

@@ -5,13 +5,16 @@ export default (config = {}) => ({
     sectionTomSelect: null,
     aiEndpoint: config.aiEndpoint || '/admin/sections/generate-description',
     emptyNameMsg: config.emptyNameMsg || 'Please enter a Section Name first.',
+    importModalOpen: false,
+    importMode: 'merge',
 
     section: {
         id: '',
         name: '',
         color: '#374151',
         description: '',
-        order: 0
+        order: 0,
+        is_visible: true
     },
 
     position: {
@@ -21,6 +24,7 @@ export default (config = {}) => ({
         description: '',
         capacity: 1,
         is_open: true,
+        is_visible: true,
         section_name: '',
         section_color: ''
     },
@@ -42,7 +46,18 @@ export default (config = {}) => ({
             });
         }
     },
-
+    handleImportSuccess(response) {
+        this.importModalOpen = false;
+        window.Swal.fire({
+            icon: 'success',
+            title: 'Import Successful',
+            text: response.message || 'Sections and positions have been imported.',
+            background: 'var(--theme-bg-panel, #111827)',
+            color: 'var(--theme-text-p, #ffffff)'
+        }).then(() => {
+            window.location.reload();
+        });
+    },
     refreshAutosize() {
         this.$nextTick(() => {
             if (window.autosize) {
@@ -59,7 +74,8 @@ export default (config = {}) => ({
             name: '',
             color: '#374151',
             description: '',
-            order: 0
+            order: 0,
+            is_visible: true
         };
         this.modal = 'section-create';
         this.refreshAutosize();
@@ -71,7 +87,8 @@ export default (config = {}) => ({
             name: secData.name || '',
             color: secData.color || '#374151',
             description: secData.description || '',
-            order: secData.order ?? 0
+            order: secData.order ?? 0,
+            is_visible: secData.is_visible !== undefined ? Boolean(secData.is_visible) : true
         };
         this.modal = 'section-edit';
         this.refreshAutosize();
@@ -86,7 +103,8 @@ export default (config = {}) => ({
             name: '',
             description: '',
             capacity: 1,
-            is_open: true
+            is_open: true,
+            is_visible: true
         };
         this.modal = 'position-create';
         this.refreshAutosize();
@@ -100,6 +118,7 @@ export default (config = {}) => ({
             description: posData.description || '',
             capacity: posData.capacity ?? 1,
             is_open: Boolean(posData.is_open),
+            is_visible: posData.is_visible !== undefined ? Boolean(posData.is_visible) : true,
             section_name: '',
             section_color: ''
         };

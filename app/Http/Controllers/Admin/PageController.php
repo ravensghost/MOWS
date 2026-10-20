@@ -90,11 +90,11 @@ class PageController extends Controller
         }
 
         $page = Page::create([
-            'title' => $request->title,
-            'slug' => $slug,
-            'content' => '',
-            'is_published' => $request->has('is_published'),
-            'layout_id' => $request->layout_id
+            'title'        => $request->title,
+            'slug'         => $slug,
+            'content'      => '',
+            'is_published' => $request->boolean('is_published', false),
+            'layout_id'    => $request->layout_id,
         ]);
 
         $this->syncPageWidgets($page, $request);
@@ -112,10 +112,10 @@ class PageController extends Controller
         }
 
         $page->update([
-            'title' => $request->title,
-            'slug' => $slug,
-            'is_published' => $request->has('is_published'),
-            'layout_id' => $request->layout_id
+            'title'        => $request->title,
+            'slug'         => $slug,
+            'is_published' => $request->boolean('is_published', false),
+            'layout_id'    => $request->layout_id,
         ]);
 
         $this->syncPageWidgets($page, $request);
@@ -142,11 +142,11 @@ class PageController extends Controller
                     }
 
                     $syncData[$widgetId] = [
-                        'layout_block_id' => $data['layout_block_id'] ?? null,
-                        'sort_order' => $data['sort_order'] ?? 0,
-                        // Cast the array to a JSON string to prevent the conversion error
-                        'instance_options' => empty($options) ? null : json_encode($options),
+                        'layout_block_id'     => $data['layout_block_id'] ?? null,
+                        'sort_order'          => $data['sort_order'] ?? 0,
+                        'instance_options'    => empty($options) ? null : json_encode($options),
                         'required_permission' => $data['required_permission'] ?? null,
+                        'is_visible'          => filter_var($data['is_visible'] ?? false, FILTER_VALIDATE_BOOLEAN),
                     ];
                 }
             }

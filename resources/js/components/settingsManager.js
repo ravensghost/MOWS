@@ -126,7 +126,7 @@ export default (initialAiMode = 'cloud') => ({
             this.ai_mode = this.modal.value;
         }
 
-        window.updateDOM_US(this.$refs, ['mainSettingsTable', 'bookStatusesTable', 'timeSystemsTable'], () => {
+        window.updateDOM_US(this.$refs, ['mainSettingsTable', 'timeSystemsTable'], () => {
             if (this.tomSelectInstance) {
                 this.tomSelectInstance.destroy();
                 this.tomSelectInstance = null;

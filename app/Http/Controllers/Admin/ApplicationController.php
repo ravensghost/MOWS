@@ -107,13 +107,16 @@ class ApplicationController extends Controller
         foreach ($application->answers as $answer) {
             if ($answer->formField && $answer->formField->type === 'service_record' && !empty($answer->answer)) {
                 $entries = json_decode($answer->answer, true);
-                $fieldGroups = json_decode($answer->formField->options, true) ?: [];
+                $rawFieldOptions = $answer->formField->options;
+                $fieldGroups = is_array($rawFieldOptions)
+                    ? $rawFieldOptions
+                    : (json_decode((string) $rawFieldOptions, true) ?: []);
 
                 // Build allowed event types for this specific form field based on selected optgroups
                 $allowedEvents = [];
                 foreach ($fieldGroups as $groupKey) {
-                    if (isset($groupToEventTypes[$groupKey])) {
-                        $allowedEvents = array_merge($allowedEvents, array_keys($groupToEventTypes[$groupKey]));
+                    if (is_string($groupKey) && isset($groupToEventTypes[$groupKey]['types'])) {
+                        $allowedEvents = array_merge($allowedEvents, array_keys($groupToEventTypes[$groupKey]['types']));
                     }
                 }
                 // Fallback if none configured

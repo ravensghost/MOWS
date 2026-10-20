@@ -5,7 +5,6 @@ export default () => ({
     fuse: null,
     matchedIds: null,
 
-    // Link Modal State
     linkModal: {
         open: false,
         mode: 'create',
@@ -20,6 +19,7 @@ export default () => ({
         required_permission: '',
         target: '_self',
         order: 0,
+        is_visible: true,
         formAction: '/admin/navigation',
         method: 'POST'
     },
@@ -62,14 +62,11 @@ export default () => ({
     },
 
     async refreshDOM() {
-        // Refresh the main table and the dropdowns inside the link modal while preserving Alpine bindings
         await window.updateDOM_US(this.$refs, ['navTableContent', 'navModalDropdowns']);
         this.$nextTick(() => {
             this.initFuse();
         });
     },
-
-    // --- Link Modal Methods ---
 
     openLinkModal(mode, data = {}) {
         this.linkModal.mode = mode;
@@ -84,6 +81,7 @@ export default () => ({
         this.linkModal.required_permission = data.required_permission && data.required_permission !== 'null' ? data.required_permission : '';
         this.linkModal.target = data.target || '_self';
         this.linkModal.order = data.order || 0;
+        this.linkModal.is_visible = data.is_visible !== undefined ? Boolean(data.is_visible) : true;
         this.linkModal.formAction = mode === 'edit' ? `/admin/navigation/${this.linkModal.id}` : '/admin/navigation';
         this.linkModal.method = mode === 'edit' ? 'PUT' : 'POST';
         this.linkModal.open = true;

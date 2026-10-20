@@ -65,6 +65,12 @@
                         <td class="p-3 font-bold">
                             <div class="flex flex-row items-center gap-xs">
                                 <span>{{ $link->lexicon_key }}</span>
+                                @if(!$link->is_visible)
+                                    <x-badge variant="danger"
+                                             x-tooltip="'{{ addslashes(lexicon('tooltip_common_HiddenFromSite', 'Hidden from live site')) }}'">
+                                        <i class="bi bi-eye-slash"></i> {{ lexicon('label_common_Hidden', 'Hidden') }}
+                                    </x-badge>
+                                @endif
                                 <x-button type="button"
                                           variant="text"
                                           class="text-xs text-muted hover-text-accent"
@@ -103,18 +109,19 @@
                                               aria-label="{{ lexicon('tooltip_Navigation_EditLink', 'Edit this menu item') }}"
                                               x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_EditLink', 'Edit this menu item')) }}'"
                                               @click="openLinkModal('edit', { 
-                                                  id: {{ $link->id }}, 
-                                                  parent_id: '',
-                                                  group_name: '{{ addslashes($link->group_name) }}', 
-                                                  lexicon_key: '{{ addslashes($link->lexicon_key) }}', 
-                                                  url: '{{ addslashes($link->url) }}', 
-                                                  location: '{{ $link->location }}', 
-                                                  visibility: '{{ $link->visibility }}',
-                                                  required_permission: '{{ $link->required_permission ?? '' }}', 
-                                                  target: '{{ $link->target }}', 
-                                                  order: {{ $link->order }}, 
-                                                  group_order: {{ $link->group_order ?? 0 }} 
-                                              })">
+                                                id: {{ $link->id }}, 
+                                                parent_id: '',
+                                                group_name: '{{ addslashes($link->group_name) }}', 
+                                                lexicon_key: '{{ addslashes($link->lexicon_key) }}', 
+                                                url: '{{ addslashes($link->url) }}', 
+                                                location: '{{ $link->location }}', 
+                                                visibility: '{{ $link->visibility }}',
+                                                required_permission: '{{ $link->required_permission ?? '' }}', 
+                                                target: '{{ $link->target }}', 
+                                                order: {{ $link->order }}, 
+                                                group_order: {{ $link->group_order ?? 0 }},
+                                                is_visible: {{ $link->is_visible ? 'true' : 'false' }}
+                                            })">
                                         <i class="bi bi-pencil"></i> {{ lexicon('btn_common_Edit', 'Edit') }}
                                     </x-button>
                                     <x-button type="button"
@@ -149,6 +156,12 @@
                             <td class="p-3">
                                 <div class="flex flex-row items-center gap-xs">
                                     <span>{{ $child->lexicon_key }}</span>
+                                    @if(!$child->is_visible)
+                                        <x-badge variant="danger"
+                                                 x-tooltip="'{{ addslashes(lexicon('tooltip_common_HiddenFromSite', 'Hidden from live site')) }}'">
+                                            <i class="bi bi-eye-slash"></i> {{ lexicon('label_common_Hidden', 'Hidden') }}
+                                        </x-badge>
+                                    @endif
                                     <x-button type="button"
                                               variant="text"
                                               class="text-xs text-muted hover-text-accent"
@@ -187,18 +200,19 @@
                                                   aria-label="{{ lexicon('tooltip_Navigation_EditLink', 'Edit this menu item') }}"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_EditLink', 'Edit this menu item')) }}'"
                                                   @click="openLinkModal('edit', { 
-                                                      id: {{ $child->id }}, 
-                                                      parent_id: '{{ $child->parent_id }}',
-                                                      group_name: '{{ addslashes($child->group_name) }}', 
-                                                      lexicon_key: '{{ addslashes($child->lexicon_key) }}', 
-                                                      url: '{{ addslashes($child->url) }}', 
-                                                      location: '{{ $child->location }}', 
-                                                      visibility: '{{ $child->visibility }}',
-                                                      required_permission: '{{ $child->required_permission ?? '' }}', 
-                                                      target: '{{ $child->target }}', 
-                                                      order: {{ $child->order }}, 
-                                                      group_order: {{ $child->group_order ?? 0 }} 
-                                                  })">
+                                                    id: {{ $child->id }}, 
+                                                    parent_id: '{{ $child->parent_id }}',
+                                                    group_name: '{{ addslashes($child->group_name) }}', 
+                                                    lexicon_key: '{{ addslashes($child->lexicon_key) }}', 
+                                                    url: '{{ addslashes($child->url) }}', 
+                                                    location: '{{ $child->location }}', 
+                                                    visibility: '{{ $child->visibility }}',
+                                                    required_permission: '{{ $child->required_permission ?? '' }}', 
+                                                    target: '{{ $child->target }}', 
+                                                    order: {{ $child->order }}, 
+                                                    group_order: {{ $child->group_order ?? 0 }},
+                                                    is_visible: {{ $child->is_visible ? 'true' : 'false' }}
+                                                })">
                                             <i class="bi bi-pencil"></i> {{ lexicon('btn_common_Edit', 'Edit') }}
                                         </x-button>
                                         <x-button type="button"
@@ -240,7 +254,18 @@
                           data-loading-title="{{ lexicon('msg_common_Saving', 'Saving...') }}">
                         @csrf
                         <input type="hidden" name="_method" :value="linkModal.method">
-
+                        <div class="flex flex-row items-center gap-sm mt-3">
+                            <input type="hidden" name="is_visible" value="0">
+                            <input type="checkbox"
+                                   id="modal_is_visible"
+                                   name="is_visible"
+                                   value="1"
+                                   x-model="linkModal.is_visible"
+                                   class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                            <label for="modal_is_visible" class="text-sm font-bold text-muted cursor-pointer">
+                                {{ lexicon('label_common_ShowOnSite', 'Show on Site') }}
+                            </label>
+                        </div>
                         <div x-ref="navModalDropdowns" class="flex flex-col gap-md">
                             <div class="grid grid-cols-1 gap-sm w-full lg-grid-cols-3 bg-panel border border-panel rounded-panel shadow-panel p-3">
                                 <div class="flex flex-col gap-xs">

@@ -9,6 +9,10 @@ class NavigationLink extends Model
 {
    protected $guarded = [];
 
+   protected $casts = [
+      'is_visible' => 'boolean',
+   ];
+
    protected static function booted(): void
    {
       static::saved(function () {

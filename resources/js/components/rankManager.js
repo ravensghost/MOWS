@@ -1,19 +1,34 @@
 export default function rankManager(defaultDeptColor, baseLayer = '#1a1a1aFF') {
     return {
         modal: null,
+        importModalOpen: false,
+        importMode: 'merge',
         defaultDeptColor: defaultDeptColor,
         baseLayer: baseLayer,
-        assignSet: { id: '', name: '', assignedIds: [] },
+        assignSet: { id: '', name: '', assignedIds: [], is_visible: true },
         imageError: { mid: false, top: false },
         rankForm: {
             id: '', set_id: '', name: '', short_name: '', sort_order: 0, description: '',
             mid_type: 'css', mid_image: '', mid_css: '', mid_color: '#1a1a1aFF',
             top_type: 'image', top_image: '', top_css: '', top_color: '#ffffffFF',
-            set_name: '', set_color: '', available_images: [], loading_images: false
+            set_name: '', set_color: '', is_visible: true, available_images: [], loading_images: false
         },
 
         initData() {
             this.resetRankForm();
+        },
+
+        handleImportSuccess(response) {
+            this.importModalOpen = false;
+            window.Swal.fire({
+                icon: 'success',
+                title: 'Import Successful',
+                text: response.message || 'Ranks have been imported successfully.',
+                background: 'var(--theme-bg-panel, #111827)',
+                color: 'var(--theme-text-p, #ffffff)'
+            }).then(() => {
+                window.location.reload();
+            });
         },
 
         resetRankForm() {
@@ -22,7 +37,7 @@ export default function rankManager(defaultDeptColor, baseLayer = '#1a1a1aFF') {
                 id: '', set_id: '', name: '', short_name: '', sort_order: 0, description: '',
                 mid_type: 'css', mid_image: '', mid_css: '', mid_color: this.baseLayer || '#1a1a1aFF',
                 top_type: 'image', top_image: '', top_css: '', top_color: '#ffffffFF',
-                set_name: '', set_color: this.defaultDeptColor, available_images: [], loading_images: false
+                set_name: '', set_color: this.defaultDeptColor, is_visible: true, available_images: [], loading_images: false
             };
         },
 
@@ -72,6 +87,7 @@ export default function rankManager(defaultDeptColor, baseLayer = '#1a1a1aFF') {
                 top_image: savedTopImage,
                 mid_color: rank.mid_color || this.baseLayer || '#1a1a1aFF',
                 top_color: rank.top_color || '#ffffffFF',
+                is_visible: rank.is_visible !== undefined ? Boolean(rank.is_visible) : true,
                 available_images: [],
                 loading_images: false
             };

@@ -22,13 +22,17 @@ class PublicController extends Controller
             ->with([
                 'layout.blocks',
                 'widgets' => function ($query) {
-                    $query->orderBy('page_widget.sort_order');
+                    $query->wherePivot('is_visible', true)
+                        ->orderBy('page_widget.sort_order');
                 }
             ])
             ->firstOrFail();
 
         $user = auth()->user();
         $systemPage->setRelation('widgets', $systemPage->widgets->filter(function ($widget) use ($user) {
+            if (!($widget->pivot->is_visible ?? true)) {
+                return false;
+            }
             $required = $widget->pivot->required_permission;
             if (empty($required)) {
                 return true;
@@ -71,13 +75,17 @@ class PublicController extends Controller
             ->with([
                 'layout.blocks',
                 'widgets' => function ($query) {
-                    $query->orderBy('page_widget.sort_order');
+                    $query->wherePivot('is_visible', true)
+                        ->orderBy('page_widget.sort_order');
                 }
             ])
             ->firstOrFail();
 
         $user = auth()->user();
         $systemPage->setRelation('widgets', $systemPage->widgets->filter(function ($widget) use ($user) {
+            if (!($widget->pivot->is_visible ?? true)) {
+                return false;
+            }
             $required = $widget->pivot->required_permission;
             if (empty($required)) {
                 return true;
@@ -88,8 +96,20 @@ class PublicController extends Controller
         // Eager load all nested relationships required by bio widgets to maintain Q < 10
         $character->load([
             'user',
-            'rank',
-            'position.section',
+            'rank' => function ($query) {
+                $query->where('is_visible', true)->with([
+                    'rankSet' => function ($q) {
+                        $q->where('is_visible', true);
+                    }
+                ]);
+            },
+            'position' => function ($query) {
+                $query->where('is_visible', true)->with([
+                    'section' => function ($q) {
+                        $q->where('is_visible', true);
+                    }
+                ]);
+            },
             'application.answers.formField',
             'serviceRecords.award',
             'serviceRecords.issuer',
@@ -119,7 +139,7 @@ class PublicController extends Controller
 
         $isAuthorized = $user && (
             (int) $user->id === (int) $character->user_id ||
-            $user->role === 'webmaster' ||
+            $user->hasRole('webmaster') ||
             $user->can('manage_roster_assignments') ||
             $user->can('manage_users')
         );

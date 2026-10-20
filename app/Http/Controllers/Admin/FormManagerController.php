@@ -29,19 +29,33 @@ class FormManagerController extends Controller
 
     public function storeForm(Request $request)
     {
-        $request->validate(['name' => 'required|string']);
-        FormField::create([
-            'name' => $request->name,
-            'type' => 'custom_form',
-            'form_type' => 'form'
+        $request->validate([
+            'name'       => 'required|string|max:255',
+            'is_visible' => 'nullable|boolean',
         ]);
+
+        FormField::create([
+            'name'       => $request->name,
+            'type'       => 'custom_form',
+            'form_type'  => 'form',
+            'is_visible' => $request->boolean('is_visible', false),
+        ]);
+
         return response()->json(['success' => true]);
     }
 
     public function updateForm(Request $request, $id)
     {
-        $request->validate(['name' => 'required|string']);
-        FormField::where('id', $id)->update(['name' => $request->name]);
+        $request->validate([
+            'name'       => 'required|string|max:255',
+            'is_visible' => 'nullable|boolean',
+        ]);
+
+        FormField::where('id', $id)->update([
+            'name'       => $request->name,
+            'is_visible' => $request->boolean('is_visible', false),
+        ]);
+
         return response()->json(['success' => true]);
     }
 
@@ -53,35 +67,49 @@ class FormManagerController extends Controller
 
     public function storeField(Request $request)
     {
+        $field = new FormField();
+        $hasArrayCast = $field->hasCast('options', ['array', 'json', 'collection']);
+
+        $groups = array_values((array) $request->input('service_record_groups', []));
         $options = $request->type === 'service_record'
-            ? json_encode($request->input('service_record_groups', []))
+            ? ($hasArrayCast ? $groups : json_encode($groups))
             : $request->options;
 
         FormField::create([
-            'name' => $request->name,
-            'type' => $request->type,
-            'form_type' => 'application',
+            'name'        => $request->name,
+            'type'        => $request->type,
+            'form_type'   => 'application',
             'form_linked' => $request->form_linked,
-            'is_required' => $request->has('is_required'),
-            'options' => $options,
-            'order' => 0
+            'is_required' => $request->boolean('is_required', false),
+            'is_visible'  => $request->boolean('is_visible', false),
+            'options'     => $options,
+            'order'       => $request->input('order', 0),
         ]);
+
         return response()->json(['success' => true]);
     }
 
     public function updateField(Request $request, $id)
     {
+        $field = FormField::findOrFail($id);
+        $hasArrayCast = $field->hasCast('options', ['array', 'json', 'collection']);
+
+        $groups = array_values((array) $request->input('service_record_groups', []));
         $options = $request->type === 'service_record'
-            ? json_encode($request->input('service_record_groups', []))
+            ? ($hasArrayCast ? $groups : json_encode($groups))
             : $request->options;
 
-        FormField::where('id', $id)->update([
-            'name' => $request->name,
-            'type' => $request->type,
+        $field->update([
+            'name'        => $request->name,
+            'type'        => $request->type,
+            'form_type'   => 'application',
             'form_linked' => $request->form_linked,
-            'is_required' => $request->has('is_required'),
-            'options' => $options
+            'is_required' => $request->boolean('is_required', false),
+            'is_visible'  => $request->boolean('is_visible', false),
+            'options'     => $options,
+            'order'       => $request->input('order', $field->order),
         ]);
+
         return response()->json(['success' => true]);
     }
 

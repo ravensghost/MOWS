@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache; // <-- 1. Add Cache import
+use Illuminate\Support\Facades\Cache;
 use App\Models\Position;
 
 class PositionController extends Controller
@@ -27,6 +27,7 @@ class PositionController extends Controller
             'description' => 'nullable|string',
             'capacity'    => 'nullable|integer|min:1|max:999',
             'is_open'     => 'nullable|boolean',
+            'is_visible'  => 'nullable|boolean',
         ]);
 
         $position = Position::create([
@@ -34,10 +35,11 @@ class PositionController extends Controller
             'name'        => $validated['name'],
             'description' => $validated['description'] ?? null,
             'capacity'    => $validated['capacity'] ?? 1,
-            'is_open'     => $request->boolean('is_open', true),
+            'is_open'     => $request->boolean('is_open', false),
+            'is_visible'  => $request->boolean('is_visible', false),
         ]);
 
-        $this->clearPositionCaches(); // <-- 2. Clear cache on create
+        $this->clearPositionCaches();
 
         return response()->json([
             'status'  => 'success',
@@ -57,6 +59,7 @@ class PositionController extends Controller
             'description' => 'nullable|string',
             'capacity'    => 'nullable|integer|min:1|max:999',
             'is_open'     => 'nullable|boolean',
+            'is_visible'  => 'nullable|boolean',
         ]);
 
         $position->update([
@@ -65,9 +68,10 @@ class PositionController extends Controller
             'description' => $validated['description'] ?? null,
             'capacity'    => $validated['capacity'] ?? 1,
             'is_open'     => $request->boolean('is_open', false),
+            'is_visible'  => $request->boolean('is_visible', false),
         ]);
 
-        $this->clearPositionCaches(); // <-- 3. Clear cache on update
+        $this->clearPositionCaches();
 
         return response()->json([
             'status'  => 'success',
@@ -83,7 +87,7 @@ class PositionController extends Controller
 
         $position->delete();
 
-        $this->clearPositionCaches(); // <-- 4. Clear cache on delete
+        $this->clearPositionCaches();
 
         return response()->json([
             'status'  => 'success',

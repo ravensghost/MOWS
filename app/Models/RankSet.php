@@ -6,12 +6,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class RankSet extends Model
 {
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'is_visible'];
 
-    public function ranks() {
+    protected $casts = [
+        'is_visible' => 'boolean',
+    ];
+
+    public function ranks()
+    {
         return $this->hasMany(Ranks::class);
     }
-    public function sections() { 
-        return $this->hasMany(Section::class); 
+
+    public function sections()
+    {
+        return $this->hasMany(Section::class);
     }
 }

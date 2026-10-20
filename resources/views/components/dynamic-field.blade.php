@@ -49,6 +49,9 @@
             if (!is_array($rawOptions)) {
                 $rawOptions = explode(',', trim((string) ($field->options ?? ''), '"'));
             }
+            if (count($rawOptions) === 1 && str_contains((string) $rawOptions[0], ',')) {
+                $rawOptions = explode(',', (string) $rawOptions[0]);
+            }
         @endphp
         <select id="{{ $name }}"
                 name="{{ $name }}"
@@ -63,11 +66,45 @@
             @endforeach
         </select>
         
-    @elseif($field->type === 'service_record')
+        @elseif($field->type === 'service_record')
+        @php
+            $allGroups = \App\Models\ServiceRecord::eventTypeGroups();
+
+            $configuredGroups = is_array($field->options)
+                ? $field->options
+                : (json_decode((string) ($field->options ?? '[]'), true) ?: []);
+
+            // Handle double-encoded JSON strings if present
+            if (is_string($configuredGroups)) {
+                $configuredGroups = json_decode($configuredGroups, true) ?: [];
+            }
+
+            $activeGroups = [];
+            if (is_array($configuredGroups)) {
+                foreach ($configuredGroups as $grpKey) {
+                    if (is_string($grpKey) && isset($allGroups[$grpKey])) {
+                        $activeGroups[$grpKey] = $allGroups[$grpKey];
+                    }
+                }
+            }
+
+            if (empty($activeGroups)) {
+                $activeGroups = $allGroups;
+            }
+
+            $firstEventType = 'background';
+            foreach ($activeGroups as $grpData) {
+                $types = $grpData['types'] ?? [];
+                if (!empty($types) && is_array($types)) {
+                    $firstEventType = (string) array_key_first($types);
+                    break;
+                }
+            }
+        @endphp
         <label class="text-xs font-bold text-input-muted">
             {{ $label }} @if($field->is_required)<span class="text-required">*</span>@endif
         </label>
-        <div x-data="{ entries: [{ era: '', event_type: 'background', description: '' }] }" class="flex flex-col gap-md">
+        <div x-data="{ entries: [{ era: '', event_type: '{{ $firstEventType }}', description: '' }] }" class="flex flex-col gap-md">
             <template x-for="(entry, idx) in entries" :key="idx">
                 <div class="grid grid-cols-1 lg-grid-cols-3 gap-md items-end bg-panel-sub border-panel rounded-panel p-3">
                     <div class="flex flex-col gap-xs">
@@ -82,13 +119,26 @@
                         <label class="text-xs font-bold text-input-muted">{{ lexicon('label_ServiceRecords_EventType', 'Event Type') }}</label>
                         <select :name="'{{ $name }}[' + idx + '][event_type]'"
                                 x-model="entry.event_type"
-                                class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent">
-                            <option value="background">{{ lexicon('label_ServiceRecords_OptBackground', 'Background') }}</option>
-                            <option value="academy">{{ lexicon('label_ServiceRecords_OptAcademy', 'Academy') }}</option>
-                            <option value="assignment">{{ lexicon('label_ServiceRecords_OptAssignment', 'Assignment') }}</option>
-                            <option value="commendation">{{ lexicon('label_ServiceRecords_OptCommendation', 'Commendation') }}</option>
-                            <option value="milestone">{{ lexicon('label_ServiceRecords_OptMilestone', 'Milestone') }}</option>
-                            <option value="incident">{{ lexicon('label_ServiceRecords_OptIncident', 'Incident') }}</option>
+                                class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent"
+                                aria-label="{{ lexicon('tooltip_ServiceRecords_SelectEventType', 'Select service record event category') }}"
+                                x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_SelectEventType', 'Select service record event category')) }}'">
+                            @foreach($activeGroups as $grpKey => $groupData)
+                                @php
+                                    $groupLabel = is_array($groupData) && isset($groupData['label'])
+                                        ? $groupData['label']
+                                        : ucfirst((string) $grpKey);
+                                    $events = is_array($groupData) && isset($groupData['types'])
+                                        ? $groupData['types']
+                                        : (is_array($groupData) ? $groupData : []);
+                                @endphp
+                                <optgroup label="{{ $groupLabel }}">
+                                    @foreach($events as $eventKey => $eventLabel)
+                                        @if(is_string($eventLabel))
+                                            <option value="{{ $eventKey }}">{{ $eventLabel }}</option>
+                                        @endif
+                                    @endforeach
+                                </optgroup>
+                            @endforeach
                         </select>
                     </div>
                     <div class="flex flex-col gap-xs">
@@ -115,7 +165,7 @@
                 <x-button type="button"
                           variant="secondary"
                           class="text-sm p-btn-sm"
-                          @click="entries.push({ era: '', event_type: 'background', description: '' })"
+                          @click="entries.push({ era: '', event_type: '{{ $firstEventType }}', description: '' })"
                           x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_AddTimelineEntry', 'Add another service record timeline entry')) }}'">
                     + {{ lexicon('btn_ServiceRecords_AddTimelineEntry', 'Add Timeline Entry') }}
                 </x-button>

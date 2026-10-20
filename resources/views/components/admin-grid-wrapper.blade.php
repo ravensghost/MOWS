@@ -27,7 +27,12 @@
                     @else
                         @php
                             // Extract widget filtering out of the Blade directive to prevent regex failure
-                            $blockWidgets = $page->widgets ? $page->widgets->where('pivot.layout_block_id', $block->id) : collect();
+                            // Filter by layout_block_id and ensure the widget placement is visible
+                            $blockWidgets = $page->widgets
+                                ? $page->widgets
+                                    ->where('pivot.layout_block_id', $block->id)
+                                    ->filter(fn($w) => (bool) ($w->pivot->is_visible ?? true))
+                                : collect();
                         @endphp
                         
                         @foreach($blockWidgets as $widget)

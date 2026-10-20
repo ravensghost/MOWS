@@ -70,9 +70,11 @@ class NavigationController extends Controller
             'target'              => 'required|in:_self,_blank',
             'order'               => 'required|integer',
             'group_name'          => 'nullable|string|max:255',
-            'group_order'         => 'nullable|integer'
+            'group_order'         => 'nullable|integer',
+            'is_visible'          => 'nullable|boolean',
         ]);
 
+        $validated['is_visible'] = $request->boolean('is_visible', false);
         NavigationLink::create($validated);
 
         if (!empty($validated['group_name']) && isset($validated['group_order'])) {
@@ -102,9 +104,11 @@ class NavigationController extends Controller
             'target'              => 'required|in:_self,_blank',
             'order'               => 'required|integer',
             'group_name'          => 'nullable|string|max:255',
-            'group_order'         => 'nullable|integer'
+            'group_order'         => 'nullable|integer',
+            'is_visible'          => 'nullable|boolean',
         ]);
 
+        $validated['is_visible'] = $request->boolean('is_visible', false);
         $link->update($validated);
 
         if (!empty($validated['group_name']) && isset($validated['group_order'])) {

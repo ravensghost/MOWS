@@ -10,30 +10,47 @@ class AwardCategoryController extends Controller
 {
     public function store(Request $request)
     {
-        $request->validate(['name' => 'required|string|max:255']);
-        AwardCategory::create(['name' => $request->name]);
+        abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorized action.');
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        AwardCategory::create($validated);
+
         return response()->json([
             'status' => 'success',
-            'message' => lexicon('msg_award_cat_created', 'Subgroup created successfully.')
+            'message' => lexicon('msg_award_category_created', 'Award category created successfully!')
         ]);
     }
 
     public function update(Request $request, $id)
     {
-        $request->validate(['name' => 'required|string|max:255']);
-        AwardCategory::findOrFail($id)->update(['name' => $request->name]);
+        abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorized action.');
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $category = AwardCategory::findOrFail($id);
+        $category->update($validated);
+
         return response()->json([
             'status' => 'success',
-            'message' => lexicon('msg_award_cat_updated', 'Subgroup updated successfully.')
+            'message' => lexicon('msg_award_category_updated', 'Award category updated successfully!')
         ]);
     }
 
     public function destroy($id)
     {
-        AwardCategory::findOrFail($id)->delete();
+        abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorized action.');
+
+        $category = AwardCategory::findOrFail($id);
+        $category->delete();
+
         return response()->json([
             'status' => 'success',
-            'message' => lexicon('msg_award_cat_deleted', 'Subgroup deleted.')
+            'message' => lexicon('msg_award_category_deleted', 'Award category deleted successfully!')
         ]);
     }
 }

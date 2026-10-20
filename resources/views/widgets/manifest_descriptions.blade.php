@@ -7,7 +7,12 @@
 })
 --}}
 @php
-    $sections = \App\Models\Section::with('positions')->orderBy('order')->get();
+    $sections = \App\Models\Section::where('is_visible', true)
+        ->with(['positions' => function ($query) {
+            $query->where('is_visible', true);
+        }])
+        ->orderBy('order')
+        ->get();
 @endphp
 
 <div class="w-full flex flex-col gap-md mb-6" x-data>

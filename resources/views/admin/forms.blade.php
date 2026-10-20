@@ -1,5 +1,4 @@
 @extends('layouts.app')
-
 @section('title', lexicon('admin_label_FormsHub', 'Forms & Component Hub'))
 
 @section('content')
@@ -47,6 +46,7 @@
                         <x-slot:headers>
                             <th class="p-4 text-left">{{ lexicon('label_common_FormName', 'Form Name') }}</th>
                             <th class="p-4 text-left">{{ lexicon('label_FormsHub_AttachedFields', 'Attached Fields') }}</th>
+                            <th class="p-4 text-center">{{ lexicon('label_common_Status', 'Status') }}</th>
                             <th class="p-4 text-right w-48">{{ lexicon('label_common_Actions', 'Actions') }}</th>
                         </x-slot:headers>
 
@@ -62,12 +62,19 @@
                                         <span class="italic opacity-50">{{ lexicon('msg_FormsHub_NoFieldsAssigned', 'No fields assigned') }}</span>
                                     @endif
                                 </td>
+                                <td class="p-4 text-center">
+                                    @if($form->is_visible)
+                                        <x-badge variant="success">{{ lexicon('label_common_Published', 'Published') }}</x-badge>
+                                    @else
+                                        <x-badge variant="danger">{{ lexicon('label_common_Hidden', 'Hidden') }}</x-badge>
+                                    @endif
+                                </td>
                                 <td class="p-4 text-right flex flex-row justify-end items-center gap-sm text-sm">
                                     @can('manage_forms')
                                         <x-button type="button" 
                                                   variant="text" 
                                                   class="text-warning hover-warning" 
-                                                  @click="openForm('edit', { id: {{ $form->id }}, name: '{{ addslashes($form->name) }}' })"
+                                                  @click="openForm('edit', { id: {{ $form->id }}, name: '{{ addslashes($form->name) }}', is_visible: {{$form->is_visible ? 'true' : 'false' }} })"
                                                   aria-label="{{ lexicon('tooltip_FormsHub_EditForm', 'Edit form details') }}"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_FormsHub_EditForm', 'Edit form details')) }}'">
                                             <i class="bi bi-pencil"></i> {{ lexicon('btn_common_Edit', 'Edit') }}
@@ -87,7 +94,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="3" class="p-6 text-center text-muted italic">
+                                <td colspan="4" class="p-6 text-center text-muted italic">
                                     <span class="block">{{ lexicon('msg_FormsHub_NoForms', 'No custom forms have been established yet.') }}</span>
                                 </td>
                             </tr>
@@ -117,21 +124,42 @@
                             <th class="p-4 text-left">{{ lexicon('label_common_FieldName', 'Field Name') }}</th>
                             <th class="p-4 text-left">{{ lexicon('label_common_InputType', 'Input Type') }}</th>
                             <th class="p-4 text-left">{{ lexicon('label_common_Required', 'Required') }}</th>
+                            <th class="p-4 text-center">{{ lexicon('label_common_Status', 'Status') }}</th>
                             <th class="p-4 text-right w-48">{{ lexicon('label_common_Actions', 'Actions') }}</th>
                         </x-slot:headers>
 
                         @forelse($fields ?? [] as $field)
                             @php
-                                $safeOptions = str_replace(["\r", "\n"], ['\r', '\n'], addslashes(is_array($field->options) ? implode(',', $field->options) : ($field->options ?? '')));
+                                $rawOpts =$field->options;
+                                if (is_string($rawOpts)) {
+                                    $decodedOpts = json_decode($rawOpts, true);
+                                    if (is_string($decodedOpts)) {
+                                        $decodedOpts = json_decode($decodedOpts, true);
+                                    }
+                                    $rawOpts = is_array($decodedOpts)
+                                        ? $decodedOpts
+                                        : array_filter(array_map('trim', explode(',', trim($rawOpts, '"'))));
+                                }
+                                $optsArray = is_array($rawOpts) ? array_values($rawOpts) : [];$dropdownString = $field->type === 'dropdown' ? implode(', ', $optsArray) : '';
+                                $srGroupsAlpine =$field->type === 'service_record'
+                                    ? '[' . implode(',', array_map(fn($g) => "'" . addslashes((string) $g) . "'", $optsArray)) . ']'
+                                    : '[]';
                             @endphp
                             <tr class="border-b-table-row hover-bg-table-row">
                                 <td class="p-4 font-bold text-main">{{ $field->name }}</td>
                                 <td class="p-4 text-sm uppercase tracking-wider text-muted">{{ $field->type }}</td>
                                 <td class="p-4 text-sm uppercase tracking-wider text-muted">
                                     @if($field->is_required)
-                                        <x-badge type="success">{{ lexicon('label_common_Yes', 'Yes') }}</x-badge>
+                                        <x-badge variant="success">{{ lexicon('label_common_Yes', 'Yes') }}</x-badge>
                                     @else
-                                        <x-badge type="planned">{{ lexicon('label_common_No', 'No') }}</x-badge>
+                                        <x-badge variant="planned">{{ lexicon('label_common_No', 'No') }}</x-badge>
+                                    @endif
+                                </td>
+                                <td class="p-4 text-center">
+                                    @if($field->is_visible)
+                                        <x-badge variant="success">{{ lexicon('label_common_Published', 'Published') }}</x-badge>
+                                    @else
+                                        <x-badge variant="danger">{{ lexicon('label_common_Hidden', 'Hidden') }}</x-badge>
                                     @endif
                                 </td>
                                 <td class="p-4 text-right flex flex-row justify-end items-center gap-sm text-sm">
@@ -139,7 +167,7 @@
                                         <x-button type="button" 
                                                   variant="text" 
                                                   class="text-warning hover-warning" 
-                                                  @click="openField('edit', { id: {{ $field->id }}, name: '{{ addslashes($field->name) }}', type: '{{ $field->type }}', isRequired: {{$field->is_required ? 'true' : 'false' }}, options: '{{ $safeOptions }}', formLinked: '{{$field->form_linked }}' })"
+                                                  @click="openField('edit', { id: {{ $field->id }}, name: '{{ addslashes($field->name) }}', type: '{{ $field->type }}', isRequired: {{$field->is_required ? 'true' : 'false' }}, options: '{{ addslashes($dropdownString) }}', serviceRecordGroups: {{$srGroupsAlpine }}, formLinked: '{{ $field->form_linked }}', is_visible: {{$field->is_visible ? 'true' : 'false' }} })"
                                                   aria-label="{{ lexicon('tooltip_FormsHub_EditField', 'Edit form field configuration') }}"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_FormsHub_EditField', 'Edit form field configuration')) }}'">
                                             <i class="bi bi-pencil"></i> {{ lexicon('btn_common_Edit', 'Edit') }}
@@ -159,7 +187,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="p-6 text-center text-muted italic">
+                                <td colspan="5" class="p-6 text-center text-muted italic">
                                     <span class="block">{{ lexicon('msg_FormsHub_NoFields', 'No form fields exist yet.') }}</span>
                                 </td>
                             </tr>
@@ -187,6 +215,12 @@
                                   :tooltip="lexicon('tooltip_FormsHub_FormNameInput', 'Enter display name for the form')"
                                   xModel="modals.form.name"
                                   :required="true" />
+
+                    <div class="flex flex-row items-center gap-sm mt-3">
+                        <input type="hidden" name="is_visible" value="0">
+                        <input type="checkbox" name="is_visible" id="form_is_visible" value="1" x-model="modals.form.is_visible" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                        <label for="form_is_visible" class="text-sm font-bold text-muted cursor-pointer">{{ lexicon('label_common_ShowOnSite', 'Show on Site') }}</label>
+                    </div>
 
                     <div class="border-t-actions pt-6 flex flex-row justify-end gap-sm mt-4">
                         <x-button type="button" 
@@ -284,32 +318,38 @@
 
                     <!-- Service Record Optgroup Checkboxes -->
                     <div class="flex flex-col gap-sm mt-2" x-cloak x-show="modals.field.type === 'service_record'">
-                        <input type="hidden" name="options" :value="JSON.stringify(modals.field.serviceRecordGroups)" x-bind:disabled="modals.field.type !== 'service_record'">
                         <label class="text-xs font-bold text-input-muted">
                             {{ lexicon('label_FormsHub_ServiceRecordGroups', 'Allowed Event Optgroups') }}
                         </label>
                         <div class="grid grid-cols-2 gap-sm bg-panel-sub border border-panel rounded-panel p-3">
                             <div class="flex flex-row items-center gap-sm">
-                                <input type="checkbox"  name="career" value="career" x-model="modals.field.serviceRecordGroups" id="grp_career" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                                <input type="checkbox" name="service_record_groups[]" value="career" x-model="modals.field.serviceRecordGroups" id="grp_career" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
                                 <label for="grp_career" class="text-xs text-p cursor-pointer">{{ lexicon('label_ServiceRecords_GroupCareer', 'Career & Duty') }}</label>
                             </div>
                             <div class="flex flex-row items-center gap-sm">
-                                <input type="checkbox" name="biographical" value="biographical" x-model="modals.field.serviceRecordGroups" id="grp_bio" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                                <input type="checkbox" name="service_record_groups[]" value="biographical" x-model="modals.field.serviceRecordGroups" id="grp_bio" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
                                 <label for="grp_bio" class="text-xs text-p cursor-pointer">{{ lexicon('label_ServiceRecords_GroupBiographical', 'Biographical History') }}</label>
                             </div>
                             <div class="flex flex-row items-center gap-sm">
-                                <input type="checkbox" name="personal" value="personal" x-model="modals.field.serviceRecordGroups" id="grp_pers" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                                <input type="checkbox" name="service_record_groups[]" value="personal" x-model="modals.field.serviceRecordGroups" id="grp_pers" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
                                 <label for="grp_pers" class="text-xs text-p cursor-pointer">{{ lexicon('label_ServiceRecords_GroupPersonal', 'Personal & Family') }}</label>
                             </div>
                             <div class="flex flex-row items-center gap-sm">
-                                <input type="checkbox" name="medical_factional" value="medical_factional" x-model="modals.field.serviceRecordGroups" id="grp_med" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                                <input type="checkbox" name="service_record_groups[]" value="medical_factional" x-model="modals.field.serviceRecordGroups" id="grp_med" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
                                 <label for="grp_med" class="text-xs text-p cursor-pointer">{{ lexicon('label_ServiceRecords_GroupMedicalFactional', 'Medical & Factional') }}</label>
                             </div>
                         </div>
                     </div>
 
                     <div class="flex flex-row items-center gap-sm mt-2">
-                        <input type="checkbox" name="is_required" id="field-required" x-model="modals.field.isRequired" value="1" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                        <input type="hidden" name="is_visible" value="0">
+                        <input type="checkbox" name="is_visible" id="field_is_visible" value="1" x-model="modals.field.is_visible" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                        <label for="field_is_visible" class="text-sm font-bold text-muted cursor-pointer">{{ lexicon('label_common_ShowOnSite', 'Show on Site') }}</label>
+                    </div>
+
+                    <div class="flex flex-row items-center gap-sm mt-2">
+                        <input type="hidden" name="is_required" value="0">
+                        <input type="checkbox" name="is_required" id="field-required" x-model="modals.field.is_required" value="1" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
                         <label for="field-required" class="text-sm font-bold text-muted cursor-pointer"
                                aria-label="{{ lexicon('tooltip_FormsHub_RequiredToggle', 'Mark field as mandatory for submissions') }}"
                                x-tooltip="'{{ addslashes(lexicon('tooltip_FormsHub_RequiredToggle', 'Mark field as mandatory for submissions')) }}'">

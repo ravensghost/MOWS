@@ -158,6 +158,7 @@
       UserFactory.php
     [migrations]
       2026_10_17_100000_phase_1_database_normalisation_and_settings.php
+      2026_10_20_000000_add_is_visible_column_to_mows_tables.php
     [schema]
       database.sql
       mysql-schema.sql

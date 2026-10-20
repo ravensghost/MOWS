@@ -16,18 +16,78 @@
             <x-page-header :title="lexicon('admin_label_ranks', 'Rank Management')">
                 <x-slot:actions>
                     @can('manage_ranks')
-                        <x-button variant="secondary" 
-                                  @click="modal = 'rankset-create'" 
-                                  aria-label="{{ lexicon('tooltip_ranks_CreateSet', 'Create a new rank set folder') }}"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_ranks_CreateSet', 'Create a new rank set folder')) }}'">
-                            + {{ lexicon('btn_ranks_NewSet', 'New Rank Set') }}
-                        </x-button>
-                        <x-button variant="success" 
-                                  @click="openCreateRank()" 
-                                  aria-label="{{ lexicon('tooltip_ranks_CreateRank', 'Create a new rank badge') }}"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_ranks_CreateRank', 'Create a new rank badge')) }}'">
-                            + {{ lexicon('btn_ranks_CreateRank', 'Create Rank') }}
-                        </x-button>
+                        <div class="flex flex-row flex-wrap items-center gap-sm">
+                            <x-button variant="secondary" 
+                                      tag="a"
+                                      href="{{ route('admin.ranks.export') }}"
+                                      x-tooltip="'{{ addslashes(lexicon('tooltip_ranks_Export', 'Download ranks JSON manifest')) }}'">
+                                <i class="bi bi-download"></i>
+                                <span>{{ lexicon('btn_common_Export', 'Export Ranks') }}</span>
+                            </x-button>
+
+                            <x-button variant="secondary" 
+                                      tag="a"
+                                      href="{{ route('admin.ranks.template') }}"
+                                      x-tooltip="'{{ addslashes(lexicon('tooltip_ranks_Template', 'Download blank JSON rank template')) }}'">
+                                <i class="bi bi-file-earmark-code"></i>
+                                <span>{{ lexicon('btn_common_DownloadTemplate', 'Download Blank Template') }}</span>
+                            </x-button>
+
+                            <x-button variant="secondary" 
+                                      @click="importModalOpen = true"
+                                      x-tooltip="'{{ addslashes(lexicon('tooltip_ranks_Import', 'Import ranks from JSON manifest')) }}'">
+                                <i class="bi bi-upload"></i>
+                                <span>{{ lexicon('btn_common_Import', 'Import Ranks') }}</span>
+                            </x-button>
+
+                            <x-button variant="secondary" 
+                                      @click="modal = 'rankset-create'" 
+                                      aria-label="{{ lexicon('tooltip_ranks_CreateSet', 'Create a new rank set folder') }}"
+                                      x-tooltip="'{{ addslashes(lexicon('tooltip_ranks_CreateSet', 'Create a new rank set folder')) }}'">
+                                + {{ lexicon('btn_ranks_NewSet', 'New Rank Set') }}
+                            </x-button>
+                            <x-button variant="success" 
+                                      @click="openCreateRank()" 
+                                      aria-label="{{ lexicon('tooltip_ranks_CreateRank', 'Create a new rank badge') }}"
+                                      x-tooltip="'{{ addslashes(lexicon('tooltip_ranks_CreateRank', 'Create a new rank badge')) }}'">
+                                + {{ lexicon('btn_ranks_CreateRank', 'Create Rank') }}
+                            </x-button>
+                        </div>
+
+                        {{-- Import Modal --}}
+                        <x-modal show="importModalOpen" maxWidth="max-w-xl">
+                            <x-slot name="top">
+                                <div class="flex flex-row items-center gap-xs">
+                                    <i class="bi bi-upload text-accent"></i>
+                                    <span>{{ lexicon('label_ranks_ImportModal', 'Import Ranks Manifest') }}</span>
+                                </div>
+                            </x-slot>
+
+                            <div class="flex flex-col gap-md" @upload-completed.window="handleImportSuccess($event.detail)">
+                                <div class="flex flex-col gap-xs">
+                                    <label class="text-sm font-bold text-h">{{ lexicon('label_common_ImportMode', 'Import Mode') }}</label>
+                                    <select x-model="importMode" class="lumi-input">
+                                        <option value="merge">{{ lexicon('label_common_MergeUpsert', 'Merge / Upsert (Preserves active records)') }}</option>
+                                        <option value="replace">{{ lexicon('label_common_ReplaceAll', 'Replace All (Clears existing rank sets)') }}</option>
+                                    </select>
+                                </div>
+
+                                <div class="flex flex-col gap-xs">
+                                    <label class="text-sm font-bold text-h">{{ lexicon('label_common_UploadJson', 'Upload JSON Manifest') }}</label>
+                                    <x-dropzone :url="route('admin.ranks.import')"
+                                                id="ranks-import-dropzone"
+                                                :maxFiles="1"
+                                                acceptedFiles="application/json,.json,.txt"
+                                                :title="lexicon('label_ranks_DropzoneTitle', 'Drop ranks manifest (.json) here')" />
+                                </div>
+                            </div>
+
+                            <x-slot name="bottom">
+                                <x-button variant="secondary" @click="importModalOpen = false">
+                                    {{ lexicon('btn_common_Cancel', 'Cancel') }}
+                                </x-button>
+                            </x-slot>
+                        </x-modal>
                     @endcan
                 </x-slot:actions>
             </x-page-header>
@@ -323,6 +383,18 @@
                                         xModel="rankForm.sort_order"
                                         :tooltip="lexicon('tooltip_ranks_SortOrder', 'Numeric hierarchy order (lower numbers appear first)')"
                                     />
+                                </div>
+                                <!-- Visibility Toggle Field -->
+                                <div class="flex flex-row items-center gap-sm mt-2">
+                                    <input type="checkbox" 
+                                        name="is_visible" 
+                                        id="rank_is_visible" 
+                                        value="1" 
+                                        x-model="rankForm.is_visible" 
+                                        class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine">
+                                    <label for="rank_is_visible" class="text-sm font-bold text-p cursor-pointer">
+                                        <span>{{ lexicon('label_common_ShowOnSite', 'Show on Site (Visible)') }}</span>
+                                    </label>
                                 </div>
                             </div>
 

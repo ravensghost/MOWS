@@ -139,13 +139,16 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     // ==========================================
     // 5. ROSTER & OPERATIONS
     // ==========================================
-    
+
     // Sections
-    Route::get('/sections', [SectionController::class, 'index']);
-    Route::post('/sections', [SectionController::class, 'store']);
-    Route::put('/sections/{section}', [SectionController::class, 'update']);
-    Route::delete('/sections/{section}', [SectionController::class, 'destroy']);
+    Route::get('/sections', [SectionController::class, 'index'])->name('sections.index');
+    Route::post('/sections', [SectionController::class, 'store'])->name('sections.store');
+    Route::get('/sections/export', [SectionController::class, 'export'])->name('sections.export');
+    Route::get('/sections/template', [SectionController::class, 'template'])->name('sections.template');
+    Route::post('/sections/import', [SectionController::class, 'import'])->name('sections.import');
     Route::post('/sections/generate-description', [SectionController::class, 'generateDescription'])->name('sections.generate-description');
+    Route::put('/sections/{section}', [SectionController::class, 'update'])->name('sections.update');
+    Route::delete('/sections/{section}', [SectionController::class, 'destroy'])->name('sections.destroy');
     
     // Positions
     Route::post('/sections/{id}/positions', [PositionController::class, 'store']);
@@ -161,15 +164,20 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::post('/characters/{id}/reassign', CharacterAssignmentController::class);
 
     // Ranks & Graphics
-    Route::get('/ranks', [RankController::class, 'index']);
-    Route::get('/ranks/images', [RankController::class, 'images']);
-    Route::post('/ranks/reorder', [RankController::class, 'reorder']); // Added
+    // Ranks & Graphics
+    Route::get('/ranks', [RankController::class, 'index'])->name('ranks.index');
+    Route::get('/ranks/export', [RankController::class, 'export'])->name('ranks.export');
+    Route::get('/ranks/template', [RankController::class, 'template'])->name('ranks.template');
+    Route::post('/ranks/import', [RankController::class, 'import'])->name('ranks.import');
+    Route::get('/ranks/images', [RankController::class, 'images'])->name('ranks.images');
+    Route::post('/ranks/reorder', [RankController::class, 'reorder']);
     Route::post('/ranks', [RankController::class, 'store']);
     Route::put('/ranks/{rank}', [RankController::class, 'update']);
     Route::delete('/ranks/{rank}', [RankController::class, 'destroy']);
 
     // Rank Sets & Classifications
     Route::post('/rank-sets', [RankSetController::class, 'store']);
+    Route::put('/rank-sets/{rankSet}', [RankSetController::class, 'update']); // <-- Add this line
     Route::delete('/rank-sets/{rankSet}', [RankSetController::class, 'destroy']);
     Route::post('/rank-sets/{rankSet}/assign', [RankSetController::class, 'assignSections']);
     

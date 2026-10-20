@@ -61,6 +61,7 @@ class AppServiceProvider extends ServiceProvider
                     return NavigationLink::orderBy('group_order')
                         ->orderBy('group_name')
                         ->orderBy('order')
+                        ->where('is_visible', true)
                         ->get()
                         ->toArray();
                 });

@@ -12,10 +12,11 @@
     <x-admin-grid-wrapper :page="$systemPage">
         <x-slot:content>
 
-            {{-- Page Header --}}
-            <x-page-header :title="lexicon('admin_label_SectionsPositions', 'Sections & Positions')">
-                <x-slot:actions>
-                    @can('manage_sections')
+        {{-- Page Header --}}
+        <x-page-header :title="lexicon('admin_label_SectionsPositions', 'Sections & Positions')">
+            <x-slot:actions>
+                @can('manage_sections')
+                    <div class="flex flex-row flex-wrap items-center gap-sm">
                         <x-button type="button"
                                   variant="success"
                                   class="p-btn-sm text-sm flex items-center gap-xs"
@@ -25,9 +26,68 @@
                             <i class="bi bi-plus-lg" aria-hidden="true"></i>
                             <span>{{ lexicon('btn_SectionsPositions_CreateSection', 'Create Section') }}</span>
                         </x-button>
-                    @endcan
-                </x-slot:actions>
-            </x-page-header>
+
+                        <x-button variant="secondary"
+                                  tag="a"
+                                  href="{{ route('admin.sections.export') }}"
+                                  x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_Export', 'Download sections and positions JSON manifest')) }}'">
+                            <i class="bi bi-download"></i>
+                            <span>{{ lexicon('btn_common_Export', 'Export Sections & Positions') }}</span>
+                        </x-button>
+
+                        <x-button variant="secondary"
+                                  tag="a"
+                                  href="{{ route('admin.sections.template') }}"
+                                  x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_Template', 'Download blank JSON manifest template')) }}'">
+                            <i class="bi bi-file-earmark-code"></i>
+                            <span>{{ lexicon('btn_common_DownloadTemplate', 'Download Blank Template') }}</span>
+                        </x-button>
+
+                        <x-button variant="secondary"
+                                  @click="importModalOpen = true"
+                                  x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_Import', 'Import sections and positions from JSON manifest')) }}'">
+                            <i class="bi bi-upload"></i>
+                            <span>{{ lexicon('btn_common_Import', 'Import Sections & Positions') }}</span>
+                        </x-button>
+
+                        {{-- Import Modal --}}
+                        <x-modal show="importModalOpen" maxWidth="max-w-xl">
+                            <x-slot name="top">
+                                <div class="flex flex-row items-center gap-xs">
+                                    <i class="bi bi-upload text-accent"></i>
+                                    <span>{{ lexicon('label_SectionsPositions_ImportModal', 'Import Sections & Positions Manifest') }}</span>
+                                </div>
+                            </x-slot>
+
+                            <div class="flex flex-col gap-md" @upload-completed.window="handleImportSuccess($event.detail)">
+                                <div class="flex flex-col gap-xs">
+                                    <label class="text-sm font-bold text-h">{{ lexicon('label_common_ImportMode', 'Import Mode') }}</label>
+                                    <select x-model="importMode" class="lumi-input">
+                                        <option value="merge">{{ lexicon('label_common_MergeUpsert', 'Merge / Upsert (Preserves active records)') }}</option>
+                                        <option value="replace">{{ lexicon('label_common_ReplaceAll', 'Replace All (Clears existing sections)') }}</option>
+                                    </select>
+                                </div>
+
+                                <div class="flex flex-col gap-xs">
+                                    <label class="text-sm font-bold text-h">{{ lexicon('label_common_UploadJson', 'Upload JSON Manifest') }}</label>
+                                    <x-dropzone :url="route('admin.sections.import')"
+                                                id="sections-import-dropzone"
+                                                :maxFiles="1"
+                                                acceptedFiles="application/json,.json,.txt"
+                                                :title="lexicon('label_SectionsPositions_DropzoneTitle', 'Drop sections manifest (.json) here')" />
+                                </div>
+                            </div>
+
+                            <x-slot name="bottom">
+                                <x-button variant="secondary" @click="importModalOpen = false">
+                                    {{ lexicon('btn_common_Cancel', 'Cancel') }}
+                                </x-button>
+                            </x-slot>
+                        </x-modal>
+                    </div>
+                @endcan
+            </x-slot:actions>
+        </x-page-header>
 
             {{-- Search / Filter Bar --}}
             <div class="bg-panel border border-panel rounded-panel p-panel shadow-panel mb-4">
@@ -48,6 +108,10 @@
                     <div x-show="matchesSearch('{{ addslashes($sec->name) }}', '{{ addslashes($sec->description ?? '') }}', @js($posSearchList))">
                         <x-accordion-panel :title="$sec->name" :expanded="true" id="section-row-{{ $sec->id }}">
                             <x-slot:top>
+                                @if(!$sec->is_visible)
+                                    <x-badge variant="warning">{{ lexicon('label_common_Hidden', 'Hidden') }}</x-badge>
+                                @endif
+
                                 @if($sec->rankSet)
                                     <x-badge variant="info"
                                              aria-label="{{ lexicon('tooltip_SectionsPositions_LinkedRankSet', 'Rank set assigned via Ranks Manager') }}"
@@ -71,7 +135,7 @@
                                     <x-button type="button"
                                               variant="text"
                                               class="text-warning hover-text-h text-sm flex items-center gap-xs"
-                                              @click="openEditSection({ id: {{ $sec->id }}, name: '{{ addslashes($sec->name) }}', color: '{{ $sec->color }}', description: '{{ addslashes($sec->description) }}', order: {{ $sec->order }} })"
+                                              @click="openEditSection({ id: {{ $sec->id }}, name: '{{ addslashes($sec->name) }}', color: '{{ $sec->color }}', description: '{{ addslashes($sec->description) }}', order: {{ $sec->order }}, is_visible: {{ $sec->is_visible ? 'true' : 'false' }} })"
                                               aria-label="{{ lexicon('tooltip_SectionsPositions_EditSection', 'Edit section details and colour') }}"
                                               x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_EditSection', 'Edit section details and colour')) }}'">
                                         <i class="bi bi-pencil-square" aria-hidden="true"></i>
@@ -107,7 +171,12 @@
                                         <div class="bg-panel-sub border border-panel rounded-panel p-3 flex flex-row flex-wrap justify-between items-start gap-sm"
                                              x-show="matchesPosition('{{ addslashes($pos->name) }}', '{{ addslashes($pos->description ?? '') }}', '{{ addslashes($sec->name) }}')">
                                             <div class="flex flex-col gap-xs flex-grow">
-                                                <span class="font-bold text-p block">{{ $pos->name }}</span>
+                                                <div class="flex flex-row items-center gap-xs">
+                                                    <span class="font-bold text-p block">{{ $pos->name }}</span>
+                                                    @if(!$pos->is_visible)
+                                                        <x-badge variant="warning" class="text-xs py-0 px-1">{{ lexicon('label_common_Hidden', 'Hidden') }}</x-badge>
+                                                    @endif
+                                                </div>
                                                 @if($pos->description)
                                                     <span class="text-xs text-muted block">{{ $pos->description }}</span>
                                                 @endif
@@ -138,7 +207,7 @@
                                                     <x-button type="button"
                                                               variant="text"
                                                               class="text-xs text-warning hover-text-h p-0 flex items-center gap-xs"
-                                                              @click="openEditPosition({ id: {{ $pos->id }}, section_id: '{{ $pos->section_id }}', name: '{{ addslashes($pos->name) }}', description: '{{ addslashes($pos->description) }}', capacity: {{ $pos->capacity ?? 1 }}, is_open: {{ $isOpen ? 'true' : 'false' }} })"
+                                                              @click="openEditPosition({ id: {{ $pos->id }}, section_id: '{{ $pos->section_id }}', name: '{{ addslashes($pos->name) }}', description: '{{ addslashes($pos->description) }}', capacity: {{ $pos->capacity ?? 1 }}, is_open: {{ $isOpen ? 'true' : 'false' }}, is_visible: {{ $pos->is_visible ? 'true' : 'false' }} })"
                                                               aria-label="{{ lexicon('tooltip_SectionsPositions_EditPosition', 'Edit this position') }}"
                                                               x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_EditPosition', 'Edit this position')) }}'">
                                                         <i class="bi bi-pencil" aria-hidden="true"></i>
@@ -220,13 +289,27 @@
                                       class="bg-input text-input border-input rounded-input p-input outline-none w-full box-border focus-border-accent focus-shadow-accent"></textarea>
                         </div>
 
-                        <div class="w-48">
-                            <x-form-input name="order"
-                                          id="create_section_order"
-                                          type="number"
-                                          xModel="section.order"
-                                          :label="lexicon('label_common_SortOrder', 'Sort Order')"
-                                          :tooltip="lexicon('tooltip_SectionsPositions_SectionSortOrder', 'Numeric display order on the roster and manifest')" />
+                        <div class="grid grid-cols-1 md-grid-cols-2 gap-md items-center">
+                            <div class="w-48">
+                                <x-form-input name="order"
+                                              id="create_section_order"
+                                              type="number"
+                                              xModel="section.order"
+                                              :label="lexicon('label_common_SortOrder', 'Sort Order')"
+                                              :tooltip="lexicon('tooltip_SectionsPositions_SectionSortOrder', 'Numeric display order on the roster and manifest')" />
+                            </div>
+                            <div class="flex flex-row items-center gap-sm mt-4">
+                                <input type="hidden" name="is_visible" value="0">
+                                <input type="checkbox" 
+                                       name="is_visible" 
+                                       id="section_is_visible" 
+                                       value="1" 
+                                       x-model="section.is_visible" 
+                                       class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                                <label for="section_is_visible" class="text-sm font-bold text-muted cursor-pointer">
+                                    {{ lexicon('label_common_ShowOnSite', 'Show on Site') }}
+                                </label>
+                            </div>
                         </div>
 
                         <div class="border-t-actions pt-6 text-right mt-4 flex flex-row flex-wrap items-center justify-end gap-sm">
@@ -296,14 +379,28 @@
                                       class="bg-input text-input border-input rounded-input p-input outline-none w-full box-border focus-border-accent focus-shadow-accent"></textarea>
                         </div>
 
-                        <div class="w-48">
-                            <x-form-input name="order"
-                                          id="edit_section_order"
-                                          type="number"
-                                          xModel="section.order"
-                                          :label="lexicon('label_common_SortOrder', 'Sort Order')"
-                                          :tooltip="lexicon('tooltip_SectionsPositions_SectionSortOrder', 'Numeric display order on the roster and manifest')"
-                                          :required="true" />
+                        <div class="grid grid-cols-1 md-grid-cols-2 gap-md items-center">
+                            <div class="w-48">
+                                <x-form-input name="order"
+                                              id="edit_section_order"
+                                              type="number"
+                                              xModel="section.order"
+                                              :label="lexicon('label_common_SortOrder', 'Sort Order')"
+                                              :tooltip="lexicon('tooltip_SectionsPositions_SectionSortOrder', 'Numeric display order on the roster and manifest')"
+                                              :required="true" />
+                            </div>
+                            <div class="flex flex-row items-center gap-sm mt-4">
+                                <input type="hidden" name="is_visible" value="0">
+                                <input type="checkbox" 
+                                       name="is_visible" 
+                                       id="edit_section_is_visible" 
+                                       value="1" 
+                                       x-model="section.is_visible" 
+                                       class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                                <label for="edit_section_is_visible" class="text-sm font-bold text-muted cursor-pointer">
+                                    {{ lexicon('label_common_ShowOnSite', 'Show on Site') }}
+                                </label>
+                            </div>
                         </div>
 
                         <div class="border-t-actions pt-6 text-right mt-4 flex flex-row flex-wrap items-center justify-end gap-sm">
@@ -355,19 +452,33 @@
                                           :required="true" />
                         </div>
 
-                        <div class="flex flex-row flex-wrap items-center gap-sm bg-panel-sub border border-panel rounded-panel p-3">
-                            <input type="hidden" name="is_open" value="0">
-                            <input type="checkbox"
-                                   id="create_position_is_open"
-                                   name="is_open"
-                                   value="1"
-                                   x-model="position.is_open"
-                                   aria-label="{{ lexicon('label_SectionsPositions_IsOpen', 'Open for Applications') }}"
-                                   x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_IsOpenToggle', 'Allow applicants to apply for vacant slots in this position')) }}'"
-                                   class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
-                            <label for="create_position_is_open" class="text-xs font-bold text-input-muted cursor-pointer">
-                                {{ lexicon('label_SectionsPositions_IsOpen', 'Open for Applications') }}
-                            </label>
+                        <div class="grid grid-cols-1 md-grid-cols-2 gap-md bg-panel-sub border border-panel rounded-panel p-3 items-center">
+                            <div class="flex flex-row flex-wrap items-center gap-sm">
+                                <input type="hidden" name="is_open" value="0">
+                                <input type="checkbox"
+                                       id="create_position_is_open"
+                                       name="is_open"
+                                       value="1"
+                                       x-model="position.is_open"
+                                       aria-label="{{ lexicon('label_SectionsPositions_IsOpen', 'Open for Applications') }}"
+                                       x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_IsOpenToggle', 'Allow applicants to apply for vacant slots in this position')) }}'"
+                                       class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                                <label for="create_position_is_open" class="text-xs font-bold text-input-muted cursor-pointer">
+                                    {{ lexicon('label_SectionsPositions_IsOpen', 'Open for Applications') }}
+                                </label>
+                            </div>
+                            <div class="flex flex-row flex-wrap items-center gap-sm">
+                                <input type="hidden" name="is_visible" value="0">
+                                <input type="checkbox"
+                                       id="create_position_is_visible"
+                                       name="is_visible"
+                                       value="1"
+                                       x-model="position.is_visible"
+                                       class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                                <label for="create_position_is_visible" class="text-xs font-bold text-input-muted cursor-pointer">
+                                    {{ lexicon('label_common_ShowOnSite', 'Show on Site') }}
+                                </label>
+                            </div>
                         </div>
 
                         <div class="flex flex-col gap-xs">
@@ -448,19 +559,33 @@
                                           :required="true" />
                         </div>
 
-                        <div class="flex flex-row flex-wrap items-center gap-sm bg-panel-sub border border-panel rounded-panel p-3">
-                            <input type="hidden" name="is_open" value="0">
-                            <input type="checkbox"
-                                   id="edit_position_is_open"
-                                   name="is_open"
-                                   value="1"
-                                   x-model="position.is_open"
-                                   aria-label="{{ lexicon('label_SectionsPositions_IsOpen', 'Open for Applications') }}"
-                                   x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_IsOpenToggle', 'Allow applicants to apply for vacant slots in this position')) }}'"
-                                   class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
-                            <label for="edit_position_is_open" class="text-xs font-bold text-input-muted cursor-pointer">
-                                {{ lexicon('label_SectionsPositions_IsOpen', 'Open for Applications') }}
-                            </label>
+                        <div class="grid grid-cols-1 md-grid-cols-2 gap-md bg-panel-sub border border-panel rounded-panel p-3 items-center">
+                            <div class="flex flex-row flex-wrap items-center gap-sm">
+                                <input type="hidden" name="is_open" value="0">
+                                <input type="checkbox"
+                                       id="edit_position_is_open"
+                                       name="is_open"
+                                       value="1"
+                                       x-model="position.is_open"
+                                       aria-label="{{ lexicon('label_SectionsPositions_IsOpen', 'Open for Applications') }}"
+                                       x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_IsOpenToggle', 'Allow applicants to apply for vacant slots in this position')) }}'"
+                                       class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                                <label for="edit_position_is_open" class="text-xs font-bold text-input-muted cursor-pointer">
+                                    {{ lexicon('label_SectionsPositions_IsOpen', 'Open for Applications') }}
+                                </label>
+                            </div>
+                            <div class="flex flex-row flex-wrap items-center gap-sm">
+                                <input type="hidden" name="is_visible" value="0">
+                                <input type="checkbox"
+                                       id="edit_position_is_visible"
+                                       name="is_visible"
+                                       value="1"
+                                       x-model="position.is_visible"
+                                       class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                                <label for="edit_position_is_visible" class="text-xs font-bold text-input-muted cursor-pointer">
+                                    {{ lexicon('label_common_ShowOnSite', 'Show on Site') }}
+                                </label>
+                            </div>
                         </div>
 
                         <div class="flex flex-col gap-xs">
