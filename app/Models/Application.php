@@ -32,4 +32,8 @@ class Application extends Model
     {
         return $this->hasMany(ApplicationAnswer::class);
     }
+    public function votes()
+    {
+        return $this->hasMany(ApplicationVote::class);
+    }
 }

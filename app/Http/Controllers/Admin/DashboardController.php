@@ -8,6 +8,7 @@ use App\Models\Character;
 use App\Models\Page;
 use App\Models\Position;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -38,12 +39,29 @@ class DashboardController extends Controller
             return max(0, $position->capacity - $position->characters_count);
         });
 
+        // Aggregated monthly writing metrics scoreboard query
+        $currentMonthMetrics = DB::table('chapter_user_contributions')
+            ->join('chapters', 'chapters.id', '=', 'chapter_user_contributions.chapter_id')
+            ->join('users', 'users.id', '=', 'chapter_user_contributions.user_id')
+            ->leftJoin('characters', 'characters.id', '=', 'chapters.active_character_id')
+            ->whereBetween('chapters.created_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->select(
+                'users.name as user_name',
+                'characters.name as character_name',
+                DB::raw('COUNT(DISTINCT chapters.id) as post_count'),
+                DB::raw('SUM(chapter_user_contributions.word_count) as total_words')
+            )
+            ->groupBy('users.id', 'users.name', 'characters.id', 'characters.name')
+            ->orderByDesc('total_words')
+            ->get();
+
         return view('admin.dashboard', [
-            'systemPage' => $systemPage,
-            'pendingApps' => Application::where('status', 'Pending')->count(),
-            'activeUsers' => User::count(),
-            'totalCharacters' => Character::where('status', 'active')->count(),
-            'openPositions' => $trueOpenSlots,
+            'systemPage'          => $systemPage,
+            'pendingApps'         => Application::where('status', 'Pending')->count(),
+            'activeUsers'         => User::count(),
+            'totalCharacters'     => Character::where('status', 'active')->count(),
+            'openPositions'       => $trueOpenSlots,
+            'currentMonthMetrics' => $currentMonthMetrics,
         ]);
     }
 }

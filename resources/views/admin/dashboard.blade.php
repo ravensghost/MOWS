@@ -61,6 +61,51 @@
                     <span class="text-xs text-muted uppercase tracking-wider">{{ lexicon('label_AdminDashboard_OpenSlots', 'Open Slots') }}</span>
                 </div>
             </div>
+
+            <!-- Monthly Writer Metrics Scoreboard -->
+            <div class="bg-panel border-panel rounded-panel shadow-panel p-4 w-full mt-6">
+                <div class="flex flex-row items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-accent flex items-center">
+                        <i class="bi bi-bar-chart-fill mr-2" aria-hidden="true"></i>
+                        <span>Monthly Writing Activity ({{ now()->format('F Y') }})</span>
+                    </h3>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-panel text-muted text-xs uppercase tracking-wider">
+                                <th class="py-3 px-4">User Name</th>
+                                <th class="py-3 px-4">Character Name</th>
+                                <th class="py-3 px-4 text-center">Posts This Month</th>
+                                <th class="py-3 px-4 text-right">Words This Month</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-panel text-sm">
+                            @forelse($currentMonthMetrics ?? [] as $metric)
+                                <tr class="hover:bg-panel-hover transition-colors">
+                                    <td class="py-3 px-4 font-medium">{{ $metric->user_name }}</td>
+                                    <td class="py-3 px-4 text-muted">{{ $metric->character_name ?? 'Unassigned / OOC' }}</td>
+                                    <td class="py-3 px-4 text-center">
+                                        <span class="px-2 py-1 bg-accent-muted text-accent rounded text-xs font-bold">
+                                            {{ $metric->post_count }}
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4 text-right font-semibold text-success">
+                                        {{ number_format($metric->total_words) }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="py-6 text-center text-muted italic">
+                                        No writing activity recorded for this month yet.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </x-slot:bottom>
 
     </x-admin-grid-wrapper>

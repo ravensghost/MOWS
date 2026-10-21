@@ -53,7 +53,7 @@ export default (initialLayouts = [], availableWidgets = [], widgetRegistry = {})
     modals: {
         page: {
             open: false, mode: 'create', id: '', title: '', slug: '', layout_id: '', is_published: true,
-            formAction: '', method: '', widgetBlocks: {}, selectedWidgets: {}, sortOrders: {},
+            formAction: '', method: '', widgetBlocks: {}, selectedWidgets: {}, selectedVisible: {}, sortOrders: {},
             requiredPermissions: {},
             instanceOptions: {},
             configuringWidgetId: null
@@ -102,12 +102,15 @@ export default (initialLayouts = [], availableWidgets = [], widgetRegistry = {})
 
         this.modals.page.widgetBlocks = {};
         this.modals.page.selectedWidgets = {};
+        this.modals.page.selectedVisible = {};
         this.modals.page.sortOrders = {};
         this.modals.page.requiredPermissions = {};
+        this.modals.page.instanceOptions = {};
 
         if (data.widgets) {
             data.widgets.forEach(w => {
                 this.modals.page.selectedWidgets[w.id] = true;
+                this.modals.page.selectedVisible[w.id] = w.is_visible !== undefined ? Boolean(w.is_visible) : true;
                 this.modals.page.sortOrders[w.id] = w.sort_order;
                 this.modals.page.widgetBlocks[w.id] = w.layout_block_id;
                 this.modals.page.requiredPermissions[w.id] = w.required_permission || '';

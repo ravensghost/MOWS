@@ -6,11 +6,12 @@
 @php
     $widgetRegistry = cache('mows_widget_manifest', []);
     
-    $widgetData =$page->exists ? $page->widgets->map(fn($w) => [
+    $widgetData = $page->exists ? $page->widgets->map(fn($w) => [
         'id' => $w->id,
         'layout_block_id' => $w->pivot->layout_block_id,
         'sort_order' => $w->pivot->sort_order,
         'required_permission' => $w->pivot->required_permission,
+        'is_visible' => (bool) ($w->pivot->is_visible ?? true),
         'instance_options' => is_string($w->pivot->instance_options) ? json_decode($w->pivot->instance_options, true) : ($w->pivot->instance_options ?? [])
     ]) : [];
 @endphp
@@ -174,7 +175,7 @@
                                     <input type="checkbox" :name="`widgets[{{ $widget->id }}][is_visible]`" value="1" 
                                            class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer mx-auto" 
                                            x-model="modals.page.selectedVisible[{{ $widget->id }}]"
-                                           x-init="modals.page.selectedVisible[{{ $widget->id }}] = true">
+                                           x-init="if (modals.page.selectedVisible[{{ $widget->id }}] === undefined) modals.page.selectedVisible[{{$widget->id }}] = true">
                                 </td>
                             </tr>
                         @empty

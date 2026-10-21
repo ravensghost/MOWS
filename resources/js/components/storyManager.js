@@ -101,10 +101,10 @@ export default () => ({
         this.bookId = detail.id || '';
         this.bookTitle = detail.title || '';
         this.bookDesc = detail.desc || '';
-        this.bookStatusId = detail.bookStatusId || '';
-        this.bookDay = detail.day || '';
+        this.bookStatusId = detail.bookStatusId !== undefined && detail.bookStatusId !== null ? String(detail.bookStatusId) : '';
+        this.bookDay = detail.day !== undefined && detail.day !== null ? detail.day : '';
         this.bookTime = detail.time || '';
-        this.bookBookcaseId = detail.bookcaseId || '';
+        this.bookBookcaseId = detail.bookcaseId !== undefined && detail.bookcaseId !== null ? String(detail.bookcaseId) : '';
         this.bookFormAction = this.bookMode === 'edit' ? `/admin/books/${this.bookId}` : '/admin/books';
         this.bookMethod = this.bookMode === 'edit' ? 'PUT' : 'POST';
         this.bookModalOpen = true;
@@ -118,12 +118,12 @@ export default () => ({
 
     openMoveChapterModal(detail = {}) {
         this.moveChapterId = detail.chapterId || '';
-        this.moveBookId = detail.bookId || '';
+        this.moveBookId = detail.bookId !== undefined && detail.bookId !== null ? String(detail.bookId) : '';
         this.moveFormAction = `/admin/chapters/${this.moveChapterId}/move`;
         this.moveModalOpen = true;
     },
 
-    async refreshDOM() {
+    async refreshDOM(responseData = {}) {
         window.updateDOM_US(this.$refs, ['bookcasesWrapper', 'looseBooksWrapper', 'statusesWrapper'], () => {
             this.bookcaseModalOpen = false;
             this.bookModalOpen = false;
@@ -131,6 +131,15 @@ export default () => ({
             this.statusModalOpen = false;
             this.initFuse();
             this.filterLibrary();
+
+            if (responseData && responseData.trigger_review && responseData.data) {
+                window.dispatchEvent(new CustomEvent('open-book-review', {
+                    detail: {
+                        bookId: responseData.data.id,
+                        bookTitle: responseData.data.title
+                    }
+                }));
+            }
         });
     }
 });

@@ -108,4 +108,13 @@
             aria-label="{{ lexicon('tooltip_common_Divider', 'Divider') }}">
         <span>—</span>
     </button>
+    <button type="button" 
+            class="bg-transparent border-none font-bold p-0 cursor-pointer text-muted hover-text-h px-2" 
+            @click="window.Alpine.raw(editor).chain().focus().insertContent('<hr class=\'scene-split-marker\'>').run()" 
+            @mousedown.prevent
+            tabindex="-1"
+            x-tooltip="'{{ addslashes(lexicon('tooltip_common_SceneSplit', 'Scene Split')) }}'"
+            aria-label="{{ lexicon('tooltip_common_SceneSplit', 'Scene Split') }}">
+        <span><i class="bi bi-scissors"></i> Split</span>
+    </button>
 </div>

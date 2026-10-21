@@ -25,7 +25,11 @@ Route::middleware('auth')->group(function () {
 
     // Story Engine: Writing Chapters
     Route::get('/chapters/create', [WriteController::class, 'createChapter'])->name('chapters.create');
+    Route::get('/chapters/{chapter}/edit', [WriteController::class, 'editChapter'])->name('chapters.edit');
     Route::post('/chapters', [WriteController::class, 'storeChapter'])->name('chapters.store');
+    Route::post('/chapters/autosave', [WriteController::class, 'autoSave']);
+    Route::post('/chapters/{chapter}/autosave', [WriteController::class, 'autoSave']);
+    Route::post('/chapters/{chapter}/lock', [WriteController::class, 'acquireLock']);
 
     // Private Messaging Engine
     Route::get('/messenger/{threadId?}', [MessengerController::class, 'index'])->name('messenger.index');

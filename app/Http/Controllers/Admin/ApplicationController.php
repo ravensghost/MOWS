@@ -12,6 +12,7 @@ use App\Models\Ranks;
 use App\Models\Section;
 use App\Models\RankSet;
 use App\Models\Page;
+use App\Models\Setting;
 use App\Models\ServiceRecord;
 
 class ApplicationController extends Controller
@@ -36,7 +37,7 @@ class ApplicationController extends Controller
         }
 
         abort(403, lexicon('msg_Applications_Unauthorised', 'Unauthorised access to Application Management.'));
-    }    
+    }
 
     public function index()
     {
@@ -51,8 +52,7 @@ class ApplicationController extends Controller
             ])
             ->firstOrFail();
 
-        // Eager load user and answers with formField to keep queries under Q < 10
-        $applications = Application::with(['user', 'answers.formField'])
+        $applications = Application::with(['user', 'answers.formField', 'votes.councilMember'])
             ->whereIn('status', ['Pending', 'pending'])
             ->orderBy('submitted_at', 'desc')
             ->get();
@@ -70,7 +70,47 @@ class ApplicationController extends Controller
             $q->orderBy('sort_order');
         }])->get();
 
-        return view('admin.applications', compact('applications', 'activeCharacters', 'sections', 'rankSets', 'systemPage'));
+        $reviewMode = Setting::where('key', 'approval_review_mode')->value('value') ?? 'single';
+        $rejectionProtocol = Setting::where('key', 'rejection_protocol')->value('value') ?? 'soft_lock';
+
+        return view('admin.applications', compact('applications', 'activeCharacters', 'sections', 'rankSets', 'systemPage', 'reviewMode', 'rejectionProtocol'));
+    }
+
+    public function reject(Request $request, $id)
+    {
+        $this->authorizeApplicationAccess(['applications_approve', 'manage_applications']);
+        $application = Application::with('user')->findOrFail($id);
+        $protocol = Setting::where('key', 'rejection_protocol')->value('value') ?? 'soft_lock';
+
+        if ($protocol === 'hard_purge') {
+            DB::transaction(function () use ($application) {
+                $user = $application->user;
+                $hasActiveChars = $user ? $user->characters()->where('status', 'active')->exists() : false;
+
+                $application->answers()->delete();
+                $application->votes()->delete();
+                $application->delete();
+
+                if ($user && !$hasActiveChars) {
+                    $user->attributes()->delete();
+                    $user->delete();
+                }
+            });
+            $message = lexicon('msg_Applications_PurgedSuccess', 'Application hard-purged and unlinked user account removed.');
+        } else {
+            // Soft Lock protocol: set status to Rejected and user attribute app_status to rejected for resubmission
+            $application->update(['status' => 'Rejected']);
+            if ($application->user) {
+                $application->user->setAttr('app_status', 'rejected');
+            }
+            $message = lexicon('msg_Applications_RejectedSuccess', 'Application rejected. The applicant may revise and resubmit.');
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['status' => 'success', 'success' => true, 'message' => $message]);
+        }
+
+        return redirect('/admin/applications')->with('status', $message);
     }
 
 
@@ -167,21 +207,6 @@ class ApplicationController extends Controller
         Cache::forget('widget_roster_sections');
 
         $message = lexicon('msg_Applications_ApprovedSuccess', 'Application approved! Character linked to position, added to active roster, and logged in service record.');
-
-        if ($request->wantsJson()) {
-            return response()->json(['status' => 'success', 'success' => true, 'message' => $message]);
-        }
-
-        return redirect('/admin/applications')->with('status', $message);
-    }
-
-    public function reject(Request $request, $id)
-    {
-        $this->authorizeApplicationAccess(['applications_approve', 'manage_applications']);
-        $application = Application::findOrFail($id);
-        $application->update(['status' => 'Rejected']);
-
-        $message = lexicon('msg_Applications_RejectedSuccess', 'Application rejected. The user has been notified.');
 
         if ($request->wantsJson()) {
             return response()->json(['status' => 'success', 'success' => true, 'message' => $message]);

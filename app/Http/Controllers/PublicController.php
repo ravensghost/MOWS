@@ -307,4 +307,25 @@ class PublicController extends Controller
             'portraits' => $this->getPortraitPayload($character),
         ]);
     }
+    /**
+     * Determine if a chapter exceeds mature content thresholds and whether the user has bypassed it.
+     */
+    protected function evaluateContentShield(Chapter $chapter): array
+    {
+        // Define severe/mature threshold (e.g., any score >= 3 or specific configurations)
+        $isMature = ($chapter->rating_l >= 3 || $chapter->rating_s >= 3 || $chapter->rating_v >= 3);
+
+        $user = auth()->user();
+        $bypassMode = \App\Models\Setting::where('key', 'content_shield_bypass')->value('value') ?? 'locked';
+
+        $userBypassed = false;
+        if ($isMature && $user && $bypassMode === 'user_bypass') {
+            $userBypassed = (bool) $user->content_shield_bypass;
+        }
+
+        return [
+            'is_mature'    => $isMature,
+            'requires_gate' => $isMature && !$userBypassed,
+        ];
+    }
 }

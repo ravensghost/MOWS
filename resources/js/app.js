@@ -63,6 +63,9 @@ import roleManager from './components/roleManager';
 import sectionManager from './components/sectionManager';
 import newsManager from './components/newsManager';
 import characterAvatarManager from './components/characterAvatarManager';
+import bookreview from './components/bookreview.js';
+import autoSave from './components/autoSave';
+import chapterEdit from './components/chapterEdit';
 
 // Alpine plugins & directives
 Alpine.plugin(collapse);
@@ -132,5 +135,8 @@ Alpine.data('roleManager', roleManager);
 Alpine.data('sectionManager', sectionManager);
 Alpine.data('newsManager', newsManager);
 Alpine.data('characterAvatarManager', characterAvatarManager);
+Alpine.data('bookreview', bookreview);
+Alpine.data('autoSave', autoSave);
+Alpine.data('chapterEdit', chapterEdit);
 
 Alpine.start();

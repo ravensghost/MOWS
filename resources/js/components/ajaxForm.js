@@ -1,6 +1,9 @@
 export default () => ({
+    submitting: false,
+
     async submit(e) {
         const form = e.target;
+        this.submitting = true;
 
         const loadingTitle = form.dataset.loadingTitle;
         if (loadingTitle) {
@@ -16,10 +19,19 @@ export default () => ({
         }
 
         try {
+            const formData = new FormData(form);
+            const rawAttrMethod = (form.getAttribute('method') || 'POST').toUpperCase();
+            if (rawAttrMethod !== 'POST' && rawAttrMethod !== 'GET' && !formData.has('_method')) {
+                formData.append('_method', rawAttrMethod);
+            }
+
             const response = await fetch(form.action, {
-                method: form.method || 'POST',
-                body: new FormData(form),
-                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
             });
 
             if (response.ok) {
@@ -34,7 +46,7 @@ export default () => ({
                     showConfirmButton: false,
                     timer: 1000
                 }).then(() => {
-                    this.$dispatch('ajax-success');
+                    this.$dispatch('ajax-success', data);
 
                     if (data.redirect) {
                         window.location.href = data.redirect;
@@ -50,6 +62,8 @@ export default () => ({
             }
         } catch (error) {
             Swal.fire('Error', 'A network error occurred.', 'error');
+        } finally {
+            this.submitting = false;
         }
     }
 });

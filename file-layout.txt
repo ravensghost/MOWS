@@ -38,9 +38,11 @@
         WriteController.php
         [Admin]
           ApplicationController.php
+          ApplicationVoteController.php
           AwardCategoryController.php
           AwardController.php
           BookController.php
+          BookReviewController.php
           BookcaseController.php
           ChangeCharacterStatusController.php
           ChapterController.php
@@ -95,6 +97,8 @@
       BookStatus.php
       Bookcase.php
       Chapter.php
+      ChapterUserContribution.php
+      ChapterVersion.php
       Character.php
       CharacterAttribute.php
       ContentRating.php
@@ -159,6 +163,10 @@
     [migrations]
       2026_10_17_100000_phase_1_database_normalisation_and_settings.php
       2026_10_20_000000_add_is_visible_column_to_mows_tables.php
+      2026_10_20_000001_create_chapter_versions_table.php
+      2026_10_20_121752_add_lock_columns_to_chapters_table.php
+      2026_10_20_150000_add_application_id_to_application_votes_table.php
+      2026_10_21_000000_create_wiki_articles_table.php
     [schema]
       database.sql
       mysql-schema.sql
@@ -237,7 +245,10 @@
         adminModal.js
         ajaxForm.js
         applicationManager.js
+        autoSave.js
         awardManager.js
+        bookreview.js
+        chapterEdit.js
         characterAvatarManager.js
         colourPicker.js
         deleteAction.js
@@ -271,6 +282,7 @@
       [admin]
         applications.blade.php
         awards.blade.php
+        bookreview.blade.php
         dashboard.blade.php
         forms.blade.php
         general-images.blade.php
@@ -295,6 +307,7 @@
       [components]
         accordion-panel.blade.php
         admin-grid-wrapper.blade.php
+        autosave-debugger.blade.php
         award-badge.blade.php
         badge-layer-fields.blade.php
         badge.blade.php

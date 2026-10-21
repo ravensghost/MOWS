@@ -34,6 +34,7 @@
         ['key' => 'ai_local_api_key', 'group' => 'ai', 'label' => lexicon('label_setting_AILocalApiKey', 'Local API Key (Optional)')],
         ['key' => 'game_setting', 'group' => 'general', 'label' => lexicon('label_setting_GameSetting', 'Game Setting / Franchise')],
         ['key' => 'lore_context', 'group' => 'general', 'label' => lexicon('label_setting_LoreContext', 'Lore & Era Context')],
+        ['key' => 'draft_autosave_interval', 'group' => 'mechanics', 'label' => lexicon('label_setting_DraftAutoSaveInterval', 'Draft Auto-Save Interval (ms)')],
     ];
 @endphp
 
@@ -161,6 +162,13 @@
                                            :label="lexicon('label_setting_RankAwardRendering', 'Rank & Award Rendering')"
                                            editClick="openModal('visual_mode', '{{ addslashes(lexicon('label_setting_RankAwardRendering', 'Rank & Award Rendering')) }}', '{{ $globalSettings['visual_mode'] ?? 'dynamic' }}', 'select', { dynamic: '{{ addslashes(lexicon('label_setting_OptDynamic', 'Mode 2: Dynamic CSS Layering')) }}', static: '{{ addslashes(lexicon('label_setting_OptStatic', 'Mode 1: Static Image Only')) }}' })">
                                 {{ ($globalSettings['visual_mode'] ?? '') == 'static' ? lexicon('label_setting_OptStatic', 'Mode 1: Static Image Only') : lexicon('label_setting_OptDynamic', 'Mode 2: Dynamic CSS Layering') }}
+                            </x-setting-row>
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('draft_autosave_interval')"
+                                x-cloak
+                                :label="lexicon('label_setting_DraftAutoSaveInterval', 'Draft Auto-Save Interval (ms)')"
+                                :hint="lexicon('msg_setting_AutoSaveIntervalHint', 'Interval in milliseconds (e.g. 30000 for 30 seconds)')"
+                                editClick="openModal('draft_autosave_interval', '{{ addslashes(lexicon('label_setting_DraftAutoSaveInterval', 'Draft Auto-Save Interval (ms)')) }}', '{{ $globalSettings['draft_autosave_interval'] ?? '30000' }}', 'text')">
+                                {{ $globalSettings['draft_autosave_interval'] ?? '30000' }} ms
                             </x-setting-row>
                         </tbody>
 

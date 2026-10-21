@@ -24,4 +24,8 @@ class ApplicationVote extends Model
     {
         return $this->belongsTo(User::class, 'council_member_id');
     }
+    public function application()
+    {
+        return $this->belongsTo(Application::class);
+    }
 }

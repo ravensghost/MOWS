@@ -40,11 +40,14 @@ class BookController extends Controller
         ]);
 
         $book = Book::findOrFail($id);
+        $wasCompleted = (int) $book->status_id === 3;
         $book->update($validated);
+        $isNowCompleted = (int) $book->status_id === 3;
 
         return response()->json([
             'status' => 'success',
             'data' => $book,
+            'trigger_review' => (!$wasCompleted && $isNowCompleted),
             'message' => 'Book updated successfully.'
         ]);
     }

@@ -34,6 +34,8 @@ use App\Http\Controllers\Admin\AwardCategoryController;
 use App\Http\Controllers\Admin\LexiconTermController;
 use App\Http\Controllers\Admin\LexiconLanguageController;
 use App\Http\Controllers\Admin\GeneralImageController;
+use App\Http\Controllers\Admin\BookReviewController;
+use App\Http\Controllers\Admin\ApplicationVoteController;
 
 
 Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
@@ -79,6 +81,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/general-images', [GeneralImageController::class, 'index'])->name('general-images.index');
     Route::post('/general-images', [GeneralImageController::class, 'store'])->name('general-images.store');
     Route::delete('/general-images', [GeneralImageController::class, 'destroy'])->name('general-images.destroy');
+    
     // ==========================================
     // 3. LEXICON & TRANSLATIONS
     // ==========================================
@@ -159,11 +162,11 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/applications', [ApplicationController::class, 'index']);
     Route::post('/applications/{id}/approve', [ApplicationController::class, 'approve']);
     Route::post('/applications/{id}/reject', [ApplicationController::class, 'reject']);
+    Route::post('/applications/{id}/vote', [ApplicationVoteController::class, 'store']);
     
     // Character Reassignment (Invokable)
     Route::post('/characters/{id}/reassign', CharacterAssignmentController::class);
 
-    // Ranks & Graphics
     // Ranks & Graphics
     Route::get('/ranks', [RankController::class, 'index'])->name('ranks.index');
     Route::get('/ranks/export', [RankController::class, 'export'])->name('ranks.export');
@@ -180,31 +183,40 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::put('/rank-sets/{rankSet}', [RankSetController::class, 'update']); // <-- Add this line
     Route::delete('/rank-sets/{rankSet}', [RankSetController::class, 'destroy']);
     Route::post('/rank-sets/{rankSet}/assign', [RankSetController::class, 'assignSections']);
-    
+
     // ==========================================
     // 6. STORY ENGINE
     // ==========================================
-    
+
     // Master Story View
     Route::get('/story', [StoryController::class, 'storyManager']);
-    
+
     // Bookcases
     Route::post('/bookcases/reorder', [BookcaseController::class, 'reorder']);
     Route::post('/bookcases', [BookcaseController::class, 'store']);
     Route::put('/bookcases/{id}', [BookcaseController::class, 'update']);
     Route::delete('/bookcases/{id}', [BookcaseController::class, 'destroy']);
-    
+
     // Books
     Route::post('/books/reorder', [BookController::class, 'reorder']);
     Route::post('/books', [BookController::class, 'store']);
     Route::put('/books/{id}', [BookController::class, 'update']);
     Route::delete('/books/{id}', [BookController::class, 'destroy']);
 
+    // End-of-Book Service Record Review System
+    Route::get('/books/{book}/review', [BookReviewController::class, 'showModal'])->name('books.review');
+    Route::post('/books/{book}/review', [BookReviewController::class, 'store'])->name('books.review.store');
+
     // Chapters (Admin Structural Changes)
     Route::post('/chapters/reorder', [ChapterController::class, 'reorder']);
     Route::put('/chapters/{id}/move', [ChapterController::class, 'move']);
     Route::delete('/chapters/{id}', [ChapterController::class, 'destroy']);
 
+    // Book Statuses
+    Route::post('/statuses', [StoryController::class, 'storeStatus']);
+    Route::put('/statuses/{id}', [StoryController::class, 'updateStatus']);
+    Route::delete('/statuses/{id}', [StoryController::class, 'destroyStatus']);
+    
     // ==========================================
     // USERS, ROLES & AWARDS
     // ==========================================

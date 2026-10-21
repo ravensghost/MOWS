@@ -7,9 +7,7 @@
     'systemPage' => null,
 ])
 
-<div x-data="{ isOpen: false }"
-     @open-chapter-modal.window="isOpen = true"
-     @close-chapter-modal.window="isOpen = false"
+<div x-data="chapterEdit"
      @ajax-success.window="isOpen = false"
      class="relative z-modal-50">
 
@@ -32,12 +30,16 @@
             </div>
 
             <!-- Modal Body Form -->
+            @php
+                $autoSaveInterval = \App\Models\Setting::where('key', 'draft_autosave_interval')->value('value') ?: 30000;
+            @endphp
+            <div x-data="autoSave({{ $autoSaveInterval }})" class="flex flex-col gap-md p-panel overflow-y-auto max-h-70vh">
             <form action="/chapters"
                   method="POST"
                   x-data="ajaxForm"
                   @submit.prevent="submit"
                   data-loading-title="{{ lexicon('msg_common_Saving', 'Saving...') }}"
-                  class="flex flex-col gap-md p-panel overflow-y-auto max-h-70vh">
+                  >
                 @csrf
 
                 <!-- Placement & Character -->
@@ -110,7 +112,12 @@
                         </div>
 
                         <div class="flex flex-col gap-xs"
-                             x-init="window.TomSelect && new window.TomSelect($refs.modalMultiCharSelect, { plugins: ['remove_button'], placeholder: '{{ addslashes(lexicon('label_WriteChapter_PlaceholderAddCharacters', 'Add other characters...')) }}' })">
+                            x-init="window.TomSelect && new window.TomSelect($refs.modalMultiCharSelect, { 
+                                plugins: ['remove_button'], 
+                                create: true, 
+                                createOnBlur: true,
+                                placeholder: '{{ addslashes(lexicon('label_WriteChapter_PlaceholderAddCharacters', 'Add other characters...')) }}' 
+                            })">
                             <label for="modal_character_ids" class="text-xs font-bold text-input-muted">{{ lexicon('label_WriteChapter_CharactersPresent', 'Characters Present') }}</label>
                             <select id="modal_character_ids"
                                     x-ref="modalMultiCharSelect"
@@ -147,7 +154,7 @@
                         <label class="text-xs font-bold text-input-muted">{{ lexicon('label_WriteChapter_TheStory', 'The Story') }}</label>
                         <span class="text-xs text-muted block">{{ lexicon('msg_WriteChapter_SanitizedHint', 'Use the rich text editor below. Content is automatically sanitised.') }}</span>
 
-                        <div class="bg-panel border-panel rounded-panel shadow-panel overflow-hidden flex flex-col" x-data="tiptapEditor()">
+                        <div class="bg-panel border-panel rounded-panel shadow-panel overflow-hidden flex flex-col" x-data="tiptapEditor(@js($chapter->content ?? ''))">
                             <x-tiptap-toolbar />
                             <div x-ref="editorContainer" class="tiptap-content w-full p-4 min-h-32 flex-grow"></div>
                             <input type="hidden" name="content" x-model="content" required>
@@ -156,7 +163,11 @@
                 </div>
 
                 <!-- Publishing Status & Submit -->
-                <div class="border-t-actions pt-4 mt-2 flex flex-row flex-wrap justify-between items-center gap-md">
+                <div class="border-t-actions pt-4 mt-2 flex flex-row flex-wrap justify-between items-center gap-md"
+                     x-data="{ autoSaved: false, savingNow: false }"
+                     @autosave-success.window="savingNow = false; autoSaved = true;"
+                     @autosave-start.window="savingNow = true;">
+                    
                     <div class="flex flex-col gap-xs w-56">
                         <label for="modal_chapter_status" class="text-xs font-bold text-input-muted">{{ lexicon('label_WriteChapter_PublishingStatus', 'Publishing Status') }}</label>
                         <select id="modal_chapter_status"
@@ -168,14 +179,41 @@
                         </select>
                     </div>
 
-                    <x-button type="submit"
-                              variant="primary"
-                              x-tooltip="'{{ addslashes(lexicon('tooltip_WriteChapter_SaveChapter', 'Save or publish this chapter')) }}'">
-                        {{ lexicon('btn_WriteChapter_SaveChapter', 'Save Chapter') }}
-                    </x-button>
+                    <!-- Auto-Save Status Badge & Save Button -->
+                    <div class="flex flex-row items-center gap-sm">
+                        <!-- Live Auto-Save Badge -->
+                        <div class="flex items-center gap-xs px-2 py-1 rounded bg-panel-sub text-xs text-muted border border-panel"
+                             x-tooltip="'Background draft synchronization status'">
+                            <template x-if="savingNow">
+                                <span class="flex items-center gap-xs text-warning">
+                                    <i class="bi bi-arrow-repeat animate-spin"></i> Saving...
+                                </span>
+                            </template>
+                            <template x-if="!savingNow">
+                                <span>
+                                    <template x-if="!autoSaved">
+                                        <span class="text-danger flex items-center gap-xs" title="Not auto-saved yet">
+                                            <i class="bi bi-x-lg"></i> Unsaved
+                                        </span>
+                                    </template>
+                                    <template x-if="autoSaved">
+                                        <span class="text-success flex items-center gap-xs" title="Draft auto-saved successfully">
+                                            <i class="bi bi-check-lg"></i> Auto-Saved
+                                        </span>
+                                    </template>
+                                </span>
+                            </template>
+                        </div>
+
+                        <x-button type="submit"
+                                  variant="primary"
+                                  x-tooltip="'{{ addslashes(lexicon('tooltip_WriteChapter_SaveChapter', 'Save or publish this chapter')) }}'">
+                            {{ lexicon('btn_WriteChapter_SaveChapter', 'Save Chapter') }}
+                        </x-button>
+                    </div>
                 </div>
             </form>
-
+            </div>
         </div>
     </x-modal>
 </div>

@@ -110,6 +110,14 @@
                     <td class="p-3 text-right">
                         <div class="flex flex-row flex-wrap gap-sm items-center justify-end">
                             <x-button type="button" 
+                                    variant="text" 
+                                    class="text-warning hover-text-h flex flex-row items-center gap-xs" 
+                                    @click="$dispatch('open-chapter-modal', { chapterId: {{ $chapter->id }} })"
+                                    x-tooltip="'{{ addslashes(lexicon('tooltip_Story_EditChapter', 'Edit this chapter')) }}'">
+                                <i class="bi bi-pencil"></i>
+                                <span>{{ lexicon('btn_common_Edit', 'Edit') }}</span>
+                            </x-button>
+                            <x-button type="button" 
                                       variant="text" 
                                       class="text-accent hover-text-h text-xs flex flex-row items-center gap-xs" 
                                       @click="$dispatch('open-move-chapter-modal', {{ json_encode(['chapterId' => $chapter->id, 'bookId' => $book->id]) }})"

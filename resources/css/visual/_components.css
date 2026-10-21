@@ -165,3 +165,27 @@
 .flatpickr-day:hover {
     background: var(--theme-bg-panel-header-colour, #1f2937) !important;
 }
+
+/* Add to resources/css/visual/_components.css or visual.css */
+hr.scene-split-marker {
+    border: none;
+    border-top: 2px dashed var(--theme-border-accent-colour,#3b82f6);
+    margin: 2rem 0;
+    position: relative;
+}
+
+hr.scene-split-marker::after {
+    content: "§ Scene Split";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--theme-bg-panel-header-colour,
+        #1f2937);
+    color: var(--theme-text-muted,
+        #9ca3af);
+    padding: 0 var(--theme-padding-3, 0.75rem);
+    font-size: var(--theme-text-s75, 0.75rem);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}

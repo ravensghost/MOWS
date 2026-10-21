@@ -159,6 +159,20 @@
                 </x-accordion-panel>
 
             </div>
+            <div class="pt-2 mt-2 flex flex-col gap-md">
+                <x-accordion-panel :title="lexicon('label_Profile_Preferences', 'Account Preferences')" :expanded="false">             
+                    <div class="flex flex-row items-center justify-between gap-md panel p-3">
+                        <div class="flex flex-col">
+                            <label for="content_shield_bypass" class="text-xs font-bold text-main">{{ lexicon('label_Profile_ContentShieldBypass', 'Auto-Bypass Mature Content Shield') }}</label>
+                            <span class="text-xs text-muted">{{ lexicon('msg_Profile_ContentShieldHint', 'Automatically reveal mature content without clicking warning gates.') }}</span>
+                        </div>
+                        <input type="hidden" name="content_shield_bypass" value="0">
+                        <input type="checkbox" id="content_shield_bypass" name="content_shield_bypass" value="1"
+                            {{ old('content_shield_bypass', auth()->user()->content_shield_bypass) ? 'checked' : '' }}
+                            class="form-checkbox h-5 w-5 text-accent rounded">
+                    </div>
+                </x-accordion-panel>
+            </div>
         </x-slot:profileinformation>
 
         <!-- BLOCK: Update Password -->

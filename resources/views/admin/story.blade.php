@@ -4,7 +4,7 @@
 
 @section('content')
 <div x-data="storyManager" 
-     @ajax-success.window="refreshDOM()"
+     @ajax-success.window="refreshDOM($event.detail)"
      @open-status-modal.window="openStatusModal($event.detail)"
      @open-bookcase-modal.window="openBookcaseModal($event.detail)"
      @open-book-modal.window="openBookModal($event.detail)"
@@ -218,7 +218,7 @@
                 </x-slot:top>
 
                 <form :action="bookcaseFormAction" 
-                      :method="bookcaseMethod" 
+                      method="POST" 
                       class="flex flex-col gap-md" 
                       x-data="ajaxForm" 
                       @submit.prevent="submit($event)">
@@ -237,9 +237,10 @@
                                   variant="primary" 
                                   ::disabled="submitting"
                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Story_SaveBookcase', 'Save bookcase changes')) }}'"
-                                  aria-label="{{ lexicon('tooltip_Story_SaveBookcase', 'Save bookcase changes') }}"
-                                  x-text="submitting ? '{{ addslashes(lexicon('msg_common_Saving', 'Saving...')) }}' : '{{ addslashes(lexicon('btn_Story_SaveBookcase', 'Save Bookcase')) }}'">
-                            {{ lexicon('btn_Story_SaveBookcase', 'Save Bookcase') }}
+                                  aria-label="{{ lexicon('tooltip_Story_SaveBookcase', 'Save bookcase changes') }}">
+                            <span x-text="submitting ? '{{ addslashes(lexicon('msg_common_Saving', 'Saving...')) }}' : '{{ addslashes(lexicon('btn_Story_SaveBookcase', 'Save Bookcase')) }}'">
+                                {{ lexicon('btn_Story_SaveBookcase', 'Save Bookcase') }}
+                            </span>
                         </x-button>
                     </div>
                 </form>
@@ -252,7 +253,7 @@
                 </x-slot:top>
 
                 <form :action="bookFormAction" 
-                      :method="bookMethod" 
+                      method="POST" 
                       class="flex flex-col gap-md" 
                       x-data="ajaxForm" 
                       @submit.prevent="submit($event)">
@@ -340,9 +341,10 @@
                                   variant="success" 
                                   ::disabled="submitting" 
                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Story_SaveBook', 'Save book details')) }}'"
-                                  aria-label="{{ lexicon('tooltip_Story_SaveBook', 'Save book details') }}"
-                                  x-text="submitting ? '{{ addslashes(lexicon('msg_common_Saving', 'Saving...')) }}' : '{{ addslashes(lexicon('btn_Story_SaveBook', 'Save Book')) }}'">
-                            {{ lexicon('btn_Story_SaveBook', 'Save Book') }}
+                                  aria-label="{{ lexicon('tooltip_Story_SaveBook', 'Save book details') }}">
+                            <span x-text="submitting ? '{{ addslashes(lexicon('msg_common_Saving', 'Saving...')) }}' : '{{ addslashes(lexicon('btn_Story_SaveBook', 'Save Book')) }}'">
+                                {{ lexicon('btn_Story_SaveBook', 'Save Book') }}
+                            </span>
                         </x-button>
                     </div>
                 </form>
@@ -394,9 +396,10 @@
                                   variant="primary" 
                                   ::disabled="submitting" 
                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Story_ConfirmMoveChapter', 'Confirm chapter relocation')) }}'"
-                                  aria-label="{{ lexicon('tooltip_Story_ConfirmMoveChapter', 'Confirm chapter relocation') }}"
-                                  x-text="submitting ? '{{ addslashes(lexicon('msg_Story_Moving', 'Moving...')) }}' : '{{ addslashes(lexicon('btn_Story_MoveChapterSubmit', 'Move Chapter')) }}'">
-                            {{ lexicon('btn_Story_MoveChapterSubmit', 'Move Chapter') }}
+                                  aria-label="{{ lexicon('tooltip_Story_ConfirmMoveChapter', 'Confirm chapter relocation') }}">
+                            <span x-text="submitting ? '{{ addslashes(lexicon('msg_Story_Moving', 'Moving...')) }}' : '{{ addslashes(lexicon('btn_Story_MoveChapterSubmit', 'Move Chapter')) }}'">
+                                {{ lexicon('btn_Story_MoveChapterSubmit', 'Move Chapter') }}
+                            </span>
                         </x-button>
                     </div>
                 </form>
@@ -409,7 +412,7 @@
                 </x-slot:top>
 
                 <form :action="statusFormAction" 
-                      :method="statusMethod" 
+                      method="POST" 
                       class="flex flex-col gap-md" 
                       x-data="ajaxForm" 
                       @submit.prevent="submit($event)">
@@ -428,13 +431,16 @@
                                   variant="primary" 
                                   ::disabled="submitting" 
                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Story_SaveStatus', 'Save book status')) }}'"
-                                  aria-label="{{ lexicon('tooltip_Story_SaveStatus', 'Save book status') }}"
-                                  x-text="submitting ? '{{ addslashes(lexicon('msg_common_Saving', 'Saving...')) }}' : '{{ addslashes(lexicon('btn_Story_SaveStatus', 'Save Status')) }}'">
-                            {{ lexicon('btn_Story_SaveStatus', 'Save Status') }}
+                                  aria-label="{{ lexicon('tooltip_Story_SaveStatus', 'Save book status') }}">
+                            <span x-text="submitting ? '{{ addslashes(lexicon('msg_common_Saving', 'Saving...')) }}' : '{{ addslashes(lexicon('btn_Story_SaveStatus', 'Save Status')) }}'">
+                                {{ lexicon('btn_Story_SaveStatus', 'Save Status') }}
+                            </span>
                         </x-button>
                     </div>
                 </form>
             </x-modal>
+            {{-- MODAL 5: End-of-Book Service Record Review Modal --}}
+            @include('admin.bookreview')
         </x-slot:bottom>
         
     </x-admin-grid-wrapper>

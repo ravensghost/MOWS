@@ -61,12 +61,14 @@
                                 <td class="p-4 text-right">
                                     <div class="flex flex-row justify-end items-center gap-sm text-sm">
                                         <x-button type="button" variant="text" class="text-warning hover-text-h" 
-                                                  @click="openModal('edit', { 
-                                                      id: {{ $item->id }}, 
-                                                      title: '{{ addslashes($item->title) }}', 
-                                                      content: '{{ addslashes($item->content) }}' 
-                                                  })"
-                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_News_EditAnnouncement', 'Edit this announcement')) }}'">
+                                                @click="openModal('edit', { 
+                                                    id: {{ $item->id }}, 
+                                                    title: $el.dataset.title, 
+                                                    content: $el.dataset.content 
+                                                })"
+                                                data-title="{{ $item->title }}"
+                                                data-content="{{ $item->content }}"
+                                                x-tooltip="'{{ addslashes(lexicon('tooltip_News_EditAnnouncement', 'Edit this announcement')) }}'">
                                             <i class="bi bi-pencil"></i> {{ lexicon('btn_common_Edit', 'Edit') }}
                                         </x-button>
 
@@ -95,8 +97,15 @@
                 <x-slot:top>
                     <span x-text="mode === 'create' ? '{{ addslashes(lexicon('label_News_CreateAnnouncementTitle', 'Broadcast Announcement')) }}' : '{{ addslashes(lexicon('label_News_EditAnnouncementTitle', 'Edit Announcement')) }}'"></span>
                 </x-slot:top>
-
-                <form id="form-news" :action="formAction" method="POST" class="flex flex-col gap-md" x-data="ajaxForm" @submit.prevent="submit">
+                @php
+                    $autoSaveInterval = \App\Models\Setting::where('key', 'draft_autosave_interval')->value('value') ?: 30000;
+                @endphp
+                <div x-data="autoSave({{ $autoSaveInterval }})" class="flex flex-col gap-md">
+                <form id="form-news" 
+                :action="formAction" 
+                method="POST"  
+                x-data="ajaxForm" 
+                @submit.prevent="submit">
                     @csrf
                     <input type="hidden" name="_method" :value="method">
                     
@@ -115,19 +124,46 @@
                         </label>
                         <span class="text-xs text-muted block">{{ lexicon('msg_News_SanitisedHint', 'Use the rich text editor below. Content is automatically sanitised.') }}</span>
                         
-                        <!-- TipTap Editor UI -->
+                        <!-- TipTap Editor UI inside the News Modal -->
                         <div class="bg-panel-sub border border-panel rounded-panel flex flex-col overflow-hidden" 
-                             x-data="tiptapEditor(content)" 
-                             @tiptap-update="content = $event.detail"
-                             @sync-news-editor.window="content = $event.detail; refreshEditor()">
+                            x-data="tiptapEditor(content)" 
+                            @tiptap-update="content = $event.detail"
+                            @set-chapter-editor-content.window="setEditorContent($event.detail.content)">
                             <x-tiptap-toolbar />
                             <div x-ref="editorContainer" class="w-full p-3 flex-grow overflow-y-auto tiptap-content"></div>
                         </div>
-                        
+
                         <input type="hidden" name="content" :value="content" required>
                     </div>
 
-                    <div class="border-t-actions border-panel pt-6 text-right mt-2 flex flex-row flex-wrap items-center justify-end gap-sm">
+                    <div class="border-t-actions border-panel pt-6 text-right mt-2 flex flex-row flex-wrap items-center justify-end gap-sm" x-data="{ autoSaved: false, savingNow: false }"
+                    @autosave-success.window="savingNow = false; autoSaved = true;"
+                    @autosave-start.window="savingNow = true;">
+                        <!-- Auto-Save Status Badge & Save Button -->
+                    <div class="flex flex-row items-center gap-sm">
+                        <!-- Live Auto-Save Badge -->
+                        <div class="flex items-center gap-xs px-2 py-1 rounded bg-panel-sub text-xs text-muted border border-panel"
+                             x-tooltip="'Background draft synchronization status'">
+                            <template x-if="savingNow">
+                                <span class="flex items-center gap-xs text-warning">
+                                    <i class="bi bi-arrow-repeat animate-spin"></i> Saving...
+                                </span>
+                            </template>
+                            <template x-if="!savingNow">
+                                <span>
+                                    <template x-if="!autoSaved">
+                                        <span class="text-danger flex items-center gap-xs" title="Not auto-saved yet">
+                                            <i class="bi bi-x-lg"></i> Unsaved
+                                        </span>
+                                    </template>
+                                    <template x-if="autoSaved">
+                                        <span class="text-success flex items-center gap-xs" title="Draft auto-saved successfully">
+                                            <i class="bi bi-check-lg"></i> Auto-Saved
+                                        </span>
+                                    </template>
+                                </span>
+                            </template>
+                        </div>
                         <x-button type="button" variant="secondary" @click="modalOpen = false"
                                   x-tooltip="'{{ addslashes(lexicon('tooltip_common_Cancel', 'Cancel and close modal')) }}'">
                             {{ lexicon('btn_common_Cancel', 'Cancel') }}
@@ -140,6 +176,7 @@
                         </x-button>
                     </div>
                 </form>
+            </div>
             </x-modal>
         </x-slot:bottom>
 

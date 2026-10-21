@@ -24,10 +24,11 @@
                     <span class="text-xs text-muted block">{{ lexicon('label_common_LastUpdated', 'Updated') }} {{ $draft->updated_at->diffForHumans() }}</span>
                 </div>
                 <x-button variant="secondary" 
-                          href="/chapters/{{ $draft->id }}/edit" 
-                          class="p-btn-sm text-sm"
-                          aria-label="{{ lexicon('tooltip_WriteChapter_ResumeDraft', 'Continue writing this draft chapter') }}"
-                          x-tooltip="'{{ addslashes(lexicon('tooltip_WriteChapter_ResumeDraft', 'Continue writing this draft chapter')) }}'">
+                        type="button"
+                        @click="$dispatch('open-chapter-modal', { chapterId: {{ $draft->id }} })" 
+                        class="p-btn-sm text-sm"
+                        aria-label="{{ lexicon('tooltip_WriteChapter_ResumeDraft', 'Continue writing this draft chapter') }}"
+                        x-tooltip="'{{ addslashes(lexicon('tooltip_WriteChapter_ResumeDraft', 'Continue writing this draft chapter')) }}'">
                     {{ lexicon('btn_common_Resume', 'Resume') }}
                 </x-button>
             </div>

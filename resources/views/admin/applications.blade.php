@@ -26,7 +26,7 @@
                             <th class="p-4 text-right">{{ lexicon('app_th_actions', 'Actions') }}</th>
                         </x-slot:headers>
                         <tbody class="divide-y divide-panel">
-                            @forelse($applications as $app)
+                            @forelse($applications as$app)
                                 @php
                                     $formattedAnswers =$app->answers
                                         ->sortBy(fn($a) =>$a->formField->order ?? 999)
@@ -47,6 +47,13 @@
                                                 'records' => $parsedRecords,
                                             ];
                                         });
+
+                                    $userVote =$app->votes->firstWhere('council_member_id', auth()->id());
+                                    $acceptCount =$app->votes->where('vote', 'accept')->count();
+                                    $rejectCount =$app->votes->where('vote', 'reject')->count();
+                                    $abstainCount =$app->votes->where('vote', 'abstain')->count();
+                                    $daysElapsed = \Carbon\Carbon::parse($app->submitted_at)->diffInDays(now());
+                                    $daysRemaining = max(0, 14 -$daysElapsed);
                                 @endphp
                                 <tr class="table-row">
                                     <td class="p-4 font-mono text-xs text-muted" x-tooltip="'{{ addslashes(lexicon('tooltip_Applications_SubmittedDate', 'Timestamp of submission')) }}'">
@@ -56,6 +63,12 @@
                                     <td class="p-4 text-sm text-muted">{{ $app->user->name ?? lexicon('label_common_Unknown', 'Unknown') }}</td>
                                     <td class="p-4">
                                         <x-badge variant="warning">{{ $app->status }}</x-badge>
+                                        @if($reviewMode === 'council')
+                                            <div class="text-xs text-muted mt-1 font-mono">
+                                                Votes: <span class="text-success">{{ $acceptCount }}</span> / <span class="text-danger">{{ $rejectCount }}</span> / <span class="text-info">{{ $abstainCount }}</span> 
+                                                ({{ $daysRemaining }}d left)
+                                            </div>
+                                        @endif
                                     </td>
                                     <td class="p-4 text-right">
                                         <x-button variant="primary" size="sm"
@@ -179,7 +192,7 @@
                         </div>
                     </div>
 
-                    <!-- Council Controls (Right) -->
+                    <!-- Review Controls (Right): Single vs Council Mode -->
                     <div class="flex flex-col gap-md panel-sub p-4">
                         <span class="text-lg font-bold text-main border-b pb-2">{{ lexicon('app_applicant_info', 'Applicant Info') }}</span>
                         <ul class="text-sm flex flex-col gap-xs text-muted">
@@ -187,50 +200,115 @@
                             <li><strong class="text-main">{{ lexicon('app_label_submitted', 'Submitted:') }}</strong> <span x-text="submittedAt"></span></li>
                         </ul>
 
-                        <span class="text-lg font-bold text-main border-b pb-2">{{ lexicon('app_council_decision', 'Council Decision') }}</span>
+                        @if($reviewMode === 'council')
+                            <span class="text-lg font-bold text-main border-b pb-2">{{ lexicon('app_council_voting', 'Council Voting & Discussion') }}</span>
+                            
+                            <!-- Cast Vote Form -->
+                            <form :action="`/admin/applications/${appId}/vote`" method="POST" class="flex flex-col gap-md panel p-3" x-data="ajaxForm" @submit.prevent="submit">
+                                @csrf
+                                <div class="flex flex-col gap-xs">
+                                    <label class="text-xs font-bold text-input-muted">{{ lexicon('label_Applications_YourVote', 'Your Vote') }}</label>
+                                    <select name="vote" required class="form-input w-full">
+                                        <option value="accept">{{ lexicon('label_Applications_VoteAccept', 'Accept') }}</option>
+                                        <option value="reject">{{ lexicon('label_Applications_VoteReject', 'Reject') }}</option>
+                                        <option value="abstain">{{ lexicon('label_Applications_VoteAbstain', 'Abstain') }}</option>
+                                    </select>
+                                </div>
+                                <div class="flex flex-col gap-xs">
+                                    <label class="text-xs font-bold text-input-muted">{{ lexicon('label_Applications_VoteComments', 'Comments / Justification') }}</label>
+                                    <textarea name="comments" rows="2" class="form-input w-full" placeholder="{{ lexicon('label_Applications_CommentsPlaceholder', 'Optional feedback...') }}"></textarea>
+                                </div>
+                                <div class="text-right">
+                                    <x-button variant="info" type="submit" size="sm" class="w-full">
+                                        {{ lexicon('btn_Applications_SubmitVote', 'Cast / Update Vote') }}
+                                    </x-button>
+                                </div>
+                            </form>
 
-                        <!-- Approve Form -->
-                        <form :action="`/admin/applications/${appId}/approve`" method="POST" class="flex flex-col gap-md panel p-3" x-data="ajaxForm" @submit.prevent="submit">
-                            @csrf
-                            <div class="flex flex-col gap-xs">
-                                <label class="text-xs font-bold text-input-muted">{{ lexicon('app_label_assign_position', 'Assign Position') }}</label>
-                                <select name="position_id" required class="form-input w-full" x-init="new window.TomSelect($el, { searchField: ['text'] })">
-                                    <option value="">{{ lexicon('app_select_position', '-- Select Position --') }}</option>
-                                    @foreach($sections ?? [] as $section)
-                                        <optgroup label="{{ $section->name }}" class="panel text-accent">
-                                            @foreach($section->positions as $pos)
-                                                <option value="{{ $pos->id }}" class="text-main">{{ $pos->name }}</option>
+                            @if(auth()->user()->can('applications_approve') || auth()->user()->role === 'webmaster')
+                                <span class="text-sm font-bold text-main mt-2">{{ lexicon('app_council_decision', 'Final Executive Approval') }}</span>
+                                <form :action="`/admin/applications/${appId}/approve`" method="POST" class="flex flex-col gap-md panel p-3" x-data="ajaxForm" @submit.prevent="submit">
+                                    @csrf
+                                    <div class="flex flex-col gap-xs">
+                                        <label class="text-xs font-bold text-input-muted">{{ lexicon('app_label_assign_position', 'Assign Position') }}</label>
+                                        <select name="position_id" required class="form-input w-full">
+                                            <option value="">{{ lexicon('app_select_position', '-- Select Position --') }}</option>
+                                            @foreach($sections ?? [] as $section)
+                                                <optgroup label="{{ $section->name }}">
+                                                    @foreach($section->positions as$pos)
+                                                        <option value="{{ $pos->id }}">{{ $pos->name }}</option>
+                                                    @endforeach
+                                                </optgroup>
                                             @endforeach
-                                        </optgroup>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="flex flex-col gap-xs">
-                                <label class="text-xs font-bold text-input-muted">{{ lexicon('app_label_assign_rank', 'Assign Rank') }}</label>
-                                <select name="rank_id" required class="form-input w-full" x-init="new window.TomSelect($el, { searchField: ['text'] })">
-                                    <option value="">{{ lexicon('app_select_rank', '-- Select Rank --') }}</option>
-                                    @foreach($rankSets ?? [] as $set)
-                                        <optgroup label="{{ $set->name }}" class="panel text-warning">
-                                            @foreach($set->ranks as $rank)
-                                                <option value="{{ $rank->id }}" class="text-main">{{ $rank->name }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex flex-col gap-xs">
+                                        <label class="text-xs font-bold text-input-muted">{{ lexicon('app_label_assign_rank', 'Assign Rank') }}</label>
+                                        <select name="rank_id" required class="form-input w-full">
+                                            <option value="">{{ lexicon('app_select_rank', '-- Select Rank --') }}</option>
+                                            @foreach($rankSets ?? [] as $set)
+                                                <optgroup label="{{ $set->name }}">
+                                                    @foreach($set->ranks as$rank)
+                                                        <option value="{{ $rank->id }}">{{ $rank->name }}</option>
+                                                    @endforeach
+                                                </optgroup>
                                             @endforeach
-                                        </optgroup>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="border-t-actions pt-4 text-right">
-                                <x-button variant="success" type="submit" class="w-full" x-tooltip="'{{ addslashes(lexicon('tooltip_Applications_ApproveSubmit', 'Approve application and integrate character into active roster')) }}'">
-                                    {{ lexicon('btn_approve_char', 'Approve & Integrate') }}
+                                        </select>
+                                    </div>
+                                    <x-button variant="success" type="submit" size="sm" class="w-full">
+                                        {{ lexicon('btn_approve_char', 'Approve & Integrate') }}
+                                    </x-button>
+                                </form>
+                                <x-button variant="danger" type="button" size="sm" class="w-full mt-2" @click="rejectApplication()">
+                                    {{ lexicon('btn_reject_app', 'Reject Application') }}
                                 </x-button>
-                            </div>
-                        </form>
+                            @endif
+                        @else
+                            <span class="text-lg font-bold text-main border-b pb-2">{{ lexicon('app_council_decision', 'Council Decision') }}</span>
 
-                        <!-- Reject Button -->
-                        <x-button variant="danger" type="button" class="w-full" @click="rejectApplication()" x-tooltip="'{{ addslashes(lexicon('tooltip_Applications_RejectSubmit', 'Reject application and notify applicant')) }}'">
-                            {{ lexicon('btn_reject_app', 'Reject Application') }}
-                        </x-button>
+                            <!-- Single Approval Form -->
+                            <form :action="`/admin/applications/${appId}/approve`" method="POST" class="flex flex-col gap-md panel p-3" x-data="ajaxForm" @submit.prevent="submit">
+                                @csrf
+                                <div class="flex flex-col gap-xs">
+                                    <label class="text-xs font-bold text-input-muted">{{ lexicon('app_label_assign_position', 'Assign Position') }}</label>
+                                    <select name="position_id" required class="form-input w-full" x-init="new window.TomSelect($el, { searchField: ['text'] })">
+                                        <option value="">{{ lexicon('app_select_position', '-- Select Position --') }}</option>
+                                        @foreach($sections ?? [] as $section)
+                                            <optgroup label="{{ $section->name }}" class="panel text-accent">
+                                                @foreach($section->positions as$pos)
+                                                    <option value="{{ $pos->id }}" class="text-main">{{ $pos->name }}</option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="flex flex-col gap-xs">
+                                    <label class="text-xs font-bold text-input-muted">{{ lexicon('app_label_assign_rank', 'Assign Rank') }}</label>
+                                    <select name="rank_id" required class="form-input w-full" x-init="new window.TomSelect($el, { searchField: ['text'] })">
+                                        <option value="">{{ lexicon('app_select_rank', '-- Select Rank --') }}</option>
+                                        @foreach($rankSets ?? [] as $set)
+                                            <optgroup label="{{ $set->name }}" class="panel text-warning">
+                                                @foreach($set->ranks as$rank)
+                                                    <option value="{{ $rank->id }}" class="text-main">{{ $rank->name }}</option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="border-t-actions pt-4 text-right">
+                                    <x-button variant="success" type="submit" class="w-full" x-tooltip="'{{ addslashes(lexicon('tooltip_Applications_ApproveSubmit', 'Approve application and integrate character into active roster')) }}'">
+                                        {{ lexicon('btn_approve_char', 'Approve & Integrate') }}
+                                    </x-button>
+                                </div>
+                            </form>
+
+                            <!-- Reject Button -->
+                            <x-button variant="danger" type="button" class="w-full" @click="rejectApplication()" x-tooltip="'{{ addslashes(lexicon('tooltip_Applications_RejectSubmit', 'Reject application and notify applicant')) }}'">
+                                {{ lexicon('btn_reject_app', 'Reject Application') }}
+                            </x-button>
+                        @endif
                     </div>
                 </div>
             </x-modal>
@@ -253,7 +331,7 @@
                             <option value="">{{ lexicon('admin_select_position', '-- Select Position --') }}</option>
                             @foreach($sections ?? [] as $section)
                                 <optgroup label="{{ $section->name }}" class="panel text-accent">
-                                    @foreach($section->positions as $pos)
+                                    @foreach($section->positions as$pos)
                                         <option value="{{ $pos->id }}" class="text-main">{{ $pos->name }}</option>
                                     @endforeach
                                 </optgroup>
@@ -270,7 +348,7 @@
                             <option value="">{{ lexicon('admin_select_rank', '-- Select Rank --') }}</option>
                             @foreach($rankSets ?? [] as $set)
                                 <optgroup label="{{ $set->name }}" class="panel text-warning">
-                                    @foreach($set->ranks as $rank)
+                                    @foreach($set->ranks as$rank)
                                         <option value="{{ $rank->id }}" class="text-main">{{ $rank->name }}</option>
                                     @endforeach
                                 </optgroup>

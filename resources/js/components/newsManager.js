@@ -47,6 +47,12 @@ export default () => ({
         this.formAction = mode === 'edit' ? `/admin/news/${this.id}` : '/admin/news';
         this.method = mode === 'edit' ? 'PUT' : 'POST';
         this.modalOpen = true;
-        this.$dispatch('sync-news-editor', this.content);
+
+        // Dispatch event to populate TipTap reliably just like the chapter modal
+        this.$nextTick(() => {
+            window.dispatchEvent(new CustomEvent('set-chapter-editor-content', {
+                detail: { content: this.content || '' }
+            }));
+        });
     }
 });

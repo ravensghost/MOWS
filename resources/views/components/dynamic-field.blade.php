@@ -1,4 +1,4 @@
-@props(['field'])
+@props(['field', 'value' => null])
 
 @php
     $fieldTermName = \Illuminate\Support\Str::studly($field->name);
@@ -25,20 +25,21 @@
                   x-init="window.autosize && window.autosize($el)"
                   {{ $field->is_required ? 'required' : '' }}></textarea>
                   
-    @elseif($field->type === 'richtext')
-        <label class="text-xs font-bold text-input-muted">
-            {{ $label }} @if($field->is_required)<span class="text-required">*</span>@endif
-        </label>
-        <div class="bg-panel border-panel rounded-panel flex flex-col overflow-hidden"
-             x-data="tiptapEditor('')"
-             @tiptap-update="$refs.hiddenInput.value = $event.detail">
-            <x-tiptap-toolbar />
-            <div x-ref="editorContainer" class="tiptap-content p-3 flex-grow"></div>
-            <input type="hidden"
-                   x-ref="hiddenInput"
-                   name="{{ $name }}"
-                   {{ $field->is_required ? 'required' : '' }}>
-        </div>
+                  @elseif($field->type === 'richtext')
+                  <label class="text-xs font-bold text-input-muted">
+                      {{ $label }} @if($field->is_required)<span class="text-required">*</span>@endif
+                  </label>
+                  <div class="bg-panel border-panel rounded-panel flex flex-col overflow-hidden"
+                       x-data="tiptapEditor(@js($value ?? ''))"
+                       @tiptap-update="$refs.hiddenInput.value = $event.detail">
+                      <x-tiptap-toolbar />
+                      <div x-ref="editorContainer" class="tiptap-content p-3 flex-grow"></div>
+                      <input type="hidden"
+                             x-ref="hiddenInput"
+                             name="{{ $name }}"
+                             value="{{ $value ?? '' }}"
+                             {{ $field->is_required ? 'required' : '' }}>
+                  </div>
         
     @elseif($field->type === 'dropdown')
         <label for="{{ $name }}" class="text-xs font-bold text-input-muted">
