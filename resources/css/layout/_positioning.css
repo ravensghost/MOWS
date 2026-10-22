@@ -89,11 +89,11 @@
 }
 
 .translate-y-logo {
-    top: var(--theme-pos-logo-y, 0px);
+    top: var(--theme-pos-logo-y, -2%);
 }
 
 .translate-x-logo {
-    left: var(--theme-pos-logo-x, 15px);
+    left: var(--theme-pos-logo-x, -4%);
 }
 
 .translate-y-title {
@@ -101,7 +101,7 @@
 }
 
 .translate-x-title {
-    right: var(--theme-pos-title-x, 45%);
+    right: var(--theme-pos-title-x, 44%);
 }
 /* Fixed Positioning */
 .fixed {

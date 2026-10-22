@@ -8,6 +8,7 @@
   .phpunit.result.cache
   AGENTS.md
   CLAUDE.md
+  MOWS Favicon Design Concept.pdf
   README.md
   artisan
   boost.json
@@ -71,6 +72,7 @@
           TransferCharacterController.php
           UserController.php
           WidgetController.php
+          WikiController.php
         [Auth]
           ConfirmablePasswordController.php
           EmailVerificationNotificationController.php
@@ -87,6 +89,9 @@
         ProfileUpdateRequest.php
         [Auth]
           LoginRequest.php
+    [Mail]
+      LockPingMail.php
+      MowsNotificationMail.php
     [Models]
       Application.php
       ApplicationAnswer.php
@@ -124,10 +129,12 @@
       User.php
       UserAttribute.php
       Widget.php
+      WikiArticle.php
     [Providers]
       AppServiceProvider.php
     [Services]
       AiTranslationService.php
+      NotificationService.php
     [View]
       [Components]
         AppLayout.php
@@ -167,6 +174,7 @@
       2026_10_20_121752_add_lock_columns_to_chapters_table.php
       2026_10_20_150000_add_application_id_to_application_votes_table.php
       2026_10_21_000000_create_wiki_articles_table.php
+      2026_10_21_160000_add_notification_channel_toggles_to_settings.php
     [schema]
       database.sql
       mysql-schema.sql
@@ -175,6 +183,7 @@
   [public]
     .htaccess
     favicon.ico
+    hot
     index.php
     robots.txt
     [build]
@@ -270,6 +279,7 @@
         themeManager.js
         themeUploader.js
         tiptapEditor.js
+        wikiManager.js
       [utils]
         clipboard.js
         debounce.js
@@ -300,6 +310,7 @@
         story.blade.php
         themes.blade.php
         users.blade.php
+        wiki.blade.php
       [auth]
         confirm-password.blade.php
         reset-password.blade.php
@@ -331,6 +342,10 @@
         table.blade.php
         theme-var-card.blade.php
         tiptap-toolbar.blade.php
+      [emails]
+        chapter_published.blade.php
+        lock_ping.blade.php
+        notification.blade.php
       [errors]
         401.blade.php
         402.blade.php
@@ -392,6 +407,7 @@
         unread_messages.blade.php
         user_drafts.blade.php
         video_embed.blade.php
+        wiki_widget.blade.php
   [routes]
     admin.php
     auth.php

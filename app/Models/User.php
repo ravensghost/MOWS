@@ -22,6 +22,7 @@ use Spatie\Permission\Traits\HasRoles;
     'role',
     'is_on_loa',
     'loa_return_date',
+    'last_login_at',
     'selected_skin',
     'app_status',
     'content_shield_bypass',
@@ -54,6 +55,7 @@ class User extends Authenticatable
         'selected_skin',
         'is_on_loa',
         'loa_return_date',
+        'last_login_at',
         'app_status',
         'content_shield_bypass',
     ];
@@ -297,6 +299,21 @@ class User extends Authenticatable
             get: fn() => filter_var($this->getAttr('content_shield_bypass', false), FILTER_VALIDATE_BOOLEAN),
             set: function ($value) {
                 $this->pendingNormalizedAttributes['content_shield_bypass'] = $value ? '1' : '0';
+                return [];
+            }
+        );
+    }
+    protected function lastLoginAt(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $val = $this->getAttr('last_login_at');
+                return $val ? Carbon::parse($val) : null;
+            },
+            set: function ($value) {
+                $this->pendingNormalizedAttributes['last_login_at'] = $value instanceof Carbon
+                    ? $value->toDateTimeString()
+                    : ($value ? Carbon::parse($value)->toDateTimeString() : null);
                 return [];
             }
         );

@@ -2,12 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\LockPingMail;
 use App\Models\Book;
-use App\Models\Page;
 use App\Models\Chapter;
+use App\Models\ChapterUserContribution;
+use App\Models\ChapterVersion;
 use App\Models\Character;
 use App\Models\ContentRating;
+use App\Models\Page;
+use App\Models\UserAttribute;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Stevebauman\Purify\Facades\Purify;
 
 class WriteController extends Controller
@@ -75,7 +82,7 @@ class WriteController extends Controller
             'book_id'             => 'required|exists:books,id',
             'active_character_id' => 'required|exists:characters,id',
             'character_ids'       => 'nullable|array',
-            'character_ids.*'     => 'string', 
+            'character_ids.*'     => 'string',
             'chapter_type'        => 'required|in:mission,personal_log',
             'ic_day'              => 'required|string',
             'ic_time'             => 'required|string',
@@ -98,39 +105,115 @@ class WriteController extends Controller
         if ($chapterId) {
             $chapter = Chapter::findOrFail($chapterId);
 
-            // Calculate word count delta based on previous content state
             $previousWordCount = str_word_count(strip_tags($chapter->content));
             $wordDelta = max(0, $currentWordCount - $previousWordCount);
 
-            // Snapshot previous content if it changed during manual save
             if ($chapter->content !== $validated['content']) {
-                \App\Models\ChapterVersion::create([
+                ChapterVersion::create([
                     'chapter_id' => $chapter->id,
                     'user_id'    => $userId,
                     'content'    => $chapter->content,
                 ]);
             }
 
-            // Release any editor lock on save
             $validated['locked_by_user_id'] = null;
             $validated['locked_at'] = null;
             $chapter->update($validated);
         } else {
             $validated['author_user_id'] = $userId;
             $chapter = Chapter::create($validated);
-            $wordDelta = $currentWordCount; // Full count for initial creation
+            $wordDelta = $currentWordCount;
         }
 
-        // Record or update the user's running word contribution tally
         if ($userId && $wordDelta > 0) {
-            \App\Models\ChapterUserContribution::updateOrCreate(
+            ChapterUserContribution::updateOrCreate(
                 ['chapter_id' => $chapter->id, 'user_id' => $userId],
-                ['word_count' => \DB::raw("word_count + {$wordDelta}")]
+                ['word_count' => DB::raw("word_count + {$wordDelta}")]
             );
         }
 
         $resolvedCharacterIds = $this->resolveCharacterIds($rawCharacterIds);
-        $chapter->characters()->sync($resolvedCharacterIds);
+        $syncResults = $chapter->characters()->sync($resolvedCharacterIds);
+        $attachedCharacterIds = $syncResults['attached'] ?? [];
+
+        // --- MULTI-CHANNEL ALERTS FOR NEWLY TAGGED CHARACTERS PRESENT ---
+        if (!empty($attachedCharacterIds)) {
+            $taggedCharacters = Character::whereIn('id', $attachedCharacterIds)->with('user')->get();
+
+            foreach ($taggedCharacters as $char) {
+                if ($char->user_id && $char->user_id !== auth()->id() && $char->user) {
+                    $discordId = UserAttribute::where('user_id', $char->user_id)
+                        ->where('key', 'discord_id')
+                        ->value('value');
+
+                    $userMention = !empty($discordId) ? "<@{$discordId}>" : $char->user->name;
+                    $chapterUrl = url('/dashboard');
+                    $chapterLink = "[Chapter #{$chapter->id}]({$chapterUrl})";
+
+                    // 1. Discord Alert
+                    NotificationService::sendDiscord(
+                        'alerts',
+                        "🏷️ **Writer Tagged:** Character **{$char->name}** ({$userMention}) was added as present in {$chapterLink} (*{$chapter->location}*) by " . auth()->user()->name . "."
+                    );
+
+                    // 2. On-Site PM Alert
+                    NotificationService::sendPm(
+                        auth()->user(),
+                        [$char->user],
+                        "Your character {$char->name} was tagged as present in Chapter #{$chapter->id} ({$chapter->location}).",
+                        "Character Tagged: {$char->name}"
+                    );
+
+                    // 3. Email Alert
+                    if (!empty($char->user->email)) {
+                        NotificationService::sendEmail(
+                            $char->user->email,
+                            "Character Tagged in Chapter #{$chapter->id}",
+                            'emails.notification',
+                            [
+                                'heading'     => 'Character Tagged in Chapter',
+                                'messageText' => "Your character {$char->name} was added as present in Chapter #{$chapter->id} ({$chapter->location}) by " . auth()->user()->name . ".",
+                                'actionUrl'   => $chapterUrl,
+                                'actionLabel' => 'View Chapter on Dashboard',
+                            ]
+                        );
+                    }
+                }
+            }
+        }
+
+        // --- PHASE 5: PUBLISHED CHAPTER NOTIFICATION PIPELINE ---
+        if ($chapter->status === 'published') {
+            // 1. Discord Webhook
+            NotificationService::sendDiscord(
+                'chapters',
+                "Chapter #{$chapter->id} ({$chapter->chapter_type}) located at *{$chapter->location}* is now live."
+            );
+
+            $subscribers = $chapter->book?->subscribers ?? collect();
+
+            // 2. On-Site PM Notification
+            if ($subscribers->isNotEmpty()) {
+                NotificationService::sendPm(
+                    auth()->user(),
+                    $subscribers,
+                    'A new chapter has been published in ' . ($chapter->book->title ?? 'your book') . ' at ' . $chapter->location . '.',
+                    'New Chapter Published: #' . $chapter->id
+                );
+            }
+
+            // 3. Email Notification
+            foreach ($subscribers as $subscriber) {
+                if (!empty($subscriber->email)) {
+                    NotificationService::sendEmail(
+                        $subscriber->email,
+                        'New Chapter Published: Chapter #' . $chapter->id,
+                        'emails.chapter_published',
+                        ['chapter' => $chapter]
+                    );
+                }
+            }
+        }
 
         return response()->json([
             'status'     => 'success',
@@ -178,12 +261,13 @@ class WriteController extends Controller
         $validated['rating_s'] = $validated['rating_s'] ?? 1;
         $validated['rating_v'] = $validated['rating_v'] ?? 1;
 
-        $chapterId = $chapter?->id ?? $request->input('chapter_id');
         if ($chapterId) {
             $existingChapter = Chapter::find($chapterId);
             if ($existingChapter && !$existingChapter->isAccessibleBy(auth()->user())) {
                 return response()->json(['status' => 'unauthorised'], 403);
             }
+            $chapter = $existingChapter;
+            $chapter->update($validated);
         } else {
             $validated['author_user_id'] = auth()->id();
             $validated['status'] = 'draft';
@@ -233,11 +317,10 @@ class WriteController extends Controller
     /**
      * Acquire or verify exclusive editor write-lock.
      */
-     public function acquireLock(Chapter $chapter)
+    public function acquireLock(Chapter $chapter)
     {
         $userId = auth()->id();
 
-        // Allow co-authors or current locker to bypass the lock block
         $coAuthorUserIds = $chapter->characters()->whereNotNull('user_id')->pluck('user_id')->toArray();
         $isCoAuthor = in_array($userId, $coAuthorUserIds);
 
@@ -256,7 +339,7 @@ class WriteController extends Controller
 
         $chapter->update([
             'locked_by_user_id' => $userId,
-            'locked_at'         => window_timestamp_safe ?? now(),
+            'locked_at'         => now(),
         ]);
 
         return response()->json(['status' => 'success']);
@@ -280,14 +363,26 @@ class WriteController extends Controller
         $channel = $validated['channel'];
 
         if ($channel === 'pm') {
-            // Dispatch internal PM logic
-            \App\Models\Thread::createSystemMessage($sender, [$locker], 'Are you finished with Chapter #' . $chapter->id . '?');
+            NotificationService::sendPm(
+                $sender,
+                [$locker],
+                'Are you finished with Chapter #' . $chapter->id . '?',
+                'Editor Lock Ping: Chapter #' . $chapter->id
+            );
         } elseif ($channel === 'email' && !empty($locker->email)) {
-            // Dispatch notification mailable
-            \Illuminate\Support\Facades\Mail::to($locker->email)->send(new \App\Mail\LockPingMail($chapter, $sender));
+            if (NotificationService::isChannelEnabled('email')) {
+                Mail::to($locker->email)->send(new LockPingMail($chapter, $sender));
+            }
         } elseif ($channel === 'discord') {
-            // Dispatch Discord webhook / mention
-            // Integration via Phase 5 notification pipeline
+            $discordId = UserAttribute::where('user_id', $locker->id)
+                ->where('key', 'discord_id')
+                ->value('value');
+            $mention = !empty($discordId) ? "<@{$discordId}>" : $locker->name;
+
+            NotificationService::sendDiscord(
+                'alerts',
+                "🔔 **Chapter Editor Ping:** {$sender->name} is asking {$mention} if they're finished with Chapter #{$chapter->id} (*{$chapter->location}*)."
+            );
         }
 
         return response()->json([

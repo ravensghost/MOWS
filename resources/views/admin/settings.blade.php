@@ -6,14 +6,12 @@
 @php
     // Prepare language options for the JSON payload
     $langOptions = ['auto' => lexicon('label_setting_OptLangAuto', 'Auto-Detect (Browser Default)')];
-    foreach($customLanguages ?? [] as $code => $displayName) {
-        $langOptions[$code] = $displayName . ' (' . lexicon('label_setting_CustomLexicon', 'Custom Lexicon') . ')';
+    foreach($customLanguages ?? [] as $code => $displayName) {$langOptions[$code] =$displayName . ' (' . lexicon('label_setting_CustomLexicon', 'Custom Lexicon') . ')';
     }
 
     // Prepare Time System options for the JSON payload
     $tsOptions = ['' => lexicon('label_setting_OptRealWorldDefault', 'Real World (Default)')];
-    foreach($timeSystems ?? [] as $system) {
-        $tsOptions[$system->id] = $system->name;
+    foreach($timeSystems ?? [] as $system) {$tsOptions[$system->id] =$system->name;
     }
 
     $notConfiguredText = lexicon('msg_setting_NotConfigured', 'Not Configured');
@@ -35,6 +33,21 @@
         ['key' => 'game_setting', 'group' => 'general', 'label' => lexicon('label_setting_GameSetting', 'Game Setting / Franchise')],
         ['key' => 'lore_context', 'group' => 'general', 'label' => lexicon('label_setting_LoreContext', 'Lore & Era Context')],
         ['key' => 'draft_autosave_interval', 'group' => 'mechanics', 'label' => lexicon('label_setting_DraftAutoSaveInterval', 'Draft Auto-Save Interval (ms)')],
+        ['key' => 'discord_webhook_chapters', 'group' => 'notifications', 'label' => 'Discord Webhook: Chapters'],
+        ['key' => 'discord_webhook_news', 'group' => 'notifications', 'label' => 'Discord Webhook: News Stories'],
+        ['key' => 'discord_webhook_alerts', 'group' => 'notifications', 'label' => 'Discord Webhook: Writer Alerts & Tags'],
+        ['key' => 'mail_from_name', 'group' => 'notifications', 'label' => 'Email Sender Name'],
+        ['key' => 'email_subject_prefix', 'group' => 'notifications', 'label' => 'Email Subject Line Prefix'],
+        ['key' => 'mail_from_address', 'group' => 'notifications', 'label' => 'Email Sender Address'],
+        ['key' => 'mail_host', 'group' => 'notifications', 'label' => 'SMTP Host'],
+        ['key' => 'mail_port', 'group' => 'notifications', 'label' => 'SMTP Port'],
+        ['key' => 'mail_encryption', 'group' => 'notifications', 'label' => 'SMTP Encryption'],
+        ['key' => 'mail_username', 'group' => 'notifications', 'label' => 'SMTP Username'],
+        ['key' => 'mail_password', 'group' => 'notifications', 'label' => 'SMTP Password'],
+        ['key' => 'notifications_discord_enabled', 'group' => 'notifications', 'label' => lexicon('label_setting_EnableDiscord', 'Enable Discord Notifications')],
+        ['key' => 'notifications_email_enabled', 'group' => 'notifications', 'label' => lexicon('label_setting_EnableEmail', 'Enable Email Notifications')],
+        ['key' => 'notifications_pm_enabled', 'group' => 'notifications', 'label' => lexicon('label_setting_EnablePm', 'Enable Automated On-Site PM Alerts')],
+        ['key' => 'inactivity_threshold_days', 'group' => 'mechanics', 'label' => lexicon('label_setting_InactivityThreshold', 'Player Inactivity Threshold (Days)')],
     ];
 @endphp
 
@@ -144,8 +157,7 @@
                                            :label="lexicon('label_setting_UniverseTimeSystem', 'Universe Time System')"
                                            editClick="openModal('universe_time_system', '{{ addslashes(lexicon('label_setting_UniverseTimeSystem', 'Universe Time System')) }}', '{{ $globalSettings['universe_time_system'] ?? '' }}', 'select', {{ json_encode($tsOptions) }})">
                                 @php
-                                    $activeId = $globalSettings['universe_time_system'] ?? '';
-                                    $activeTs = collect($timeSystems ?? [])->firstWhere('id', $activeId);
+                                    $activeId = $globalSettings['universe_time_system'] ?? '';$activeTs = collect($timeSystems ?? [])->firstWhere('id', $activeId);
                                 @endphp
                                 {{ $activeTs ? $activeTs->name : lexicon('label_setting_OptRealWorldDefault', 'Real World (Default)') }}
                             </x-setting-row>
@@ -169,6 +181,14 @@
                                 :hint="lexicon('msg_setting_AutoSaveIntervalHint', 'Interval in milliseconds (e.g. 30000 for 30 seconds)')"
                                 editClick="openModal('draft_autosave_interval', '{{ addslashes(lexicon('label_setting_DraftAutoSaveInterval', 'Draft Auto-Save Interval (ms)')) }}', '{{ $globalSettings['draft_autosave_interval'] ?? '30000' }}', 'text')">
                                 {{ $globalSettings['draft_autosave_interval'] ?? '30000' }} ms
+                            </x-setting-row>
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('inactivity_threshold_days')"
+                                x-cloak
+                                :label="lexicon('label_setting_InactivityThreshold', 'Player Inactivity Threshold (Days)')"
+                                :tooltip="lexicon('tooltip_setting_InactivityThreshold', 'Number of days without a login before an active player is flagged as inactive (default: 30)')"
+                                :hint="lexicon('msg_setting_InactivityThresholdHint', 'Number of days before flagging inactive accounts (e.g. 30)')"
+                                editClick="openModal('inactivity_threshold_days', '{{ addslashes(lexicon('label_setting_InactivityThreshold', 'Player Inactivity Threshold (Days)')) }}', '{{ $globalSettings['inactivity_threshold_days'] ?? '30' }}', 'text')">
+                                {{ $globalSettings['inactivity_threshold_days'] ?? '30' }} {{ lexicon('label_common_Days', 'days') }}
                             </x-setting-row>
                         </tbody>
 
@@ -242,6 +262,141 @@
                                            :hint="lexicon('msg_setting_LocalApiHint', 'Only if required by proxy (e.g., LiteLLM)')"
                                            editClick="openModal('ai_local_api_key', '{{ addslashes(lexicon('label_setting_AILocalApiKey', 'Local API Key (Optional)')) }}', '{{ addslashes($globalSettings['ai_local_api_key'] ?? '') }}', 'password')">
                                 {{ !empty($globalSettings['ai_local_api_key']) ? '••••••••••••••••' : $notConfiguredText }}
+                            </x-setting-row>
+                        </tbody>
+
+                        {{-- Notifications & Email Group (Unified Single tbody) --}}
+                        <tbody x-data="{ expanded: false }" x-show="matchesGroup('notifications')">
+                            <tr class="bg-panel-sub border-b-table-row hover-bg-panel-hover cursor-pointer border-t border-panel select-none" 
+                                @click="expanded = !expanded"
+                                x-tooltip="'{{ addslashes(lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel')) }}'"
+                                aria-label="{{ lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel') }}">
+                                <td colspan="3" class="px-4 py-2 font-bold text-h text-xs uppercase tracking-wider">
+                                    <div class="flex flex-row items-center gap-sm">
+                                        <span class="text-xs text-muted" x-text="(expanded || searchQuery.trim().length > 0) ? '▼' : '▶'"></span>
+                                        <i class="bi bi-bell text-accent"></i>
+                                        <span>{{ lexicon('label_setting_NotificationsGroup', 'Multi-Channel Notifications & Email Settings') }}</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            {{-- Master Channel Kill-Switches --}}
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('notifications_discord_enabled')"
+                                           x-cloak
+                                           :label="lexicon('label_setting_EnableDiscord', 'Enable Discord Notifications')"
+                                           :tooltip="lexicon('tooltip_setting_EnableDiscord', 'Master switch to enable or disable outgoing Discord webhook dispatches')"
+                                           editClick="openModal('notifications_discord_enabled', '{{ addslashes(lexicon('label_setting_EnableDiscord', 'Enable Discord Notifications')) }}', '{{ $globalSettings['notifications_discord_enabled'] ?? '0' }}', 'select', { '1': '{{ addslashes(lexicon('label_common_Enabled', 'Enabled')) }}', '0': '{{ addslashes(lexicon('label_common_Disabled', 'Disabled')) }}' })">
+                                <x-badge :variant="($globalSettings['notifications_discord_enabled'] ?? '0') === '1' ? 'success' : 'secondary'">
+                                    {{ ($globalSettings['notifications_discord_enabled'] ?? '0') === '1' ? lexicon('label_common_Enabled', 'Enabled') : lexicon('label_common_Disabled', 'Disabled') }}
+                                </x-badge>
+                            </x-setting-row>
+
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('notifications_email_enabled')"
+                                           x-cloak
+                                           :label="lexicon('label_setting_EnableEmail', 'Enable Email Notifications')"
+                                           :tooltip="lexicon('tooltip_setting_EnableEmail', 'Master switch to enable or disable outgoing SMTP email alerts')"
+                                           editClick="openModal('notifications_email_enabled', '{{ addslashes(lexicon('label_setting_EnableEmail', 'Enable Email Notifications')) }}', '{{ $globalSettings['notifications_email_enabled'] ?? '0' }}', 'select', { '1': '{{ addslashes(lexicon('label_common_Enabled', 'Enabled')) }}', '0': '{{ addslashes(lexicon('label_common_Disabled', 'Disabled')) }}' })">
+                                <x-badge :variant="($globalSettings['notifications_email_enabled'] ?? '0') === '1' ? 'success' : 'secondary'">
+                                    {{ ($globalSettings['notifications_email_enabled'] ?? '0') === '1' ? lexicon('label_common_Enabled', 'Enabled') : lexicon('label_common_Disabled', 'Disabled') }}
+                                </x-badge>
+                            </x-setting-row>
+
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('notifications_pm_enabled')"
+                                           x-cloak
+                                           :label="lexicon('label_setting_EnablePm', 'Enable Automated On-Site PM Alerts')"
+                                           :tooltip="lexicon('tooltip_setting_EnablePm', 'Master switch to enable or disable automated system Private Message alerts')"
+                                           editClick="openModal('notifications_pm_enabled', '{{ addslashes(lexicon('label_setting_EnablePm', 'Enable Automated On-Site PM Alerts')) }}', '{{ $globalSettings['notifications_pm_enabled'] ?? '0' }}', 'select', { '1': '{{ addslashes(lexicon('label_common_Enabled', 'Enabled')) }}', '0': '{{ addslashes(lexicon('label_common_Disabled', 'Disabled')) }}' })">
+                                <x-badge :variant="($globalSettings['notifications_pm_enabled'] ?? '0') === '1' ? 'success' : 'secondary'">
+                                    {{ ($globalSettings['notifications_pm_enabled'] ?? '0') === '1' ? lexicon('label_common_Enabled', 'Enabled') : lexicon('label_common_Disabled', 'Disabled') }}
+                                </x-badge>
+                            </x-setting-row>
+                            {{-- Discord Webhooks --}}
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('discord_webhook_chapters')"
+                                           x-cloak
+                                           :label="lexicon('label_setting_DiscordChapters', 'Discord Webhook: Chapters')"
+                                           :tooltip="lexicon('tooltip_setting_DiscordChapters', 'Webhook endpoint URL for broadcasting published chapters')"
+                                           editClick="openModal('discord_webhook_chapters', '{{ addslashes(lexicon('label_setting_DiscordChapters', 'Discord Webhook: Chapters')) }}', '{{ addslashes($globalSettings['discord_webhook_chapters'] ?? '') }}', 'url')">
+                                {{ Str::limit($globalSettings['discord_webhook_chapters'] ?? $notConfiguredText, 45) }}
+                            </x-setting-row>
+
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('discord_webhook_news')"
+                                           x-cloak
+                                           :label="lexicon('label_setting_DiscordNews', 'Discord Webhook: News Stories')"
+                                           :tooltip="lexicon('tooltip_setting_DiscordNews', 'Webhook endpoint URL for broadcasting news and site announcements')"
+                                           editClick="openModal('discord_webhook_news', '{{ addslashes(lexicon('label_setting_DiscordNews', 'Discord Webhook: News Stories')) }}', '{{ addslashes($globalSettings['discord_webhook_news'] ?? '') }}', 'url')">
+                                {{ Str::limit($globalSettings['discord_webhook_news'] ?? $notConfiguredText, 45) }}
+                            </x-setting-row>
+
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('discord_webhook_alerts')"
+                                           x-cloak
+                                           :label="lexicon('label_setting_DiscordAlerts', 'Discord Webhook: Writer Alerts & Tags')"
+                                           :tooltip="lexicon('tooltip_setting_DiscordAlerts', 'Webhook endpoint URL for chapter co-author tags and lock pings')"
+                                           editClick="openModal('discord_webhook_alerts', '{{ addslashes(lexicon('label_setting_DiscordAlerts', 'Discord Webhook: Writer Alerts & Tags')) }}', '{{ addslashes($globalSettings['discord_webhook_alerts'] ?? '') }}', 'url')">
+                                {{ Str::limit($globalSettings['discord_webhook_alerts'] ?? $notConfiguredText, 45) }}
+                            </x-setting-row>
+
+                            {{-- Email Configuration --}}
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('email_subject_prefix')"
+                                           x-cloak
+                                           :label="lexicon('label_setting_EmailSubjectPrefix', 'Email Subject Line Prefix')"
+                                           :tooltip="lexicon('tooltip_setting_EmailSubjectPrefix', 'Custom prefix text prepended to email subjects, e.g. [MOWS Engine]')"
+                                           editClick="openModal('email_subject_prefix', '{{ addslashes(lexicon('label_setting_EmailSubjectPrefix', 'Email Subject Line Prefix')) }}', '{{ addslashes($globalSettings['email_subject_prefix'] ?? '[MOWS Engine]') }}', 'text')">
+                                {{ $globalSettings['email_subject_prefix'] ?? '[MOWS Engine]' }}
+                            </x-setting-row>
+
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('mail_from_name')"
+                                           x-cloak
+                                           :label="lexicon('label_setting_MailFromName', 'Email Sender Name')"
+                                           :tooltip="lexicon('tooltip_setting_MailFromName', 'The display name shown on outgoing emails')"
+                                           editClick="openModal('mail_from_name', '{{ addslashes(lexicon('label_setting_MailFromName', 'Email Sender Name')) }}', '{{ addslashes($globalSettings['mail_from_name'] ?? '') }}', 'text')">
+                                {{ $globalSettings['mail_from_name'] ?? $notConfiguredText }}
+                            </x-setting-row>
+
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('mail_from_address')"
+                                           x-cloak
+                                           :label="lexicon('label_setting_MailFromAddress', 'Email Sender Address')"
+                                           :tooltip="lexicon('tooltip_setting_MailFromAddress', 'The email address for automated notifications')"
+                                           editClick="openModal('mail_from_address', '{{ addslashes(lexicon('label_setting_MailFromAddress', 'Email Sender Address')) }}', '{{ addslashes($globalSettings['mail_from_address'] ?? '') }}', 'text')">
+                                {{ $globalSettings['mail_from_address'] ?? $notConfiguredText }}
+                            </x-setting-row>
+                            {{-- SMTP Configuration --}}
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('mail_host')"
+                                           x-cloak
+                                           :label="lexicon('label_setting_MailHost', 'SMTP Host')"
+                                           :tooltip="lexicon('tooltip_setting_MailHost', 'The SMTP server address for your external mail provider')"
+                                           editClick="openModal('mail_host', '{{ addslashes(lexicon('label_setting_MailHost', 'SMTP Host')) }}', '{{ addslashes($globalSettings['mail_host'] ?? '') }}', 'text')">
+                                {{ $globalSettings['mail_host'] ?? $notConfiguredText }}
+                            </x-setting-row>
+
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('mail_port')"
+                                           x-cloak
+                                           :label="lexicon('label_setting_MailPort', 'SMTP Port')"
+                                           :tooltip="lexicon('tooltip_setting_MailPort', 'The connection port, typically 587 or 465')"
+                                           editClick="openModal('mail_port', '{{ addslashes(lexicon('label_setting_MailPort', 'SMTP Port')) }}', '{{ addslashes($globalSettings['mail_port'] ?? '587') }}', 'text')">
+                                {{ $globalSettings['mail_port'] ?? '587' }}
+                            </x-setting-row>
+
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('mail_encryption')"
+                                           x-cloak
+                                           :label="lexicon('label_setting_MailEncryption', 'SMTP Encryption')"
+                                           :tooltip="lexicon('tooltip_setting_MailEncryption', 'Encryption protocol, usually tls or ssl')"
+                                           editClick="openModal('mail_encryption', '{{ addslashes(lexicon('label_setting_MailEncryption', 'SMTP Encryption')) }}', '{{ addslashes($globalSettings['mail_encryption'] ?? 'tls') }}', 'select', { tls: 'TLS', ssl: 'SSL', none: 'None' })">
+                                {{ strtoupper($globalSettings['mail_encryption'] ?? 'TLS') }}
+                            </x-setting-row>
+
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('mail_username')"
+                                           x-cloak
+                                           :label="lexicon('label_setting_MailUsername', 'SMTP Username')"
+                                           :tooltip="lexicon('tooltip_setting_MailUsername', 'Your mail provider login or account email')"
+                                           editClick="openModal('mail_username', '{{ addslashes(lexicon('label_setting_MailUsername', 'SMTP Username')) }}', '{{ addslashes($globalSettings['mail_username'] ?? '') }}', 'text')">
+                                {{ $globalSettings['mail_username'] ?? $notConfiguredText }}
+                            </x-setting-row>
+
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('mail_password')"
+                                           x-cloak
+                                           :label="lexicon('label_setting_MailPassword', 'SMTP Password')"
+                                           :tooltip="lexicon('tooltip_setting_MailPassword', 'Your mail provider password or API key')"
+                                           editClick="openModal('mail_password', '{{ addslashes(lexicon('label_setting_MailPassword', 'SMTP Password')) }}', '{{ addslashes($globalSettings['mail_password'] ?? '') }}', 'password')">
+                                {{ !empty($globalSettings['mail_password']) ? '••••••••••••••••' : $notConfiguredText }}
                             </x-setting-row>
                         </tbody>
                     </x-table>

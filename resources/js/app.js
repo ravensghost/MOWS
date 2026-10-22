@@ -66,6 +66,9 @@ import characterAvatarManager from './components/characterAvatarManager';
 import bookreview from './components/bookreview.js';
 import autoSave from './components/autoSave';
 import chapterEdit from './components/chapterEdit';
+import wikiManager from './components/wikiManager.js'
+import loaHubManager from './components/loaHubManager';
+import themeVarCard from './components/themeVarCard';
 
 // Alpine plugins & directives
 Alpine.plugin(collapse);
@@ -138,5 +141,8 @@ Alpine.data('characterAvatarManager', characterAvatarManager);
 Alpine.data('bookreview', bookreview);
 Alpine.data('autoSave', autoSave);
 Alpine.data('chapterEdit', chapterEdit);
+Alpine.data('wikiManager', wikiManager);
+Alpine.data('loaHubManager', loaHubManager);
+Alpine.data('themeVarCard', themeVarCard);
 
 Alpine.start();

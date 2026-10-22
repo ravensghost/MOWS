@@ -43,9 +43,14 @@
 }
 
 /* Responsive Grid Modifiers */
+/* Responsive Grid Modifiers */
 @media (min-width: 768px) {
     .md-grid-cols-2 {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .md-grid-cols-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .md-col-span-2 {
@@ -62,6 +67,10 @@
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
+    .lg-grid-cols-6 {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
     .lg-grid-sidebar-left {
         grid-template-columns: var(--theme-width-sidebar, 250px) 1fr;
     }
@@ -70,7 +79,6 @@
         grid-template-columns: 1fr var(--theme-width-sidebar, 250px);
     }
 }
-
 /* Column Spans */
 .col-span-full {
     grid-column: 1 / -1;

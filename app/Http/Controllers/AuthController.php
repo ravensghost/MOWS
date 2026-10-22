@@ -17,6 +17,12 @@ class AuthController extends Controller
         if (auth()->attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 
+            // Record login timestamp in user_attributes for Player Activity Auditing
+            $user = auth()->user();
+            if ($user) {
+                $user->setAttr('last_login_at', now()->toDateTimeString());
+            }
+
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => true,

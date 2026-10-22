@@ -10,10 +10,6 @@ use App\Http\Controllers\PublicFormController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 
-DB::listen(function ($query) {
-    logger($query->sql);
-});
-
 Route::middleware('auth')->group(function () {
     // User Dashboard (Invokable) & LOA Toggle
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
@@ -30,6 +26,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/chapters/autosave', [WriteController::class, 'autoSave']);
     Route::post('/chapters/{chapter}/autosave', [WriteController::class, 'autoSave']);
     Route::post('/chapters/{chapter}/lock', [WriteController::class, 'acquireLock']);
+    Route::post('/chapters/{chapter}/ping', [WriteController::class, 'pingLockWriter']);
 
     // Private Messaging Engine
     Route::get('/messenger/{threadId?}', [MessengerController::class, 'index'])->name('messenger.index');

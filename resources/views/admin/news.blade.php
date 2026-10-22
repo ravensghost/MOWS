@@ -97,86 +97,92 @@
                 <x-slot:top>
                     <span x-text="mode === 'create' ? '{{ addslashes(lexicon('label_News_CreateAnnouncementTitle', 'Broadcast Announcement')) }}' : '{{ addslashes(lexicon('label_News_EditAnnouncementTitle', 'Edit Announcement')) }}'"></span>
                 </x-slot:top>
+
                 @php
                     $autoSaveInterval = \App\Models\Setting::where('key', 'draft_autosave_interval')->value('value') ?: 30000;
                 @endphp
+
                 <div x-data="autoSave({{ $autoSaveInterval }})" class="flex flex-col gap-md">
-                <form id="form-news" 
-                :action="formAction" 
-                method="POST"  
-                x-data="ajaxForm" 
-                @submit.prevent="submit">
-                    @csrf
-                    <input type="hidden" name="_method" :value="method">
-                    
-                    <x-form-input 
-                        name="title" 
-                        id="news-title"
-                        :label="lexicon('label_News_Headline', 'Headline')" 
-                        xModel="title" 
-                        :tooltip="lexicon('tooltip_News_HeadlineInput', 'Enter the headline for this announcement')"
-                        required />
-
-                    <div class="flex flex-col gap-xs">
-                        <label class="text-xs font-bold text-input-muted">
-                            <span>{{ lexicon('label_News_AnnouncementBody', 'Announcement Content') }}</span>
-                            <span class="text-required">*</span>
-                        </label>
-                        <span class="text-xs text-muted block">{{ lexicon('msg_News_SanitisedHint', 'Use the rich text editor below. Content is automatically sanitised.') }}</span>
+                    <form id="form-news" 
+                          :action="formAction" 
+                          method="POST"  
+                          x-data="ajaxForm" 
+                          @submit.prevent="submit"
+                          class="flex flex-col gap-md"
+                          @update-content.window="content = $event.detail">
+                        @csrf
+                        <input type="hidden" name="_method" :value="method">
                         
-                        <!-- TipTap Editor UI inside the News Modal -->
-                        <div class="bg-panel-sub border border-panel rounded-panel flex flex-col overflow-hidden" 
-                            x-data="tiptapEditor(content)" 
-                            @tiptap-update="content = $event.detail"
-                            @set-chapter-editor-content.window="setEditorContent($event.detail.content)">
-                            <x-tiptap-toolbar />
-                            <div x-ref="editorContainer" class="w-full p-3 flex-grow overflow-y-auto tiptap-content"></div>
+                        <x-form-input 
+                            name="title" 
+                            id="news-title"
+                            :label="lexicon('label_News_Headline', 'Headline')" 
+                            xModel="title" 
+                            :tooltip="lexicon('tooltip_News_HeadlineInput', 'Enter the headline for this announcement')"
+                            required />
+
+                        <div class="flex flex-col gap-xs">
+                            <label class="text-xs font-bold text-input-muted">
+                                <span>{{ lexicon('label_News_AnnouncementBody', 'Announcement Content') }}</span>
+                                <span class="text-required">*</span>
+                            </label>
+                            <span class="text-xs text-muted block">{{ lexicon('msg_News_SanitisedHint', 'Use the rich text editor below. Content is automatically sanitised.') }}</span>
+                            
+                            <!-- TipTap Editor UI inside the News Modal -->
+                            <div class="bg-panel-sub border border-panel rounded-panel flex flex-col overflow-hidden" 
+                                x-data="tiptapEditor(content)" 
+                                @tiptap-update="content = $event.detail; $dispatch('update-content', $event.detail)"
+                                @set-chapter-editor-content.window="setEditorContent($event.detail.content)">
+                                <x-tiptap-toolbar />
+                                <div x-ref="editorContainer" class="w-full p-3 flex-grow overflow-y-auto tiptap-content"></div>
+                            </div>
+
+                            <input type="hidden" name="content" :value="content" required>
                         </div>
 
-                        <input type="hidden" name="content" :value="content" required>
-                    </div>
+                        <div class="border-t-actions border-panel pt-6 text-right mt-2 flex flex-row flex-wrap items-center justify-end gap-sm" 
+                             x-data="{ autoSaved: false, savingNow: false }"
+                             @autosave-success.window="savingNow = false; autoSaved = true;"
+                             @autosave-start.window="savingNow = true;">
+                            <!-- Live Auto-Save Badge & Save Button -->
+                            <div class="flex flex-row items-center gap-sm">
+                                <div class="flex items-center gap-xs px-2 py-1 rounded bg-panel-sub text-xs text-muted border border-panel"
+                                     x-tooltip="'Background draft synchronization status'">
+                                    <template x-if="savingNow">
+                                        <span class="flex items-center gap-xs text-warning">
+                                            <i class="bi bi-arrow-repeat animate-spin"></i> Saving...
+                                        </span>
+                                    </template>
+                                    <template x-if="!savingNow">
+                                        <span>
+                                            <template x-if="!autoSaved">
+                                                <span class="text-danger flex items-center gap-xs" title="Not auto-saved yet">
+                                                    <i class="bi bi-x-lg"></i> Unsaved
+                                                </span>
+                                            </template>
+                                            <template x-if="autoSaved">
+                                                <span class="text-success flex items-center gap-xs" title="Draft auto-saved successfully">
+                                                    <i class="bi bi-check-lg"></i> Auto-Saved
+                                                </span>
+                                            </template>
+                                        </span>
+                                    </template>
+                                </div>
 
-                    <div class="border-t-actions border-panel pt-6 text-right mt-2 flex flex-row flex-wrap items-center justify-end gap-sm" x-data="{ autoSaved: false, savingNow: false }"
-                    @autosave-success.window="savingNow = false; autoSaved = true;"
-                    @autosave-start.window="savingNow = true;">
-                        <!-- Auto-Save Status Badge & Save Button -->
-                    <div class="flex flex-row items-center gap-sm">
-                        <!-- Live Auto-Save Badge -->
-                        <div class="flex items-center gap-xs px-2 py-1 rounded bg-panel-sub text-xs text-muted border border-panel"
-                             x-tooltip="'Background draft synchronization status'">
-                            <template x-if="savingNow">
-                                <span class="flex items-center gap-xs text-warning">
-                                    <i class="bi bi-arrow-repeat animate-spin"></i> Saving...
-                                </span>
-                            </template>
-                            <template x-if="!savingNow">
-                                <span>
-                                    <template x-if="!autoSaved">
-                                        <span class="text-danger flex items-center gap-xs" title="Not auto-saved yet">
-                                            <i class="bi bi-x-lg"></i> Unsaved
-                                        </span>
-                                    </template>
-                                    <template x-if="autoSaved">
-                                        <span class="text-success flex items-center gap-xs" title="Draft auto-saved successfully">
-                                            <i class="bi bi-check-lg"></i> Auto-Saved
-                                        </span>
-                                    </template>
-                                </span>
-                            </template>
+                                <x-button type="button" variant="secondary" @click="modalOpen = false"
+                                          x-tooltip="'{{ addslashes(lexicon('tooltip_common_Cancel', 'Cancel and close modal')) }}'">
+                                    {{ lexicon('btn_common_Cancel', 'Cancel') }}
+                                </x-button>
+
+                                <x-button type="submit" variant="primary"
+                                          x-tooltip="'{{ addslashes(lexicon('tooltip_News_SubmitAnnouncement', 'Publish or update this announcement')) }}'">
+                                    <i class="bi" :class="mode === 'create' ? 'bi-send' : 'bi-check-lg'"></i>
+                                    <span x-text="mode === 'create' ? '{{ addslashes(lexicon('btn_News_Broadcast', 'Broadcast to Station')) }}' : '{{ addslashes(lexicon('btn_common_Update', 'Update')) }}'"></span>
+                                </x-button>
+                            </div>
                         </div>
-                        <x-button type="button" variant="secondary" @click="modalOpen = false"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_common_Cancel', 'Cancel and close modal')) }}'">
-                            {{ lexicon('btn_common_Cancel', 'Cancel') }}
-                        </x-button>
-
-                        <x-button type="submit" variant="primary"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_News_SubmitAnnouncement', 'Publish or update this announcement')) }}'">
-                            <i class="bi" :class="mode === 'create' ? 'bi-send' : 'bi-check-lg'"></i>
-                            <span x-text="mode === 'create' ? '{{ addslashes(lexicon('btn_News_Broadcast', 'Broadcast to Station')) }}' : '{{ addslashes(lexicon('btn_common_Update', 'Update')) }}'"></span>
-                        </x-button>
-                    </div>
-                </form>
-            </div>
+                    </form>
+                </div>
             </x-modal>
         </x-slot:bottom>
 

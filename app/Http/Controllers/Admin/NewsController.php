@@ -29,17 +29,25 @@ class NewsController extends Controller
 
     public function store(Request $request)
     {
+        // 1. Validate FIRST. If this fails, it stops execution immediately.
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'content' => 'required|string'
+            'content' => 'required|string',
         ]);
 
-        News::create([
+        // 2. Create SECOND (only runs if validation passes)
+        $news = News::create([
             'title' => $validated['title'],
             'content' => Purify::clean($validated['content']),
             'author_id' => $request->user()->id,
             'published_at' => now(),
         ]);
+
+        // 3. Push to Discord THIRD (only runs if creation succeeds)
+        \App\Services\NotificationService::sendDiscord(
+            'news',
+            "📰 **New Station Announcement!**\n**{$news->title}**\nCheck out the latest broadcast on the station."
+        );
 
         return response()->json(['success' => true]);
     }
@@ -47,8 +55,8 @@ class NewsController extends Controller
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'content' => 'required|string'
+            'title'   => 'required|string|max:255',
+            'content' => 'required|string',
         ]);
 
         $validated['content'] = Purify::clean($validated['content']);

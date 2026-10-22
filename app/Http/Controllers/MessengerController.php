@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\Character;
+use App\Models\Message;
+use App\Models\Page;
 use App\Models\Thread;
 use App\Models\ThreadParticipant;
-use App\Models\Message;
 use App\Models\User;
-use App\Models\Character;
-use App\Models\Page;
+use App\Models\UserAttribute;
+use App\Services\NotificationService;
+use Illuminate\Http\Request;
 
 class MessengerController extends Controller
 {
@@ -57,15 +59,18 @@ class MessengerController extends Controller
             'thread_id'    => $thread->id,
             'user_id'      => auth()->id(),
             'character_id' => $validated['type'] === 'IC' ? $validated['sender_character_id'] : null,
+            'last_read_at' => now(),
         ]);
 
         $characterUserMap = $validated['type'] === 'IC'
             ? Character::whereIn('id', $validated['recipients'])->pluck('user_id', 'id')
             : collect();
 
+        $notifiedUserIds = [];
+
         foreach ($validated['recipients'] as $recipientId) {
             $targetUserId = $validated['type'] === 'OOC'
-                ? $recipientId
+                ? (int) $recipientId
                 : ($characterUserMap[$recipientId] ?? null);
 
             if ($targetUserId) {
@@ -74,6 +79,7 @@ class MessengerController extends Controller
                     'user_id'      => $targetUserId,
                     'character_id' => $validated['type'] === 'IC' ? $recipientId : null,
                 ]);
+                $notifiedUserIds[] = $targetUserId;
             }
         }
 
@@ -83,6 +89,8 @@ class MessengerController extends Controller
             'character_id' => $validated['type'] === 'IC' ? $validated['sender_character_id'] : null,
             'body'         => $validated['body'],
         ]);
+
+        $this->dispatchExternalAlerts($thread, array_unique($notifiedUserIds), $validated['body']);
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -106,11 +114,19 @@ class MessengerController extends Controller
         Message::create([
             'thread_id'    => $thread->id,
             'user_id'      => auth()->id(),
-            'character_id' => $thread->type === 'IC' ? $validated['sender_character_id'] : null,
+            'character_id' => $thread->type === 'IC' ? ($validated['sender_character_id'] ?? null) : null,
             'body'         => $validated['body'],
         ]);
 
         $thread->touch();
+
+        $recipientUserIds = $thread->participants()
+            ->where('user_id', '!=', auth()->id())
+            ->pluck('user_id')
+            ->unique()
+            ->toArray();
+
+        $this->dispatchExternalAlerts($thread, $recipientUserIds, $validated['body']);
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -122,5 +138,51 @@ class MessengerController extends Controller
         }
 
         return back();
+    }
+
+    /**
+     * Dispatch Email and Discord notifications to thread recipients when enabled.
+     */
+    protected function dispatchExternalAlerts(Thread $thread, array $recipientUserIds, string $body): void
+    {
+        if (empty($recipientUserIds)) {
+            return;
+        }
+
+        $recipients = User::whereIn('id', $recipientUserIds)->get();
+        $senderName = auth()->user()->name ?? 'A writer';
+        $subjectLine = $thread->title ?: 'Direct Message';
+
+        foreach ($recipients as $recipient) {
+            if ($recipient->id === auth()->id()) {
+                continue;
+            }
+
+            // 1. Email Alert
+            if (!empty($recipient->email)) {
+                NotificationService::sendEmail(
+                    $recipient->email,
+                    "New Private Message: {$subjectLine}",
+                    'emails.notification',
+                    [
+                        'heading'     => "New {$thread->type} Message from {$senderName}",
+                        'messageText' => $body,
+                        'actionUrl'   => url('/messenger/' . $thread->id),
+                        'actionLabel' => 'Open Messenger',
+                    ]
+                );
+            }
+
+            // 2. Discord @mention Alert
+            $discordId = UserAttribute::where('user_id', $recipient->id)
+                ->where('key', 'discord_id')
+                ->value('value');
+            $mention = !empty($discordId) ? "<@{$discordId}>" : $recipient->name;
+
+            NotificationService::sendDiscord(
+                'alerts',
+                "✉️ **New {$thread->type} Message:** {$mention}, you have received a transmission from **{$senderName}** (*{$subjectLine}*)."
+            );
+        }
     }
 }

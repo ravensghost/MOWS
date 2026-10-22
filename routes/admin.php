@@ -216,7 +216,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::post('/statuses', [StoryController::class, 'storeStatus']);
     Route::put('/statuses/{id}', [StoryController::class, 'updateStatus']);
     Route::delete('/statuses/{id}', [StoryController::class, 'destroyStatus']);
-    
+
     // ==========================================
     // USERS, ROLES & AWARDS
     // ==========================================
@@ -224,6 +224,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/users', [UserController::class, 'index']);
     Route::put('/users/{user}/role', [UserController::class, 'updateRole']);
     Route::put('/users/{user}/loa', [UserController::class, 'updateLoa']);
+    Route::post('/users/{user}/ping', [UserController::class, 'pingPlayer'])->name('users.ping');
 
     // Roles & Permissions
     Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
@@ -259,4 +260,12 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::post('/service-records/promotion', PromoteCharacterController::class)->name('service-records.promotion');
     Route::post('/service-records/transfer', TransferCharacterController::class)->name('service-records.issueTransfer');
     Route::post('/service-records/status-change', ChangeCharacterStatusController::class)->name('service-records.issueStatusChange');
+    
+    // ==========================================
+    // Wiki Encyclopedia Manager
+    // ==========================================
+    Route::get('/wiki', [\App\Http\Controllers\Admin\WikiController::class, 'index'])->name('wiki.index');
+    Route::post('/wiki', [\App\Http\Controllers\Admin\WikiController::class, 'store'])->name('wiki.store');
+    Route::put('/wiki/{wikiArticle}', [\App\Http\Controllers\Admin\WikiController::class, 'update'])->name('wiki.update');
+    Route::delete('/wiki/{wikiArticle}', [\App\Http\Controllers\Admin\WikiController::class, 'destroy'])->name('wiki.destroy');
 });
