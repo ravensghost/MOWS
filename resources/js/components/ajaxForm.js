@@ -36,10 +36,10 @@ export default () => ({
 
             if (response.ok) {
                 const data = await response.json();
-
+                const successTitle = document.body.dataset.swalSuccess || 'Success!';
                 Swal.fire({
                     icon: 'success',
-                    title: 'Success!',
+                    title: successTitle,
                     text: data.message || '',
                     background: 'var(--theme-panel-bg, #111827)',
                     color: 'var(--theme-text-main, #ffffff)',
@@ -50,6 +50,24 @@ export default () => ({
 
                     if (data.redirect) {
                         window.location.href = data.redirect;
+                    } else if (form.action.includes('/admin/settings')) {
+                        // Smooth AJAX page body swap using standard promise chaining
+                        fetch(window.location.href, {
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        })
+                            .then(response => response.text())
+                            .then(html => {
+                                const doc = new DOMParser().parseFromString(html, 'text/html');
+                                document.documentElement.setAttribute('lang', doc.documentElement.getAttribute('lang') || 'gb');
+                                document.body.innerHTML = doc.body.innerHTML;
+
+                                if (window.Alpine) {
+                                    window.Alpine.initTree(document.body);
+                                }
+                            })
+                            .catch(() => {
+                                window.location.reload();
+                            });
                     }
                 });
             } else {

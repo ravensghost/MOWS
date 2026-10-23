@@ -8,7 +8,6 @@
   .phpunit.result.cache
   AGENTS.md
   CLAUDE.md
-  MOWS Favicon Design Concept.pdf
   README.md
   artisan
   boost.json
@@ -175,6 +174,7 @@
       2026_10_20_150000_add_application_id_to_application_votes_table.php
       2026_10_21_000000_create_wiki_articles_table.php
       2026_10_21_160000_add_notification_channel_toggles_to_settings.php
+      2026_10_22_000000_add_last_login_and_inactivity_setting.php
     [schema]
       database.sql
       mysql-schema.sql
@@ -183,14 +183,13 @@
   [public]
     .htaccess
     favicon.ico
-    hot
     index.php
     robots.txt
     [build]
       manifest.json
       [assets]
-        app-CPNmsNkd.css
-        app-Dfx3tYlT.js
+        app-BAfxPZ0Z.css
+        app-BmIsqKFp.js
         banner-CUu7wrsR.png
         bootstrap-icons-BOrJxbIo.woff
         bootstrap-icons-BtvjY1KL.woff2
@@ -264,6 +263,7 @@
         dropzoneManager.js
         generalImageManager.js
         lexiconManager.js
+        loaHubManager.js
         navOptionsManager.js
         navigationManager.js
         newsManager.js
@@ -278,6 +278,7 @@
         storyManager.js
         themeManager.js
         themeUploader.js
+        themeVarCard.js
         tiptapEditor.js
         wikiManager.js
       [utils]

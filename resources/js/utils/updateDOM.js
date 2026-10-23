@@ -1,27 +1,70 @@
 /**
- * Internal Helper: Synchronises the primary navigation bar and slide-out drawer
- * from the freshly fetched HTML document without stripping Alpine.js bindings.
+ * Internal Helper: Synchronises global layout partials (header, navigation,
+ * drawer, footer, auth-modal, rendered forms) and document metadata from the
+ * freshly fetched HTML document without stripping Alpine.js bindings.
  */
 function syncGlobalNavigation(doc) {
-    ['primary', 'drawer'].forEach(zone => {
-        const currentNav = document.querySelector(`[data-global-nav="${zone}"]`);
-        const newNav = doc.querySelector(`[data-global-nav="${zone}"]`);
+    // 1. Sync HTML lang attribute and document title
+    const newLang = doc.documentElement.getAttribute('lang');
+    if (newLang) {
+        document.documentElement.setAttribute('lang', newLang);
+    }
+    if (doc.title) {
+        document.title = doc.title;
+    }
 
-        if (currentNav && newNav) {
-            currentNav.innerHTML = newNav.innerHTML;
+    // Helper to clean up active Tippy.js instances inside a container before replacing HTML
+    const cleanupTooltips = (container) => {
+        container.querySelectorAll('[x-tooltip]').forEach(el => {
+            if (el._tippy) {
+                el._tippy.destroy();
+            }
+        });
+    };
+
+    // 2. Sync all global layout partials tagged with data-global-sync
+    doc.querySelectorAll('[data-global-sync]').forEach(newPartial => {
+        const key = newPartial.getAttribute('data-global-sync');
+        const currentPartial = document.querySelector(`[data-global-sync="${key}"]`);
+
+        if (currentPartial) {
+            cleanupTooltips(currentPartial);
+            currentPartial.innerHTML = newPartial.innerHTML;
 
             if (window.Alpine) {
-                window.Alpine.initTree(currentNav);
+                window.Alpine.initTree(currentPartial);
             }
         }
     });
+
+    // 3. Fallback for standalone data-global-nav zones if not wrapped in data-global-sync
+    if (!document.querySelector('[data-global-sync="navigation"]')) {
+        ['primary', 'drawer'].forEach(zone => {
+            const currentNav = document.querySelector(`[data-global-nav="${zone}"]`);
+            const newNav = doc.querySelector(`[data-global-nav="${zone}"]`);
+
+            if (currentNav && newNav) {
+                cleanupTooltips(currentNav);
+                currentNav.innerHTML = newNav.innerHTML;
+
+                if (window.Alpine) {
+                    window.Alpine.initTree(currentNav);
+                }
+            }
+        });
+    }
 }
+
+// Expose globally as per architectural helpers
+window.syncGlobalNavigation = syncGlobalNavigation;
 
 /**
  * SAFE: updateDOM
  * Uses DOMPurify. Strips Alpine.js attributes and malicious scripts.
  * Best used for user-generated content blocks.
  */
+// resources/js/utils/updateDOM.js
+
 window.updateDOM = async function (componentRefs, refNames = [], onSuccess = null) {
     try {
         const response = await fetch(window.location.href, {
@@ -49,17 +92,6 @@ window.updateDOM = async function (componentRefs, refNames = [], onSuccess = nul
             onSuccess(doc);
         }
 
-        if (window.Swal) {
-            window.Swal.close();
-            window.Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                showConfirmButton: false,
-                timer: 1500,
-                background: 'var(--theme-panel-bg, #111827)',
-                color: 'var(--theme-text-main, #ffffff)'
-            });
-        }
 
     } catch (err) {
         console.error("Safe DOM Update Error:", err);
@@ -99,18 +131,6 @@ window.updateDOM_US = async function (componentRefs, refNames = [], onSuccess = 
             onSuccess(doc);
         }
 
-        if (window.Swal) {
-            window.Swal.close();
-            window.Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                showConfirmButton: false,
-                timer: 1500,
-                background: 'var(--theme-panel-bg, #111827)',
-                color: 'var(--theme-text-main, #ffffff)'
-            });
-        }
-
     } catch (err) {
         console.error("Unsafe DOM Update Error:", err);
         window.location.reload();
@@ -139,30 +159,13 @@ window.refreshDOM = function (targetSelector = '.table-wrapper') {
                 }
 
                 syncGlobalNavigation(doc);
-
-                if (window.Swal) {
-                    window.Swal.close();
-                    window.Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        showConfirmButton: false,
-                        timer: 1500,
-                        background: 'var(--theme-panel-bg, #111827)',
-                        color: 'var(--theme-text-main, #ffffff)'
-                    });
+                if (typeof onSuccess === 'function') {
+                    onSuccess(doc);
                 }
-            } else {
-                if (window.Swal) {
-                    window.Swal.close();
-                }
-                window.location.reload();
             }
         })
         .catch(error => {
             console.error('Safe DOM Refresh Failed:', error);
-            if (window.Swal) {
-                window.Swal.close();
-            }
             window.location.reload();
         });
 };
@@ -180,7 +183,7 @@ window.refreshDOM_US = function (targetSelector = '.table-wrapper, [x-ref="navTa
             let doc = new DOMParser().parseFromString(html, 'text/html');
             let newContent = doc.querySelector(targetSelector);
             let currentContent = document.querySelector(targetSelector);
-
+            
             if (newContent && currentContent) {
                 currentContent.innerHTML = newContent.innerHTML;
 
@@ -189,30 +192,13 @@ window.refreshDOM_US = function (targetSelector = '.table-wrapper, [x-ref="navTa
                 }
 
                 syncGlobalNavigation(doc);
-
-                if (window.Swal) {
-                    window.Swal.close();
-                    window.Swal.fire({
-                        icon: 'success',
-                        title: 'Success!',
-                        showConfirmButton: false,
-                        timer: 1500,
-                        background: 'var(--theme-panel-bg, #111827)',
-                        color: 'var(--theme-text-main, #ffffff)'
-                    });
+                if (typeof onSuccess === 'function') {
+                    onSuccess(doc);
                 }
-            } else {
-                if (window.Swal) {
-                    window.Swal.close();
-                }
-                window.location.reload();
             }
         })
         .catch(error => {
             console.error('Unsafe DOM Refresh Failed:', error);
-            if (window.Swal) {
-                window.Swal.close();
-            }
             window.location.reload();
         });
 };

@@ -47,7 +47,7 @@
         {!! $activeSkin->custom_head !!}
     @endif
 </head>
-<body class="bg-body font-base text-p">
+<body class="bg-body font-base text-p" data-swal-success="{{ lexicon('label_common_Success', 'Success!') }}">
     
     <div class="min-h-screen flex flex-col">
         @includeIf('layouts.partials.header')

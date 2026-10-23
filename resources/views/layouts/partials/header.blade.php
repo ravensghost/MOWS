@@ -1,4 +1,4 @@
-<header class="bg-panel border-b-panel bg-cover bg-no-repeat bg-banner-pos bg-banner-image flex flex-row items-stretch w-full min-h-48 p-1 relative">
+<header data-global-sync="header" class="bg-panel border-b-panel bg-cover bg-no-repeat bg-banner-pos bg-banner-image flex flex-row items-stretch w-full min-h-48 p-1 relative">
     <div class="w-full max-w-container mx-auto px-container flex flex-row flex-wrap gap-md relative">
         <a href="/"
            class="relative w-full h-full block no-underline"

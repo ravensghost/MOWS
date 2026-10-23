@@ -145,4 +145,4 @@ Alpine.data('wikiManager', wikiManager);
 Alpine.data('loaHubManager', loaHubManager);
 Alpine.data('themeVarCard', themeVarCard);
 
-Alpine.start();
+Alpine.start(); 

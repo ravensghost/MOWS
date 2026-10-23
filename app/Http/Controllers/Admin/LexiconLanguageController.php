@@ -114,7 +114,15 @@ class LexiconLanguageController extends Controller
         $code = strtolower(trim($code));
 
         if ($code === 'gb') {
-            return response()->json(['error' => 'Cannot delete the base language.'], 403);
+            return response()->json([
+                'status'  => 'error',
+                'message' => lexicon('msg_Lexicon_CannotDeleteCore', 'The core British English language pack cannot be deleted.')
+            ], 422);
+        }
+
+        $globalSetting = Setting::where('key', 'global_lexicon_setting')->first();
+        if ($globalSetting && $globalSetting->value === $code) {
+            $globalSetting->update(['value' => 'auto']);
         }
 
         Term::chunk(100, function ($terms) use ($code) {
@@ -131,7 +139,11 @@ class LexiconLanguageController extends Controller
         Cache::forget('global_settings');
         Cache::forget('mows_lexicon');
 
-        return response()->json(['success' => true]);
+        return response()->json([
+        'status'  => 'success',
+        'success' => true,
+        'message' => lexicon('msg_Lexicon_LanguageDeleted', 'Language pack deleted successfully and global settings updated.')
+        ]);
     }
 
     public function clear($code)

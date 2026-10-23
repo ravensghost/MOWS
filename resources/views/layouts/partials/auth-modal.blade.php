@@ -1,4 +1,4 @@
-<div x-data="{ open: false, view: 'login' }" @open-auth.window="open = true">
+<div data-global-sync="auth-modal" x-data="{ open: false, view: 'login' }" @open-auth.window="open = true">
     <x-modal show="open" maxWidth="max-w-lg">
         <x-slot:top>
             <span x-text="

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use App\Models\Setting;
 use App\Models\Page;
 use App\Models\TimeSystem;
@@ -22,10 +23,18 @@ class SettingController extends Controller
             }])
             ->firstOrFail();
 
+        
+
         $globalSettings = Setting::all()->pluck('value', 'key')->toArray();
         $timeSystems = TimeSystem::all();
         $bookStatuses = BookStatus::orderBy('sort_order')->get();
-        $customLanguages = []; // Populated by custom lexicon languages if configured
+        $customLanguages = Setting::where('key', 'like', 'lexicon_label_%')
+            ->get()
+            ->mapWithKeys(function ($setting) {
+                $code = str_replace('lexicon_label_', '', $setting->key);
+                return [$code => $setting->value];
+            })
+            ->toArray();
 
         return view('admin.settings', compact('globalSettings', 'systemPage', 'timeSystems', 'bookStatuses', 'customLanguages'));
     }
@@ -46,6 +55,12 @@ class SettingController extends Controller
                 ['value' => is_array($value) ? json_encode($value) : $value]
             );
         }
+
+        // Flush cached settings and lexicon so changes take effect immediately
+        Cache::forget('global_lexicon_setting');
+        Cache::forget('global_settings');
+        Cache::forget('active_time_system');
+        Cache::forget('mows_lexicon');
 
         return response()->json([
             'status'  => 'success',

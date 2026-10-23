@@ -3,7 +3,7 @@
     $childNav = isset($primaryNav) ? $primaryNav->filter(fn($l) => isset($l->parent_id) && !empty($l->parent_id))->groupBy('parent_id') : collect();
 @endphp
 
-<div x-data="{ drawerOpen: false, activeDropdown: null }">
+<div data-global-sync="navigation" x-data="{ drawerOpen: false, activeDropdown: null }">
     <nav class="bg-panel-header border-b-panel w-full relative">
         <div class="w-full max-w-container mx-auto px-container flex flex-row flex-wrap gap-md items-center justify-between h-16">
             <div data-global-nav="primary" class="flex flex-row flex-wrap gap-md items-center justify-center">

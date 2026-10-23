@@ -1,4 +1,4 @@
-<footer class="bg-panel-header border-t border-panel pt-6 pb-4 mt-auto" x-data>
+<footer data-global-sync="footer" class="bg-panel-header border-t border-panel pt-6 pb-4 mt-auto" x-data>
     <div class="w-full max-w-container mx-auto px-container flex flex-row flex-wrap gap-md items-center justify-between">
         <span class="text-sm text-muted">
             &copy; {{ date('Y') }} {{ config('app.name', 'MOWS') }}. {{ lexicon('label_common_AllRightsReserved', 'All rights reserved.') }}
