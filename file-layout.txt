@@ -91,6 +91,8 @@
     [Mail]
       LockPingMail.php
       MowsNotificationMail.php
+      [Transport]
+        PhpMailTransport.php
     [Models]
       Application.php
       ApplicationAnswer.php
@@ -132,6 +134,7 @@
     [Providers]
       AppServiceProvider.php
     [Services]
+      AICore.php
       AiTranslationService.php
       NotificationService.php
     [View]
@@ -183,6 +186,7 @@
   [public]
     .htaccess
     favicon.ico
+    hot
     index.php
     robots.txt
     [build]

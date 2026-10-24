@@ -6,12 +6,14 @@
 @php
     // Prepare language options for the JSON payload
     $langOptions = ['auto' => lexicon('label_setting_OptLangAuto', 'Auto-Detect (Browser Default)')];
-    foreach($customLanguages ?? [] as $code => $displayName) {$langOptions[$code] =$displayName . ' (' . lexicon('label_setting_CustomLexicon', 'Custom Lexicon') . ')';
+    foreach($customLanguages ?? [] as $code => $displayName) {
+        $langOptions[$code] = $displayName . ' (' . lexicon('label_setting_CustomLexicon', 'Custom Lexicon') . ')';
     }
 
     // Prepare Time System options for the JSON payload
     $tsOptions = ['' => lexicon('label_setting_OptRealWorldDefault', 'Real World (Default)')];
-    foreach($timeSystems ?? [] as $system) {$tsOptions[$system->id] =$system->name;
+    foreach($timeSystems ?? [] as $system) {
+        $tsOptions[$system->id] = $system->name;
     }
 
     $notConfiguredText = lexicon('msg_setting_NotConfigured', 'Not Configured');
@@ -33,17 +35,18 @@
         ['key' => 'game_setting', 'group' => 'general', 'label' => lexicon('label_setting_GameSetting', 'Game Setting / Franchise')],
         ['key' => 'lore_context', 'group' => 'general', 'label' => lexicon('label_setting_LoreContext', 'Lore & Era Context')],
         ['key' => 'draft_autosave_interval', 'group' => 'mechanics', 'label' => lexicon('label_setting_DraftAutoSaveInterval', 'Draft Auto-Save Interval (ms)')],
-        ['key' => 'discord_webhook_chapters', 'group' => 'notifications', 'label' => 'Discord Webhook: Chapters'],
-        ['key' => 'discord_webhook_news', 'group' => 'notifications', 'label' => 'Discord Webhook: News Stories'],
-        ['key' => 'discord_webhook_alerts', 'group' => 'notifications', 'label' => 'Discord Webhook: Writer Alerts & Tags'],
-        ['key' => 'mail_from_name', 'group' => 'notifications', 'label' => 'Email Sender Name'],
-        ['key' => 'email_subject_prefix', 'group' => 'notifications', 'label' => 'Email Subject Line Prefix'],
-        ['key' => 'mail_from_address', 'group' => 'notifications', 'label' => 'Email Sender Address'],
-        ['key' => 'mail_host', 'group' => 'notifications', 'label' => 'SMTP Host'],
-        ['key' => 'mail_port', 'group' => 'notifications', 'label' => 'SMTP Port'],
-        ['key' => 'mail_encryption', 'group' => 'notifications', 'label' => 'SMTP Encryption'],
-        ['key' => 'mail_username', 'group' => 'notifications', 'label' => 'SMTP Username'],
-        ['key' => 'mail_password', 'group' => 'notifications', 'label' => 'SMTP Password'],
+        ['key' => 'discord_webhook_chapters', 'group' => 'notifications', 'label' => lexicon('label_setting_DiscordChapters', 'Discord Webhook: Chapters')],
+        ['key' => 'discord_webhook_news', 'group' => 'notifications', 'label' => lexicon('label_setting_DiscordNews', 'Discord Webhook: News Stories')],
+        ['key' => 'discord_webhook_alerts', 'group' => 'notifications', 'label' => lexicon('label_setting_DiscordAlerts', 'Discord Webhook: Writer Alerts & Tags')],
+        ['key' => 'mail_mailer', 'group' => 'notifications', 'label' => lexicon('label_setting_MailMailer', 'Email Transport Driver')],
+        ['key' => 'mail_from_name', 'group' => 'notifications', 'label' => lexicon('label_setting_MailFromName', 'Email Sender Name')],
+        ['key' => 'email_subject_prefix', 'group' => 'notifications', 'label' => lexicon('label_setting_EmailSubjectPrefix', 'Email Subject Line Prefix')],
+        ['key' => 'mail_from_address', 'group' => 'notifications', 'label' => lexicon('label_setting_MailFromAddress', 'Email Sender Address')],
+        ['key' => 'mail_host', 'group' => 'notifications', 'label' => lexicon('label_setting_MailHost', 'SMTP Host')],
+        ['key' => 'mail_port', 'group' => 'notifications', 'label' => lexicon('label_setting_MailPort', 'SMTP Port')],
+        ['key' => 'mail_encryption', 'group' => 'notifications', 'label' => lexicon('label_setting_MailEncryption', 'SMTP Encryption')],
+        ['key' => 'mail_username', 'group' => 'notifications', 'label' => lexicon('label_setting_MailUsername', 'SMTP Username')],
+        ['key' => 'mail_password', 'group' => 'notifications', 'label' => lexicon('label_setting_MailPassword', 'SMTP Password')],
         ['key' => 'notifications_discord_enabled', 'group' => 'notifications', 'label' => lexicon('label_setting_EnableDiscord', 'Enable Discord Notifications')],
         ['key' => 'notifications_email_enabled', 'group' => 'notifications', 'label' => lexicon('label_setting_EnableEmail', 'Enable Email Notifications')],
         ['key' => 'notifications_pm_enabled', 'group' => 'notifications', 'label' => lexicon('label_setting_EnablePm', 'Enable Automated On-Site PM Alerts')],
@@ -51,7 +54,7 @@
     ];
 @endphp
 
-<div x-data="settingsManager('{{ $globalSettings['ai_mode'] ?? 'cloud' }}')" @ajax-success.window="refreshDOM()">
+<div x-data="settingsManager('{{ $globalSettings['ai_mode'] ?? 'cloud' }}', '{{ $globalSettings['mail_mailer'] ?? 'smtp' }}')" @ajax-success.window="refreshDOM()">
     <x-admin-grid-wrapper :page="$systemPage">
         
         <x-slot:top>
@@ -86,7 +89,7 @@
                         </x-slot:headers>
                         
                         {{-- General Configuration Group --}}
-                        <tbody x-data="{ expanded: true }" x-show="matchesGroup('general')">
+                        <tbody x-data="{ expanded: false }" x-show="matchesGroup('general')">
                             <tr class="bg-panel-sub border-b-table-row hover-bg-panel-hover cursor-pointer select-none" 
                                 @click="expanded = !expanded"
                                 x-tooltip="'{{ addslashes(lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel')) }}'"
@@ -157,7 +160,8 @@
                                            :label="lexicon('label_setting_UniverseTimeSystem', 'Universe Time System')"
                                            editClick="openModal('universe_time_system', '{{ addslashes(lexicon('label_setting_UniverseTimeSystem', 'Universe Time System')) }}', '{{ $globalSettings['universe_time_system'] ?? '' }}', 'select', {{ json_encode($tsOptions) }})">
                                 @php
-                                    $activeId = $globalSettings['universe_time_system'] ?? '';$activeTs = collect($timeSystems ?? [])->firstWhere('id', $activeId);
+                                    $activeId = $globalSettings['universe_time_system'] ?? '';
+                                    $activeTs = collect($timeSystems ?? [])->firstWhere('id', $activeId);
                                 @endphp
                                 {{ $activeTs ? $activeTs->name : lexicon('label_setting_OptRealWorldDefault', 'Real World (Default)') }}
                             </x-setting-row>
@@ -335,6 +339,19 @@
                             </x-setting-row>
 
                             {{-- Email Configuration --}}
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('mail_mailer')"
+                                           x-cloak
+                                           :label="lexicon('label_setting_MailMailer', 'Email Transport Driver')"
+                                           :tooltip="lexicon('tooltip_setting_MailMailer', 'Select the mail transport driver (SMTP, PHP mail(), or Log / Disabled)')"
+                                           editClick="openModal('mail_mailer', '{{ addslashes(lexicon('label_setting_MailMailer', 'Email Transport Driver')) }}', mail_mailer, 'select', { smtp: '{{ addslashes(lexicon('label_setting_OptMailSmtp', 'SMTP')) }}', phpmail: '{{ addslashes(lexicon('label_setting_OptMailPhpmail', 'PHP mail() (phpmail)')) }}', log: '{{ addslashes(lexicon('label_setting_OptMailLog', 'Log / Disabled')) }}' })">
+                                <span x-text="mail_mailer === 'phpmail' ? '{{ addslashes(lexicon('label_setting_OptMailPhpmail', 'PHP mail() (phpmail)')) }}' : (mail_mailer === 'log' ? '{{ addslashes(lexicon('label_setting_OptMailLog', 'Log / Disabled')) }}' : '{{ addslashes(lexicon('label_setting_OptMailSmtp', 'SMTP')) }}')">
+                                    @php
+                                        $currentMailer = $globalSettings['mail_mailer'] ?? 'smtp';
+                                    @endphp
+                                    {{ $currentMailer === 'phpmail' ? lexicon('label_setting_OptMailPhpmail', 'PHP mail() (phpmail)') : ($currentMailer === 'log' ? lexicon('label_setting_OptMailLog', 'Log / Disabled') : lexicon('label_setting_OptMailSmtp', 'SMTP')) }}
+                                </span>
+                            </x-setting-row>
+
                             <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('email_subject_prefix')"
                                            x-cloak
                                            :label="lexicon('label_setting_EmailSubjectPrefix', 'Email Subject Line Prefix')"
@@ -358,8 +375,9 @@
                                            editClick="openModal('mail_from_address', '{{ addslashes(lexicon('label_setting_MailFromAddress', 'Email Sender Address')) }}', '{{ addslashes($globalSettings['mail_from_address'] ?? '') }}', 'text')">
                                 {{ $globalSettings['mail_from_address'] ?? $notConfiguredText }}
                             </x-setting-row>
-                            {{-- SMTP Configuration --}}
-                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('mail_host')"
+
+                            {{-- SMTP Configuration (Visible only when mail_mailer === 'smtp') --}}
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && mail_mailer === 'smtp' && matchesSetting('mail_host')"
                                            x-cloak
                                            :label="lexicon('label_setting_MailHost', 'SMTP Host')"
                                            :tooltip="lexicon('tooltip_setting_MailHost', 'The SMTP server address for your external mail provider')"
@@ -367,7 +385,7 @@
                                 {{ $globalSettings['mail_host'] ?? $notConfiguredText }}
                             </x-setting-row>
 
-                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('mail_port')"
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && mail_mailer === 'smtp' && matchesSetting('mail_port')"
                                            x-cloak
                                            :label="lexicon('label_setting_MailPort', 'SMTP Port')"
                                            :tooltip="lexicon('tooltip_setting_MailPort', 'The connection port, typically 587 or 465')"
@@ -375,7 +393,7 @@
                                 {{ $globalSettings['mail_port'] ?? '587' }}
                             </x-setting-row>
 
-                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('mail_encryption')"
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && mail_mailer === 'smtp' && matchesSetting('mail_encryption')"
                                            x-cloak
                                            :label="lexicon('label_setting_MailEncryption', 'SMTP Encryption')"
                                            :tooltip="lexicon('tooltip_setting_MailEncryption', 'Encryption protocol, usually tls or ssl')"
@@ -383,7 +401,7 @@
                                 {{ strtoupper($globalSettings['mail_encryption'] ?? 'TLS') }}
                             </x-setting-row>
 
-                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('mail_username')"
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && mail_mailer === 'smtp' && matchesSetting('mail_username')"
                                            x-cloak
                                            :label="lexicon('label_setting_MailUsername', 'SMTP Username')"
                                            :tooltip="lexicon('tooltip_setting_MailUsername', 'Your mail provider login or account email')"
@@ -391,7 +409,7 @@
                                 {{ $globalSettings['mail_username'] ?? $notConfiguredText }}
                             </x-setting-row>
 
-                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('mail_password')"
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && mail_mailer === 'smtp' && matchesSetting('mail_password')"
                                            x-cloak
                                            :label="lexicon('label_setting_MailPassword', 'SMTP Password')"
                                            :tooltip="lexicon('tooltip_setting_MailPassword', 'Your mail provider password or API key')"

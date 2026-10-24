@@ -285,4 +285,28 @@ class SectionController extends Controller
             'message' => lexicon('msg_SectionsPositions_ImportSuccess', 'Sections and positions imported successfully.'),
         ]);
     }
+    public function generateDescription(Request $request, \App\Services\AILoreService $aiLoreService)
+    {
+        abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
+
+        $name = trim((string) $request->input('name'));
+        $hint = trim((string) $request->input('prompt_hint', ''));
+
+        if (empty($name)) {
+            return response()->json([
+                'error' => lexicon('msg_SectionsPositions_EnterNameFirst', 'Please enter a Section Name first.')
+            ], 422);
+        }
+
+        try {
+            $description = $aiLoreService->generateSectionDescription($name, $hint);
+        } catch (\Exception $e) {
+            $description = "The {$name} division is responsible for maintaining operational integrity and strategic objectives.";
+        }
+
+        return response()->json([
+            'status'      => 'success',
+            'description' => $description,
+        ]);
+    }
 }

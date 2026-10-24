@@ -47,6 +47,14 @@ return [
             'lock_table' => env('DB_CACHE_LOCK_TABLE'),
         ],
 
+        'agent_prompt_cache' => [
+            'driver' => 'database',
+            'connection' => env('DB_CONNECTION'),
+            'table' => 'agent_prompt_cache',
+            'lock_connection' => null,
+            'lock_table' => null,
+        ],
+
         'file' => [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),

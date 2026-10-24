@@ -268,4 +268,6 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::post('/wiki', [\App\Http\Controllers\Admin\WikiController::class, 'store'])->name('wiki.store');
     Route::put('/wiki/{wikiArticle}', [\App\Http\Controllers\Admin\WikiController::class, 'update'])->name('wiki.update');
     Route::delete('/wiki/{wikiArticle}', [\App\Http\Controllers\Admin\WikiController::class, 'destroy'])->name('wiki.destroy');
+    // AI Content & Lore Assistance
+    Route::post('/ai/chapter-generate', [\App\Http\Controllers\WriteController::class, 'aiChapterGenerate']);
 });

@@ -23,9 +23,11 @@ class SettingController extends Controller
             }])
             ->firstOrFail();
 
-        
-
         $globalSettings = Setting::all()->pluck('value', 'key')->toArray();
+        if (!isset($globalSettings['mail_mailer'])) {
+            $globalSettings['mail_mailer'] = 'smtp';
+        }
+
         $timeSystems = TimeSystem::all();
         $bookStatuses = BookStatus::orderBy('sort_order')->get();
         $customLanguages = Setting::where('key', 'like', 'lexicon_label_%')
@@ -47,6 +49,10 @@ class SettingController extends Controller
 
         if (empty($settings) && !$request->has('settings')) {
             $settings = $request->except(['_token', '_method']);
+        }
+
+        if (isset($settings['mail_mailer']) && !in_array($settings['mail_mailer'], ['smtp', 'phpmail', 'log'], true)) {
+            $settings['mail_mailer'] = 'smtp';
         }
 
         foreach ($settings as $key => $value) {

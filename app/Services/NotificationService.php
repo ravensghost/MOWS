@@ -35,11 +35,12 @@ class NotificationService
     }
 
     /**
-     * Dynamically configure Laravel's mailer using database settings.
+     * Dynamically configure Laravel's mailer using database settings and return the active transport driver.
      */
-    protected static function applyMailConfig(): void
+    protected static function applyMailConfig(): string
     {
         $settings = Setting::whereIn('key', [
+            'mail_mailer',
             'mail_host',
             'mail_port',
             'mail_encryption',
@@ -49,13 +50,25 @@ class NotificationService
             'mail_from_name',
         ])->pluck('value', 'key');
 
-        Config::set('mail.mailers.smtp.host', $settings['mail_host'] ?? 'smtp-relay.brevo.com');
-        Config::set('mail.mailers.smtp.port', $settings['mail_port'] ?? 587);
-        Config::set('mail.mailers.smtp.encryption', $settings['mail_encryption'] ?? 'tls');
-        Config::set('mail.mailers.smtp.username', $settings['mail_username'] ?? '');
-        Config::set('mail.mailers.smtp.password', $settings['mail_password'] ?? '');
+        $mailer = strtolower(trim((string) ($settings['mail_mailer'] ?? 'smtp')));
+        if (!in_array($mailer, ['smtp', 'phpmail', 'log'], true)) {
+            $mailer = 'smtp';
+        }
+
+        Config::set('mail.default', $mailer);
         Config::set('mail.from.address', $settings['mail_from_address'] ?? 'no-reply@mowsengine.local');
         Config::set('mail.from.name', $settings['mail_from_name'] ?? 'MOWS Engine');
+
+        if ($mailer === 'smtp') {
+            $encryption = strtolower(trim((string) ($settings['mail_encryption'] ?? 'tls')));
+            Config::set('mail.mailers.smtp.host', $settings['mail_host'] ?? 'smtp-relay.brevo.com');
+            Config::set('mail.mailers.smtp.port', (int) ($settings['mail_port'] ?? 587));
+            Config::set('mail.mailers.smtp.encryption', $encryption === 'none' ? null : $encryption);
+            Config::set('mail.mailers.smtp.username', $settings['mail_username'] ?? '');
+            Config::set('mail.mailers.smtp.password', $settings['mail_password'] ?? '');
+        }
+
+        return $mailer;
     }
 
     /**
@@ -67,12 +80,12 @@ class NotificationService
             return false;
         }
 
-        self::applyMailConfig();
+        $mailer = self::applyMailConfig();
 
         $prefix = Setting::where('key', 'email_subject_prefix')->value('value') ?? '[MOWS Engine]';
         $fullSubject = trim($prefix . ' ' . $subject);
 
-        Mail::to($to)->send(new MowsNotificationMail($fullSubject, $view, $data));
+        Mail::mailer($mailer)->to($to)->send(new MowsNotificationMail($fullSubject, $view, $data));
 
         return true;
     }

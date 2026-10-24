@@ -390,4 +390,21 @@ class WriteController extends Controller
             'message' => 'Ping successfully sent to ' . $locker->name . '.'
         ]);
     }
+    public function aiChapterGenerate(Request $request, \App\Services\AiContentService $contentService)
+    {
+        $validated = $request->validate([
+            'prompt'   => 'required|string',
+            'npc_name' => 'nullable|string',
+        ]);
+
+        $content = $contentService->generateNpcDialogue(
+            $validated['prompt'],
+            $validated['npc_name'] ?? 'Security Chief'
+        );
+
+        return response()->json([
+            'status'  => 'success',
+            'content' => $content,
+        ]);
+    }
 }

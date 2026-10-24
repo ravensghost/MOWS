@@ -1,6 +1,7 @@
-export default (initialAiMode = 'cloud') => ({
-    // Initialise with the variable passed from Blade
+export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
+    // Initialise with the variables passed from Blade
     ai_mode: initialAiMode,
+    mail_mailer: initialMailMailer,
 
     // Fuzzy search state (Fuse.js)
     searchQuery: '',
@@ -124,6 +125,9 @@ export default (initialAiMode = 'cloud') => ({
     async refreshDOM() {
         if (this.modal.open && this.modal.key === 'ai_mode') {
             this.ai_mode = this.modal.value;
+        }
+        if (this.modal.open && this.modal.key === 'mail_mailer') {
+            this.mail_mailer = this.modal.value;
         }
 
         window.updateDOM_US(this.$refs, ['mainSettingsTable', 'timeSystemsTable'], () => {
