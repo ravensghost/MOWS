@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Cache;
 use App\Models\Setting;
 use App\Models\Page;
 use App\Models\TimeSystem;
-use App\Models\BookStatus;
 
 class SettingController extends Controller
 {
@@ -29,7 +28,6 @@ class SettingController extends Controller
         }
 
         $timeSystems = TimeSystem::all();
-        $bookStatuses = BookStatus::orderBy('sort_order')->get();
         $customLanguages = Setting::where('key', 'like', 'lexicon_label_%')
             ->get()
             ->mapWithKeys(function ($setting) {
@@ -38,7 +36,7 @@ class SettingController extends Controller
             })
             ->toArray();
 
-        return view('admin.settings', compact('globalSettings', 'systemPage', 'timeSystems', 'bookStatuses', 'customLanguages'));
+        return view('admin.settings', compact('globalSettings', 'systemPage', 'timeSystems', 'customLanguages'));
     }
 
     public function update(Request $request)

@@ -1,11 +1,14 @@
 <?php
 
 use App\Models\Term;
+use App\Models\TimeSystem;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\File;
 use League\CommonMark\GithubFlavoredMarkdownConverter;
 use SteveBauman\Purify\Facades\Purify;
+use Illuminate\Support\Str;
 use Carbon\Carbon;
 
 if (! function_exists('lexicon')) {
@@ -100,8 +103,8 @@ if (! function_exists('lexicon')) {
         // If the stored value perfectly matches the generic Str::headline generation,
         // and we now have a better, different fallback string, upgrade the database.
         if ($value && !empty($default) && $value !== $default) {
-            $headlineMatch = \Illuminate\Support\Str::headline($actualKey);
-            $navMatch = \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $actualKey));
+            $headlineMatch = Str::headline($actualKey);
+            $navMatch = Str::headline(str_replace('nav_link_', '', $actualKey));
 
             if ($value === $headlineMatch || $value === $navMatch) {
                 $translations['gb'] = $default;
@@ -194,13 +197,13 @@ if (! function_exists('world_date')) {
     {
         if (!$date) return '';
 
-        $carbonDate = \Carbon\Carbon::parse($date);
+        $carbonDate = Carbon::parse($date);
 
         // Cache the data as an array to completely bypass object serialization timing issues
         $system = Cache::remember('active_time_system', 3600, function () {
             $activeId = DB::table('settings')->where('key', 'universe_time_system')->value('value');
             if (!$activeId) return null;
-            $ts = \App\Models\TimeSystem::find($activeId);
+            $ts = TimeSystem::find($activeId);
             return $ts ? $ts->toArray() : null;
         });
 

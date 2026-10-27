@@ -1,3 +1,4 @@
+// resources/js/components/ajaxForm.js
 export default () => ({
     submitting: false,
 
@@ -6,56 +7,40 @@ export default () => ({
         this.submitting = true;
 
         const loadingTitle = form.dataset.loadingTitle;
-        if (loadingTitle) {
-            Swal.fire({
-                title: loadingTitle,
-                html: form.dataset.loadingMsg || 'Please wait...',
-                allowOutsideClick: false,
-                showConfirmButton: false,
-                background: 'var(--theme-panel-bg, #111827)',
-                color: 'var(--theme-text-main, #ffffff)',
-                didOpen: () => Swal.showLoading()
-            });
-        }
+        const loadingMsg = form.dataset.loadingMsg || 'Please wait...';
+        const method = form.getAttribute('method') || 'POST';
+        const formData = new FormData(form);
 
         try {
-            const formData = new FormData(form);
-            const rawAttrMethod = (form.getAttribute('method') || 'POST').toUpperCase();
-            if (rawAttrMethod !== 'POST' && rawAttrMethod !== 'GET' && !formData.has('_method')) {
-                formData.append('_method', rawAttrMethod);
-            }
-
-            const response = await fetch(form.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                }
+            // Leverage global window.Fetch helper which handles loading states, 
+            // CSRF headers, method spoofing, and network error alerts automatically.
+            const { ok, data } = await window.Fetch.request(form.action, method, formData, {
+                loading: Boolean(loadingTitle),
+                loadingTitle: loadingTitle,
+                loadingHtml: loadingMsg
             });
 
-            if (response.ok) {
-                const data = await response.json();
+            if (ok) {
                 const successTitle = document.body.dataset.swalSuccess || 'Success!';
-                Swal.fire({
+
+                window.Swal.fire({
                     icon: 'success',
                     title: successTitle,
                     text: data.message || '',
-                    background: 'var(--theme-panel-bg, #111827)',
-                    color: 'var(--theme-text-main, #ffffff)',
                     showConfirmButton: false,
-                    timer: 1000
+                    timer: 1000,
+                    ...window.Swal.themeConfig()
                 }).then(() => {
                     this.$dispatch('ajax-success', data);
 
                     if (data.redirect) {
                         window.location.href = data.redirect;
                     } else if (form.action.includes('/admin/settings')) {
-                        // Smooth AJAX page body swap using standard promise chaining
+                        // Refresh settings page view content dynamically
                         fetch(window.location.href, {
                             headers: { 'X-Requested-With': 'XMLHttpRequest' }
                         })
-                            .then(response => response.text())
+                            .then(res => res.text())
                             .then(html => {
                                 const doc = new DOMParser().parseFromString(html, 'text/html');
                                 document.documentElement.setAttribute('lang', doc.documentElement.getAttribute('lang') || 'gb');
@@ -72,14 +57,16 @@ export default () => ({
                 });
             } else {
                 let errorMsg = 'Validation failed.';
-                try {
-                    const data = await response.json();
-                    errorMsg = data.message || (data.errors ? Object.values(data.errors)[0][0] : errorMsg);
-                } catch (err) { }
-                Swal.fire('Error', errorMsg, 'error');
+                if (data.message) {
+                    errorMsg = data.message;
+                } else if (data.errors) {
+                    errorMsg = Object.values(data.errors)[0][0];
+                }
+                window.Swal.error('Error', errorMsg);
             }
         } catch (error) {
-            Swal.fire('Error', 'A network error occurred.', 'error');
+            // Network errors are already handled by window.Fetch, 
+            // but we ensure submitting state resets safely here.
         } finally {
             this.submitting = false;
         }

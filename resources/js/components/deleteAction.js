@@ -1,43 +1,31 @@
+// resources/js/components/deleteAction.js
 export default (url, method, name, warningText = 'You cannot revert this action!', isClear = false) => ({
-    confirmDelete() {
-        Swal.fire({
-            title: `Delete ${name}?`,
-            text: warningText,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: 'var(--theme-danger, #ef4444)',
-            cancelButtonColor: 'var(--theme-panel-header-bg, #1f2937)',
-            confirmButtonText: 'Yes, proceed!',
-            background: 'var(--theme-panel-bg, #111827)',
-            color: 'var(--theme-text-main, #ffffff)'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                Swal.fire({
-                    title: 'Wiping Database...',
-                    html: 'Please wait...',
-                    allowOutsideClick: false,
-                    showConfirmButton: false,
-                    background: 'var(--theme-panel-bg, #111827)',
-                    color: 'var(--theme-text-main, #ffffff)',
-                    didOpen: () => { Swal.showLoading(); }
+    async confirmDelete() {
+        const result = await window.Swal.confirm(
+            `Delete ${name}?`,
+            warningText,
+            'Yes, proceed!'
+        );
+
+        if (result.isConfirmed) {
+            try {
+                // Leverage window.Fetch which handles loading state, CSRF tokens, 
+                // method spoofing (_method for DELETE/PUT), and error responses automatically.
+                const { ok, data } = await window.Fetch.request(url, method, null, {
+                    loading: true,
+                    loadingTitle: 'Wiping Database...',
+                    loadingHtml: 'Please wait...'
                 });
 
-                fetch(url, {
-                    method: method,
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                        'Accept': 'application/json'
-                    }
-                }).then(response => {
-                    if (response.ok) {
-                        this.$dispatch(isClear ? 'lexicon-clear' : 'ajax-success');
-                    } else {
-                        Swal.fire('Error', 'Failed to execute action.', 'error');
-                    }
-                }).catch(() => {
-                    Swal.fire('Error', 'Network error occurred.', 'error');
-                });
+                if (ok) {
+                    this.$dispatch(isClear ? 'lexicon-clear' : 'ajax-success', data);
+                } else {
+                    window.Swal.error('Error', data.message || 'Failed to execute action.');
+                }
+            } catch (error) {
+                // Network errors are automatically caught and alerted by window.Fetch,
+                // but we ensure failure logging or fallback handling can occur here if needed.
             }
-        });
+        }
     }
 });

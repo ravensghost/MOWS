@@ -14,7 +14,6 @@ export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
 
     // State objects
     modal: { open: false, key: '', title: '', value: '', type: 'select', options: {} },
-    statusModal: { open: false, id: '', name: '', slug: '', sort_order: 0, isEdit: false },
     tsModal: { open: false, isEdit: false, data: {} },
 
     init() {
@@ -93,15 +92,6 @@ export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
         this.initModalSelect();
     },
 
-    openStatusModal(id = '', name = '', slug = '', sort_order = 0) {
-        this.statusModal.id = id;
-        this.statusModal.name = name;
-        this.statusModal.slug = slug;
-        this.statusModal.sort_order = sort_order;
-        this.statusModal.isEdit = !!id;
-        this.statusModal.open = true;
-    },
-
     openTsModal(ts = null) {
         if (ts) {
             this.tsModal.isEdit = true;
@@ -136,7 +126,6 @@ export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
                 this.tomSelectInstance = null;
             }
             this.modal.open = false;
-            this.statusModal.open = false;
             this.tsModal.open = false;
             this.filterSettings();
         });

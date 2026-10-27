@@ -19,12 +19,11 @@
     $notConfiguredText = lexicon('msg_setting_NotConfigured', 'Not Configured');
 
     $settingsSearchCatalog = [
-        ['key' => 'approval_mode', 'group' => 'general', 'label' => lexicon('label_settings_ApprovalReviewMode', 'Application Review Mode')],
+        ['key' => 'approval_review_mode', 'group' => 'general', 'label' => lexicon('label_settings_ApprovalReviewMode', 'Application Review Mode')],
         ['key' => 'rejection_protocol', 'group' => 'general', 'label' => lexicon('label_settings_RejectionProtocol', 'Rejection Protocol')],
         ['key' => 'global_lexicon_setting', 'group' => 'general', 'label' => lexicon('label_settings_GlobalLanguage', 'Global Site Language')],
         ['key' => 'universe_time_system', 'group' => 'mechanics', 'label' => lexicon('label_setting_UniverseTimeSystem', 'Universe Time System')],
         ['key' => 'content_shield_bypass', 'group' => 'mechanics', 'label' => lexicon('label_setting_ContentShield', 'Mature Content Shield')],
-        ['key' => 'visual_mode', 'group' => 'mechanics', 'label' => lexicon('label_setting_RankAwardRendering', 'Rank & Award Rendering')],
         ['key' => 'ai_mode', 'group' => 'ai', 'label' => lexicon('label_setting_AIHosting', 'AI Hosting Environment')],
         ['key' => 'ai_provider', 'group' => 'ai', 'label' => lexicon('label_setting_AIProvider', 'Cloud AI Provider')],
         ['key' => 'ai_model', 'group' => 'ai', 'label' => lexicon('label_setting_AIModel', 'Target AI Model') . ' ' . lexicon('msg_setting_ModelHint', 'e.g., gemini-1.5-pro, gpt-4o')],
@@ -103,11 +102,11 @@
                                 </td>
                             </tr>
 
-                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('approval_mode')"
+                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('approval_review_mode')"
                                            x-cloak
                                            :label="lexicon('label_settings_ApprovalReviewMode', 'Application Review Mode')"
-                                           editClick="openModal('approval_mode', '{{ addslashes(lexicon('label_settings_ApprovalReviewMode', 'Application Review Mode')) }}', '{{ $globalSettings['approval_mode'] ?? 'single' }}', 'select', { single: '{{ addslashes(lexicon('label_setting_OptSingle', 'Single-Authority Approval')) }}', council: '{{ addslashes(lexicon('label_setting_OptCouncil', '14-Day Council Voting')) }}' })">
-                                {{ ($globalSettings['approval_mode'] ?? '') == 'council' ? lexicon('label_setting_OptCouncil', '14-Day Council Voting') : lexicon('label_setting_OptSingle', 'Single-Authority Approval') }}
+                                           editClick="openModal('approval_review_mode', '{{ addslashes(lexicon('label_settings_ApprovalReviewMode', 'Application Review Mode')) }}', '{{ $globalSettings['approval_review_mode'] ?? 'single' }}', 'select', { single: '{{ addslashes(lexicon('label_setting_OptSingle', 'Single-Authority Approval')) }}', council: '{{ addslashes(lexicon('label_setting_OptCouncil', '14-Day Council Voting')) }}' })">
+                                {{ ($globalSettings['approval_review_mode'] ?? '') == 'council' ? lexicon('label_setting_OptCouncil', '14-Day Council Voting') : lexicon('label_setting_OptSingle', 'Single-Authority Approval') }}
                             </x-setting-row>
 
                             <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('rejection_protocol')"
@@ -123,19 +122,20 @@
                                            editClick="openModal('global_lexicon_setting', '{{ addslashes(lexicon('label_settings_GlobalLanguage', 'Global Site Language')) }}', '{{ $globalSettings['global_lexicon_setting'] ?? 'auto' }}', 'select', {{ json_encode($langOptions) }})">
                                 {{ ($globalSettings['global_lexicon_setting'] ?? 'auto') == 'auto' ? lexicon('label_setting_OptLangAuto', 'Auto-Detect (Browser Default)') : ($customLanguages[$globalSettings['global_lexicon_setting']] ?? $globalSettings['global_lexicon_setting']) }}
                             </x-setting-row>
+
                             <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('game_setting')"
-                                x-cloak
-                                :label="lexicon('label_setting_GameSetting', 'Game Setting / Franchise')"
-                                :tooltip="lexicon('tooltip_setting_GameSetting', 'The primary universe or franchise setting')"
-                                editClick="openModal('game_setting', '{{ addslashes(lexicon('label_setting_GameSetting', 'Game Setting / Franchise')) }}', '{{ addslashes($globalSettings['game_setting'] ?? '') }}', 'text')">
+                                           x-cloak
+                                           :label="lexicon('label_setting_GameSetting', 'Game Setting / Franchise')"
+                                           :tooltip="lexicon('tooltip_setting_GameSetting', 'The primary universe or franchise setting')"
+                                           editClick="openModal('game_setting', '{{ addslashes(lexicon('label_setting_GameSetting', 'Game Setting / Franchise')) }}', '{{ addslashes($globalSettings['game_setting'] ?? '') }}', 'text')">
                                 {{ $globalSettings['game_setting'] ?? $notConfiguredText }}
                             </x-setting-row>
 
                             <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('lore_context')"
-                                            x-cloak
-                                            :label="lexicon('label_setting_LoreContext', 'Lore & Era Context')"
-                                            :tooltip="lexicon('tooltip_setting_LoreContext', 'Brief era, tone, and station premise injected into AI prompts')"
-                                            editClick="openModal('lore_context', '{{ addslashes(lexicon('label_setting_LoreContext', 'Lore & Era Context')) }}', '{{ addslashes($globalSettings['lore_context'] ?? '') }}', 'text')">
+                                           x-cloak
+                                           :label="lexicon('label_setting_LoreContext', 'Lore & Era Context')"
+                                           :tooltip="lexicon('tooltip_setting_LoreContext', 'Brief era, tone, and station premise injected into AI prompts')"
+                                           editClick="openModal('lore_context', '{{ addslashes(lexicon('label_setting_LoreContext', 'Lore & Era Context')) }}', '{{ addslashes($globalSettings['lore_context'] ?? '') }}', 'text')">
                                 {{ $globalSettings['lore_context'] ?? $notConfiguredText }}
                             </x-setting-row>
                         </tbody>
@@ -173,25 +173,20 @@
                                 {{ ($globalSettings['content_shield_bypass'] ?? '') == 'locked' ? lexicon('label_setting_OptLocked', 'Global Lock (Require Manual Click)') : lexicon('label_setting_OptUserBypass', 'Allow User Bypass') }}
                             </x-setting-row>
 
-                            <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('visual_mode')"
-                                           x-cloak
-                                           :label="lexicon('label_setting_RankAwardRendering', 'Rank & Award Rendering')"
-                                           editClick="openModal('visual_mode', '{{ addslashes(lexicon('label_setting_RankAwardRendering', 'Rank & Award Rendering')) }}', '{{ $globalSettings['visual_mode'] ?? 'dynamic' }}', 'select', { dynamic: '{{ addslashes(lexicon('label_setting_OptDynamic', 'Mode 2: Dynamic CSS Layering')) }}', static: '{{ addslashes(lexicon('label_setting_OptStatic', 'Mode 1: Static Image Only')) }}' })">
-                                {{ ($globalSettings['visual_mode'] ?? '') == 'static' ? lexicon('label_setting_OptStatic', 'Mode 1: Static Image Only') : lexicon('label_setting_OptDynamic', 'Mode 2: Dynamic CSS Layering') }}
-                            </x-setting-row>
                             <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('draft_autosave_interval')"
-                                x-cloak
-                                :label="lexicon('label_setting_DraftAutoSaveInterval', 'Draft Auto-Save Interval (ms)')"
-                                :hint="lexicon('msg_setting_AutoSaveIntervalHint', 'Interval in milliseconds (e.g. 30000 for 30 seconds)')"
-                                editClick="openModal('draft_autosave_interval', '{{ addslashes(lexicon('label_setting_DraftAutoSaveInterval', 'Draft Auto-Save Interval (ms)')) }}', '{{ $globalSettings['draft_autosave_interval'] ?? '30000' }}', 'text')">
+                                           x-cloak
+                                           :label="lexicon('label_setting_DraftAutoSaveInterval', 'Draft Auto-Save Interval (ms)')"
+                                           :hint="lexicon('msg_setting_AutoSaveIntervalHint', 'Interval in milliseconds (e.g. 30000 for 30 seconds)')"
+                                           editClick="openModal('draft_autosave_interval', '{{ addslashes(lexicon('label_setting_DraftAutoSaveInterval', 'Draft Auto-Save Interval (ms)')) }}', '{{ $globalSettings['draft_autosave_interval'] ?? '30000' }}', 'text')">
                                 {{ $globalSettings['draft_autosave_interval'] ?? '30000' }} ms
                             </x-setting-row>
+
                             <x-setting-row x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('inactivity_threshold_days')"
-                                x-cloak
-                                :label="lexicon('label_setting_InactivityThreshold', 'Player Inactivity Threshold (Days)')"
-                                :tooltip="lexicon('tooltip_setting_InactivityThreshold', 'Number of days without a login before an active player is flagged as inactive (default: 30)')"
-                                :hint="lexicon('msg_setting_InactivityThresholdHint', 'Number of days before flagging inactive accounts (e.g. 30)')"
-                                editClick="openModal('inactivity_threshold_days', '{{ addslashes(lexicon('label_setting_InactivityThreshold', 'Player Inactivity Threshold (Days)')) }}', '{{ $globalSettings['inactivity_threshold_days'] ?? '30' }}', 'text')">
+                                           x-cloak
+                                           :label="lexicon('label_setting_InactivityThreshold', 'Player Inactivity Threshold (Days)')"
+                                           :tooltip="lexicon('tooltip_setting_InactivityThreshold', 'Number of days without a login before an active player is flagged as inactive (default: 30)')"
+                                           :hint="lexicon('msg_setting_InactivityThresholdHint', 'Number of days before flagging inactive accounts (e.g. 30)')"
+                                           editClick="openModal('inactivity_threshold_days', '{{ addslashes(lexicon('label_setting_InactivityThreshold', 'Player Inactivity Threshold (Days)')) }}', '{{ $globalSettings['inactivity_threshold_days'] ?? '30' }}', 'text')">
                                 {{ $globalSettings['inactivity_threshold_days'] ?? '30' }} {{ lexicon('label_common_Days', 'days') }}
                             </x-setting-row>
                         </tbody>
@@ -420,7 +415,6 @@
                     </x-table>
                 </div>
 
-
                 {{-- TIME SYSTEMS MANAGEMENT ACCORDION --}}
                 <x-accordion-panel :title="lexicon('admin_label_TimeSystems', 'Immersive Time Systems')" :expanded="false">
                     <x-slot:top>
@@ -545,57 +539,7 @@
                 </form>
             </x-modal>
 
-            {{-- MODAL 2: BOOK STATUS MODAL --}}
-            <x-modal show="statusModal.open" maxWidth="max-w-lg">
-                <x-slot:top>
-                    <span x-text="statusModal.isEdit ? '{{ addslashes(lexicon('label_Story_EditStatus', 'Edit Status')) }}' : '{{ addslashes(lexicon('label_Story_CreateStatus', 'Create Status')) }}'"></span>
-                </x-slot:top>
-
-                <form :action="statusModal.isEdit ? `/admin/statuses/${statusModal.id}` : '/admin/statuses'" 
-                      method="POST" 
-                      class="flex flex-col gap-md" 
-                      x-data="ajaxForm" 
-                      @submit.prevent="submit($event)">
-                    @csrf
-                    <template x-if="statusModal.isEdit">
-                        <input type="hidden" name="_method" value="PUT">
-                    </template>
-
-                    <x-form-input name="name"
-                                  id="setting-status-name"
-                                  :label="lexicon('label_common_Name', 'Name')"
-                                  :tooltip="lexicon('tooltip_Story_StatusNameInput', 'Enter the display name for this book status')"
-                                  xModel="statusModal.name"
-                                  :required="true" />
-
-                    <x-form-input name="sort_order"
-                                  id="setting-status-sort-order"
-                                  type="number"
-                                  :label="lexicon('label_common_SortOrder', 'Sort Order')"
-                                  :tooltip="lexicon('tooltip_Story_StatusSortOrderInput', 'Numeric display order for this book status')"
-                                  xModel="statusModal.sort_order" />
-
-                    <div class="border-t-actions pt-6 mt-4 flex flex-row flex-wrap items-center justify-end gap-md">
-                        <x-button type="button" 
-                                  variant="secondary" 
-                                  @click="statusModal.open = false"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_common_Cancel', 'Cancel and close modal')) }}'"
-                                  aria-label="{{ lexicon('tooltip_common_Cancel', 'Cancel and close modal') }}">
-                            {{ lexicon('btn_common_Cancel', 'Cancel') }}
-                        </x-button>
-                        <x-button type="submit" 
-                                  variant="primary"
-                                  ::disabled="submitting"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Story_SaveStatus', 'Save book status')) }}'"
-                                  aria-label="{{ lexicon('tooltip_Story_SaveStatus', 'Save book status') }}"
-                                  x-text="submitting ? '{{ addslashes(lexicon('msg_common_Saving', 'Saving...')) }}' : '{{ addslashes(lexicon('btn_common_Save', 'Save Changes')) }}'">
-                            {{ lexicon('btn_common_Save', 'Save Changes') }}
-                        </x-button>
-                    </div>
-                </form>
-            </x-modal>
-
-            {{-- MODAL 3: TIME SYSTEM EDITOR MODAL --}}
+            {{-- MODAL 2: TIME SYSTEM EDITOR MODAL --}}
             <x-modal show="tsModal.open" maxWidth="max-w-lg">
                 <x-slot:top>
                     <span x-text="tsModal.isEdit ? '{{ addslashes(lexicon('label_setting_EditTimeSystem', 'Edit Time System')) }}' : '{{ addslashes(lexicon('label_setting_NewTimeSystem', 'New Time System')) }}'"></span>

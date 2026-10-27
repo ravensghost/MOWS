@@ -1,6 +1,7 @@
 @props([
     'label',
     'hint' => null,
+    'tooltip' => null,
     'editClick',
     'editTooltip' => null,
 ])
@@ -11,7 +12,11 @@
 
 <tr {{ $attributes->merge(['class' => 'border-b-table-row hover-bg-table-row']) }}>
     <td class="p-4 font-bold text-p pl-6">
-        <span class="block">{{ $label }}</span>
+        <span class="block"
+              @if($tooltip)
+                  x-tooltip="'{{ addslashes($tooltip) }}'"
+                  aria-label="{{ $tooltip }}"
+              @endif>{{ $label }}</span>
         @if($hint)
             <span class="block text-xs font-normal text-muted">{{ $hint }}</span>
         @endif
