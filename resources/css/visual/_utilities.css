@@ -1,60 +1,40 @@
-/* Animation & Transition Utilities */
+/* ==========================================================================
+   VISUAL: UTILITIES & ENGINE STATES (_utilities.css)
+   ========================================================================== */
+
+/* Transitions */
 .transition-colors {
     transition: background-color var(--theme-transition-speed, 0.2s),
         border-color var(--theme-transition-speed, 0.2s),
         color var(--theme-transition-speed, 0.2s);
 }
 
-/* Atomic Hover Filter Utilities */
-.hover-brightness-110:hover {
-    filter: brightness(1.1);
+.transition-btn {
+    transition: var(--theme-transition-btn, all 0.2s ease);
 }
 
-.hover-brightness-120:hover {
-    filter: brightness(1.2);
-}
-
-/* Atomic Hover Background Utilities */
-.hover-bg-border:hover {
-    background-color: var(--theme-bg-border-hover-colour, #374151);
-}
-
-.hover-bg-danger:hover {
-    background-color: var(--theme-bg-danger-hover-colour, #7F1D1DFF);
-}
-
-.hover-bg-panel-hover:hover {
-    background-color: var(--theme-bg-panel-hover-colour, #1F293780);
-}
-
-.hover-bg-close:hover {
-    background-color: var(--theme-bg-close-hover-colour, #1F293780);
-}
-
-/* Atomic Hover Text Utilities */
-.hover-text-h:hover,
-.hover-main:hover {
-    color: var(--theme-text-heading-colour, #ffffff);
-}
-
-.hover-text-accent:hover {
-    color: var(--theme-text-accent-colour, #3b82f6);
-}
-
-/* Atomic Hover Border Utilities */
-.hover-border-accent:hover {
-    border-color: var(--theme-border-accent-colour, #3b82f6);
-}
-
-/* Framework & State Utilities */
+/* Framework & Alpine Visibility */
 [x-cloak] {
     display: none !important;
 }
 
-.bg-transparent {
-    background-color: transparent !important;
+/* Custom Checkbox Engine */
+.checkbox-engine {
+    font: inherit;
+    color: currentColor;
 }
 
-.border-accent {
-    border-color: var(--theme-border-accent-colour, #3b82f6) !important;
+.checkbox-engine::before {
+    content: "";
+    width: 0.65em;
+    height: 0.65em;
+    transform: scale(0);
+    box-shadow: inset 1em 1em var(--theme-bg-accent-colour, #3b82f6);
+    transform-origin: center;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    transition: 120ms transform ease-in-out;
+}
+
+.checkbox-engine:checked::before {
+    transform: scale(1);
 }

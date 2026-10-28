@@ -1,3 +1,7 @@
+/* ==========================================================================
+   VISUAL: BRANDING & BANNERS (_branding.css)
+   ========================================================================== */
+
 .bg-banner-image {
     background-image: var(--theme-banner-image, url('/public/skins/default/images/site/banner.png'));
 }

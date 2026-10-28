@@ -1,0 +1,55 @@
+/* ==========================================================================
+   VISUAL: SHADOWS (_shadow.css)
+   ========================================================================== */
+
+/* Text Shadows */
+.shadow-text {
+    text-shadow: 0 2px 4px var(--theme-shadow-text-colour, #00000099);
+}
+
+/* Component & Panel Drop Shadows */
+.shadow-pc {
+    box-shadow: 0 0 8px var(--theme-shadow-pc-colour, #3B82F640);
+}
+
+.shadow-success {
+    box-shadow: 0 0 8px var(--theme-shadow-success-colour, #16A34A40);
+}
+
+.shadow-warning {
+    box-shadow: 0 0 8px var(--theme-shadow-warning-colour, #FACC1540);
+}
+
+.shadow-panel {
+    box-shadow: 0 10px 15px -3px var(--theme-shadow-panel-colour, #0000001A), 0 4px 6px -2px var(--theme-shadow-panel-sm-colour, #0000000D);
+}
+
+.shadow-drawer {
+    box-shadow: -10px 0 25px -5px var(--theme-shadow-drawer-colour, #00000033);
+}
+
+/* Button & Widget Shadows */
+.shadow-btn {
+    box-shadow: 0 10px 15px -3px var(--theme-shadow-btn-colour, #0000001A);
+}
+
+.shadow-btn-sm {
+    box-shadow: 0 4px 6px -1px var(--theme-shadow-btn-add-colour, #0000001A);
+}
+
+/* Structural & Badge Drop Shadows */
+.shadow-inner {
+    box-shadow: inset 0 2px 4px 0 var(--theme-shadow-inner-colour, #0000000F);
+}
+
+.shadow {
+    box-shadow: 0 1px 3px 0 var(--theme-shadow-sm-colour, #0000001A), 0 1px 2px 0 var(--theme-shadow-xs-colour, #0000000F);
+}
+
+.shadow-lg {
+    box-shadow: 0 10px 15px -3px var(--theme-shadow-lg-colour, #0000001A), 0 4px 6px -2px var(--theme-shadow-md-colour, #0000000D);
+}
+
+.drop-shadow-badge {
+    filter: drop-shadow(0 4px 3px var(--theme-shadow-award-light, #00000012));
+}

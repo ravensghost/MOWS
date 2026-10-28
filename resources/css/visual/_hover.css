@@ -1,0 +1,44 @@
+/* ==========================================================================
+   VISUAL: HOVER STATES (_hover.css)
+   ========================================================================== */
+
+/* Brightness Filters */
+.hover-brightness-110:hover {
+    filter: brightness(1.1);
+}
+
+.hover-brightness-120:hover {
+    filter: brightness(1.2);
+}
+
+/* Background States */
+.hover-bg-border:hover {
+    background-color: var(--theme-bg-border-hover-colour, #374151);
+}
+
+.hover-bg-danger:hover {
+    background-color: var(--theme-bg-danger-hover-colour, #7F1D1DFF);
+}
+
+.hover-bg-panel-hover:hover {
+    background-color: var(--theme-bg-panel-hover-colour, #1F293780);
+}
+
+.hover-bg-close:hover {
+    background-color: var(--theme-bg-close-hover-colour, #1F293780);
+}
+
+/* Text States */
+.hover-text-h:hover,
+.hover-main:hover {
+    color: var(--theme-text-heading-colour, #ffffff);
+}
+
+.hover-text-accent:hover {
+    color: var(--theme-text-accent-colour, #3b82f6);
+}
+
+/* Border States */
+.hover-border-accent:hover {
+    border-color: var(--theme-border-accent-colour, #3b82f6);
+}

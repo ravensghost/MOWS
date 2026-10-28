@@ -1,0 +1,35 @@
+/* ==========================================================================
+   VISUAL: PADDING (_padding.css)
+   ========================================================================== */
+
+.p-panel-body {
+    padding: var(--theme-padding-panel, 1.5rem);
+}
+
+.p-panel-header {
+    padding: var(--theme-padding-panel-header, 1rem 1.5rem);
+}
+
+.p-badge {
+    padding: 0.25rem 0.75rem;
+}
+
+.p-nav-link {
+    padding: 0.75rem 1rem;
+}
+
+.p-btn {
+    padding: var(--theme-padding-btn, 0.5rem 1rem);
+}
+
+.p-btn-sm {
+    padding: var(--theme-padding-btn-sm, 0.25rem 0.5rem);
+}
+
+.p-btn-lg {
+    padding: var(--theme-padding-btn-lg, 0.75rem 1.5rem);
+}
+
+.p-input {
+    padding: var(--theme-padding-input, 0.5rem 0.75rem);
+}

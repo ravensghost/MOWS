@@ -2,11 +2,14 @@
    MOWS VISUAL STYLESHEET (Master Import Hub)
    ========================================================================== */
 
-      @import url('visual/_base.css');
-      @import url('visual/_branding.css');
-      @import url('visual/_panels.css');
-      @import url('visual/_buttons.css');
-      @import url('visual/_forms.css');
-      @import url('visual/_tables.css');
-      @import url('visual/_components.css');
-      @import url('visual/_utilities.css');
+@import url('visual/_base.css');
+@import url('visual/_badge.css');
+@import url('visual/_text.css');
+@import url('visual/_panels.css');
+@import url('visual/_shadow.css');
+@import url('visual/_border.css');
+@import url('visual/_padding.css');
+@import url('visual/_components.css');
+@import url('visual/_branding.css');
+@import url('visual/_hover.css');
+@import url('visual/_utilities.css');

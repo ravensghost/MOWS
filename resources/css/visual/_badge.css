@@ -1,0 +1,29 @@
+/* ==========================================================================
+   VISUAL: BADGES (_badge.css)
+   ========================================================================== */
+
+/* Badge Background Utilities */
+.bg-badge-primary {
+    background-color: var(--theme-bg-accent-colour, #3B82F633);
+}
+
+.bg-badge-info {
+    background-color: var(--theme-bg-info-colour, #3B82F633);
+}
+
+.bg-badge-warning {
+    background-color: var(--theme-bg-warning-colour, #FACC1533);
+}
+
+.bg-badge-success {
+    background-color: var(--theme-bg-success-colour, #16A34A33);
+}
+
+.bg-badge-danger {
+    background-color: var(--theme-bg-danger-colour, #7F1D1D80);
+}
+
+/* Badge Padding */
+.p-badge {
+    padding: 0.25rem 0.75rem;
+}

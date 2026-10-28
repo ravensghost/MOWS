@@ -29,4 +29,8 @@ Thumbs.db
 database.sql
 file-layout.txt
 /resources/js/JS.txt
+js_codebase.txt
+visual_css_codebase.txt
+layout_css_codebase.txt
+third_party_css_codebase.txt
 /mows_db
