@@ -1,13 +1,21 @@
+/* ==========================================================================
+   LAYOUT: POSITIONING & VISIBILITY (_positioning.css)
+   ========================================================================== */
+
 /* Display & Visibility */
 .hidden {
     display: none !important;
 }
 
-/* Responsive Visibility */
 @media (max-width: 768px) {
     .hidden-mobile {
         display: none !important;
     }
+}
+
+.block {
+    display: block;
+    /* Moved from Layout _Structural */
 }
 
 .inline-block {
@@ -15,13 +23,31 @@
 }
 
 /* Positioning & Z-Index */
-/* Positioning & Z-Index */
 .relative {
     position: relative;
 }
 
 .absolute {
     position: absolute;
+}
+
+.fixed {
+    position: fixed;
+}
+
+.inset-0 {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+}
+
+.top-4 {
+    top: 1rem;
+}
+
+.right-4 {
+    right: 1rem;
 }
 
 .z-0 {
@@ -53,13 +79,18 @@
     box-sizing: border-box;
 }
 
-/* Object Fit */
+/* Object Fit & Position */
 .object-cover {
     object-fit: cover;
 }
 
 .object-contain {
     object-fit: contain;
+}
+
+.object-right {
+    object-position: right;
+    /* Moved from Layout _Structural */
 }
 
 /* Interactivity & Opacity */
@@ -79,7 +110,7 @@
     opacity: 0.5;
 }
 
-/* Extracted Branding Positioning Utilities */
+/* Branding Positioning & Logo Offsets */
 .h-logo {
     height: var(--theme-height-logo, 5rem);
 }
@@ -102,24 +133,4 @@
 
 .translate-x-title {
     right: var(--theme-pos-title-x, 44%);
-}
-/* Fixed Positioning */
-.fixed {
-    position: fixed;
-}
-
-/* Inset & Coordinates */
-.inset-0 {
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-}
-
-.top-4 {
-    top: 1rem;
-}
-
-.right-4 {
-    right: 1rem;
 }

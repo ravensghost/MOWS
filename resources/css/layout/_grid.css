@@ -1,8 +1,8 @@
-/* Container Utilities */
-.min-h-screen {
-    min-height: 100vh;
-}
+/* ==========================================================================
+   LAYOUT: GRID & CONTAINERS (_grid.css)
+   ========================================================================== */
 
+/* Container Utilities */
 .max-w-container {
     max-width: var(--theme-width-container-max, 1200px);
 }
@@ -43,7 +43,6 @@
 }
 
 /* Responsive Grid Modifiers */
-/* Responsive Grid Modifiers */
 @media (min-width: 768px) {
     .md-grid-cols-2 {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -79,6 +78,7 @@
         grid-template-columns: 1fr var(--theme-width-sidebar, 250px);
     }
 }
+
 /* Column Spans */
 .col-span-full {
     grid-column: 1 / -1;

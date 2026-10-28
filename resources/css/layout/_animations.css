@@ -1,0 +1,57 @@
+/* ==========================================================================
+   LAYOUT: ANIMATIONS & TRANSFORMS (_animations.css)
+   ========================================================================== */
+
+/* Transform & Transition Utilities */
+.transition-transform {
+    transition: transform var(--theme-transition-speed, 0.2s ease);
+}
+
+.rotate-180 {
+    transform: rotate(180deg);
+}
+
+.scale-75 {
+    transform: scale(0.75);
+}
+
+.origin-left {
+    transform-origin: left;
+}
+
+.will-change-transform {
+    will-change: transform;
+}
+
+/* Keyframe Animations */
+.animate-spin-base {
+    animation: spin var(--theme-anim-speed-spin, 1s) linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-marquee {
+    animation: marquee-scroll var(--theme-anim-speed-marquee, 25s) linear infinite;
+}
+
+.group-hover-pause:hover .animate-marquee {
+    animation-play-state: paused;
+}
+
+@keyframes marquee-scroll {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-100%);
+    }
+}

@@ -1,3 +1,7 @@
+/* ==========================================================================
+   LAYOUT: SPACING & SIZING (_spacing.css)
+   ========================================================================== */
+
 /* Gap Utilities */
 .gap-xs {
     gap: var(--theme-gap-xs, 0.25rem);
@@ -151,9 +155,21 @@
     padding-left: var(--theme-padding-2, 0.5rem);
 }
 
-/* Width Utilities */
+.pl-full {
+    padding-left: 100%;
+}
+
+/* Width & Max-Width Utilities */
 .w-full {
     width: 100%;
+}
+
+.w-auto {
+    width: auto;
+}
+
+.w-icon {
+    width: var(--theme-width-icon, 1.25rem);
 }
 
 .w-4 {
@@ -206,9 +222,17 @@
     max-width: 100%;
 }
 
-/* Height Utilities */
+.max-w-content {
+    max-width: var(--theme-width-content-max, 1200px);
+}
+
+/* Height, Min-Height & Max-Height Utilities */
 .h-full {
     height: 100%;
+}
+
+.h-icon {
+    height: var(--theme-height-icon, 1.25rem);
 }
 
 .h-4 {
@@ -241,6 +265,14 @@
 
 .h-input {
     height: var(--theme-height-input, 2.25rem);
+}
+
+.min-h-screen {
+    min-height: 100vh;
+}
+
+.min-h-auth {
+    min-height: var(--theme-height-auth-min, 100vh);
 }
 
 .min-h-48 {

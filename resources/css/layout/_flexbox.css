@@ -1,3 +1,7 @@
+/* ==========================================================================
+   LAYOUT: FLEXBOX (_flexbox.css)
+   ========================================================================== */
+
 /* Base Flex Display */
 .flex {
     display: flex;
@@ -58,17 +62,4 @@
 
 .flex-shrink-0 {
     flex-shrink: 0;
-}
-
-/* Text Alignment Layout */
-.text-center {
-    text-align: center;
-}
-
-.text-left {
-    text-align: left;
-}
-
-.text-right {
-    text-align: right;
 }

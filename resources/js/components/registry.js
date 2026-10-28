@@ -22,7 +22,7 @@ import configurationManager from '../managers/configurationManager';
 import distinctionManager from '../managers/distinctionManager';
 import divisionManager from '../managers/divisionManager';
 import encyclopediaCodexManager from '../managers/encyclopediaCodexManager';
-import metadataManager from './metadataManager';
+import metadataManager from '../managers/metadataManager';
 import insigniaManager from '../managers/insigniaManager';
 import lexiconCodexManager from '../managers/lexiconCodexManager';
 import loaHubManager from '../managers/loaHubManager';
