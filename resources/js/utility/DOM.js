@@ -61,7 +61,7 @@ window.syncGlobalNavigation = syncGlobalNavigation;
  * @param {Object} componentRefs - Component $refs object
  * @param {Array<string>} refNames - Array of ref names to update
  * @param {Function} [onSuccess] - Optional callback function (doc) => {}
- * @param {boolean} [sanitize=true] - Whether to apply DOMPurify sanitisation
+ * @param {boolean} [sanitize=true] - Whether to apply window.Purify.clean() sanitisation
  */
 window.updateDOM = async function (componentRefs, refNames = [], onSuccess = null, sanitize = true) {
     try {
@@ -77,7 +77,7 @@ window.updateDOM = async function (componentRefs, refNames = [], onSuccess = nul
 
             if (currentEl && newEl) {
                 const content = newEl.innerHTML;
-                currentEl.innerHTML = (sanitize && window.DOMPurify) ? window.DOMPurify.sanitize(content) : content;
+                currentEl.innerHTML = (sanitize && window.Purify) ? window.Purify.clean(content) : content;
 
                 if (window.Alpine) {
                     window.Alpine.initTree(currentEl);
@@ -102,7 +102,7 @@ window.updateDOM = async function (componentRefs, refNames = [], onSuccess = nul
  * 
  * @param {string} [targetSelector='.table-wrapper'] - CSS selector for target element
  * @param {Function} [onSuccess] - Optional callback function (doc) => {}
- * @param {boolean} [sanitize=true] - Whether to apply DOMPurify sanitisation
+ * @param {boolean} [sanitize=true] - Whether to apply window.Purify.clean() sanitisation
  */
 window.refreshDOM = async function (targetSelector = '.table-wrapper', onSuccess = null, sanitize = true) {
     try {
@@ -116,7 +116,7 @@ window.refreshDOM = async function (targetSelector = '.table-wrapper', onSuccess
 
         if (newContent && currentContent) {
             const content = newContent.innerHTML;
-            currentContent.innerHTML = (sanitize && window.DOMPurify) ? window.DOMPurify.sanitize(content) : content;
+            currentContent.innerHTML = (sanitize && window.Purify) ? window.Purify.clean(content) : content;
 
             if (window.Alpine) {
                 window.Alpine.initTree(currentContent);

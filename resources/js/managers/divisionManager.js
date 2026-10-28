@@ -1,3 +1,4 @@
+// resources/js/managers/divisionManager.js
 export default (config = {}) => ({
     modal: null,
     searchQuery: '',
@@ -37,8 +38,8 @@ export default (config = {}) => ({
 
     initTomSelect() {
         const selectEl = document.getElementById('edit_position_section_id');
-        if (selectEl && window.TomSelect && !this.sectionTomSelect) {
-            this.sectionTomSelect = new window.TomSelect(selectEl, {
+        if (selectEl && window.Select && !this.sectionTomSelect) {
+            this.sectionTomSelect = window.Select.init(selectEl, {
                 create: false,
                 onChange: (val) => {
                     this.position.section_id = val;
@@ -46,23 +47,28 @@ export default (config = {}) => ({
             });
         }
     },
+
     handleImportSuccess(response) {
         this.importModalOpen = false;
-        window.Swal.fire({
-            icon: 'success',
-            title: 'Import Successful',
-            text: response.message || 'Sections and positions have been imported.',
-            background: 'var(--theme-bg-panel, #111827)',
-            color: 'var(--theme-text-p, #ffffff)'
-        }).then(() => {
+        if (window.Swal && typeof window.Swal.fire === 'function') {
+            window.Swal.fire({
+                icon: 'success',
+                title: 'Import Successful',
+                text: response.message || 'Sections and positions have been imported.',
+                ...window.Swal.themeConfig()
+            }).then(() => {
+                window.location.reload();
+            });
+        } else {
             window.location.reload();
-        });
+        }
     },
+
     refreshAutosize() {
         this.$nextTick(() => {
-            if (window.autosize) {
+            if (window.Autosize) {
                 document.querySelectorAll('textarea[name="description"]').forEach(el => {
-                    window.autosize.update(el);
+                    window.Autosize.update(el);
                 });
             }
         });
@@ -125,8 +131,9 @@ export default (config = {}) => ({
         this.modal = 'position-edit';
 
         this.$nextTick(() => {
-            if (this.sectionTomSelect) {
-                this.sectionTomSelect.setValue(String(posData.section_id), true);
+            const selectEl = document.getElementById('edit_position_section_id');
+            if (selectEl && window.Select) {
+                window.Select.setValue(selectEl, String(posData.section_id), true);
             }
             this.refreshAutosize();
         });
@@ -140,6 +147,8 @@ export default (config = {}) => ({
         if (!this.searchQuery.trim()) return true;
         const q = this.searchQuery.trim();
         const haystack = [secName || '', secDesc || '', ...(posNames || [])];
+
+        // Leverage standardized window.Search helper if available, or fallback to Fuse
         if (window.Fuse) {
             const fuse = new window.Fuse(
                 haystack.map(item => ({ text: String(item) })),
@@ -155,6 +164,7 @@ export default (config = {}) => ({
         const q = this.searchQuery.trim();
         if (String(secName || '').toLowerCase().includes(q.toLowerCase())) return true;
         const haystack = [posName || '', posDesc || ''];
+
         if (window.Fuse) {
             const fuse = new window.Fuse(
                 haystack.map(item => ({ text: String(item) })),
@@ -167,10 +177,11 @@ export default (config = {}) => ({
 
     async generateAiDescription() {
         if (!this.section.name || !this.section.name.trim()) {
-            if (window.Swal) {
+            if (window.Swal && typeof window.Swal.fire === 'function') {
                 window.Swal.fire({
                     icon: 'warning',
-                    title: this.emptyNameMsg
+                    title: this.emptyNameMsg,
+                    ...window.Swal.themeConfig()
                 });
             }
             return;
@@ -178,18 +189,13 @@ export default (config = {}) => ({
 
         this.isGeneratingAi = true;
         try {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-            const response = await fetch(this.aiEndpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
-                },
-                body: JSON.stringify({ name: this.section.name })
+            // Leverage standardized window.Fetch helper
+            const { ok, data } = await window.Fetch.post(this.aiEndpoint, { name: this.section.name }, {
+                loading: false,
+                showError: false
             });
-            const data = await response.json();
-            if (data.description) {
+
+            if (ok && data && data.description) {
                 this.section.description = data.description;
                 this.refreshAutosize();
             }
@@ -200,9 +206,14 @@ export default (config = {}) => ({
         }
     },
 
-    handleAjaxSuccess() {
-        window.updateDOM_US(this.$refs, ['sectionsContainer'], () => {
+    async handleAjaxSuccess() {
+        // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
+        if (typeof window.updateDOM === 'function') {
+            await window.updateDOM(this.$refs, ['sectionsContainer'], () => {
+                this.closeModal();
+            }, false);
+        } else {
             this.closeModal();
-        });
+        }
     }
 });

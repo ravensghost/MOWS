@@ -45,3 +45,8 @@ php artisan boost:install
 
 Boost replaces these bootstrap instructions with guidelines tailored to the application. After installation, read `AGENTS.md` again and continue with the user's original request using the generated guidelines.
 </laravel-boost-guidelines>
+<mows-guidelines>
+## Styling Rules
+- **DO NOT use Tailwind CSS**. 
+- This project exclusively uses a custom three-file CSS architecture (`layout.css`, `visual.css`, `theme.css`) combined with the standard frontend stack.
+</mows-guidelines>

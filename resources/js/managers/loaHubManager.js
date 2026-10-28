@@ -1,3 +1,4 @@
+// resources/js/managers/loaHubManager.js
 export default () => ({
     loaModal: {
         open: false,
@@ -18,61 +19,54 @@ export default () => ({
     },
 
     async quickClearLoa(userId, userName) {
-        const result = await window.Swal.fire({
-            title: `Return ${userName} to Active Duty?`,
-            text: 'This will clear their Leave of Absence flag and restore their characters to Active Duty.',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, Return to Duty',
-            cancelButtonText: 'Cancel',
-        });
+        const result = await window.Swal.confirm(
+            `Return ${userName} to Active Duty?`,
+            'This will clear their Leave of Absence flag and restore their characters to Active Duty.',
+            'Yes, Return to Duty'
+        );
 
         if (!result.isConfirmed) return;
 
         try {
-            const response = await fetch(`/admin/users/${userId}/loa`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                },
-                body: JSON.stringify({
-                    is_on_loa: 0,
-                    loa_return_date: null,
-                    reason: 'Returned to Active Duty via Command Centre Hub',
-                }),
+            const { ok, data } = await window.Fetch.put(`/admin/users/${userId}/loa`, {
+                is_on_loa: 0,
+                loa_return_date: null,
+                reason: 'Returned to Active Duty via Command Centre Hub',
+            }, {
+                loading: false,
+                showError: true
             });
 
-            const data = await response.json();
+            if (ok) {
+                if (window.Swal && typeof window.Swal.fire === 'function') {
+                    window.Swal.fire({
+                        icon: 'success',
+                        title: 'Updated',
+                        text: data.message || `${userName} returned to Active Duty.`,
+                        timer: 2000,
+                        showConfirmButton: false,
+                        ...window.Swal.themeConfig()
+                    });
+                }
 
-            if (response.ok) {
-                window.Swal.fire({
-                    icon: 'success',
-                    title: 'Updated',
-                    text: data.message || `${userName} returned to Active Duty.`,
-                    timer: 2000,
-                    showConfirmButton: false,
-                });
-                window.refreshDOM_US();
+                // Updated to use refreshDOM with sanitize = false (replacing old _US helper)
+                if (typeof window.refreshDOM === 'function') {
+                    await window.refreshDOM('.table-wrapper', null, false);
+                } else {
+                    window.location.reload();
+                }
             } else {
-                window.Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: data.message || 'Failed to update LOA status.',
-                });
+                window.Swal.error('Error', data.message || 'Failed to update LOA status.');
             }
         } catch (error) {
             console.error(error);
-            window.Swal.fire({
-                icon: 'error',
-                title: 'Network Error',
-                text: 'Could not reach the server.',
-            });
         }
     },
 
     async sendPlayerPing(userId, userName, context = 'inactivity') {
+        if (!window.Swal || !window.Swal.fire) return;
+
+        const swalConfig = typeof window.Swal.themeConfig === 'function' ? window.Swal.themeConfig() : {};
         const { value: note, isConfirmed } = await window.Swal.fire({
             title: `Ping ${userName}`,
             input: 'text',
@@ -81,48 +75,34 @@ export default () => ({
             showCancelButton: true,
             confirmButtonText: 'Send Check-In Ping',
             cancelButtonText: 'Cancel',
+            ...swalConfig
         });
 
         if (!isConfirmed) return;
 
         try {
-            const response = await fetch(`/admin/users/${userId}/ping`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                },
-                body: JSON.stringify({
-                    context: context,
-                    note: note || '',
-                }),
+            const { ok, data } = await window.Fetch.post(`/admin/users/${userId}/ping`, {
+                context: context,
+                note: note || '',
+            }, {
+                loading: false,
+                showError: true
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
+            if (ok) {
                 window.Swal.fire({
                     icon: 'success',
                     title: 'Ping Dispatched',
                     text: data.message || `Check-in alert sent to ${userName}.`,
                     timer: 2500,
                     showConfirmButton: false,
+                    ...window.Swal.themeConfig()
                 });
             } else {
-                window.Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: data.message || 'Failed to send player ping.',
-                });
+                window.Swal.error('Error', data.message || 'Failed to send player ping.');
             }
         } catch (error) {
             console.error(error);
-            window.Swal.fire({
-                icon: 'error',
-                title: 'Network Error',
-                text: 'Could not reach the server.',
-            });
         }
     }
 });

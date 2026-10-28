@@ -1,3 +1,4 @@
+// resources/js/components/volumeReview.js
 export default () => ({
     reviewModalOpen: false,
     bookId: null,
@@ -17,19 +18,20 @@ export default () => ({
         this.description = '';
 
         try {
-            const response = await fetch(`/admin/books/${bookId}/review`, {
-                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            const { ok, data } = await window.Fetch.get(`/admin/books/${bookId}/review`, {
+                loading: false,
+                showError: false
             });
-            if (response.ok) {
-                const data = await response.json();
+
+            if (ok && data) {
                 this.recipients = data.recipients || [];
                 this.selectedRecipients = this.recipients.map(r => `${r.type}:${r.id}`);
             } else {
-                window.Swal.fire('Error', 'Failed to load participating characters and co-writers.', 'error');
+                window.Swal.error('Error', 'Failed to load participating characters and co-writers.');
                 this.reviewModalOpen = false;
             }
         } catch (error) {
-            window.Swal.fire('Error', 'A network error occurred.', 'error');
+            window.Swal.error('Error', 'A network error occurred.');
             this.reviewModalOpen = false;
         } finally {
             this.isLoading = false;
@@ -42,7 +44,12 @@ export default () => ({
 
     async submitReview() {
         if (this.selectedRecipients.length === 0) {
-            window.Swal.fire('Warning', 'Please select at least one recipient.', 'warning');
+            window.Swal.fire({
+                icon: 'warning',
+                title: 'Warning',
+                text: 'Please select at least one recipient.',
+                ...window.Swal.themeConfig()
+            });
             return;
         }
 
@@ -51,55 +58,39 @@ export default () => ({
             return { type, id: parseInt(id) };
         });
 
-        window.Swal.fire({
-            title: 'Issuing Service Records...',
-            html: 'Please wait while records are bulk-issued...',
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            background: 'var(--theme-panel-bg, #111827)',
-            color: 'var(--theme-text-main, #ffffff)',
-            didOpen: () => window.Swal.showLoading()
-        });
+        // Use window.Swal helper for loading state
+        window.Swal.loading('Issuing Service Records...', 'Please wait while records are bulk-issued...');
 
         try {
-            const response = await fetch(`/admin/books/${this.bookId}/review`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    event_type: this.eventType,
-                    description: this.description,
-                    recipients: formattedRecipients
-                })
+            const { ok, data } = await window.Fetch.post(`/admin/books/${this.bookId}/review`, {
+                event_type: this.eventType,
+                description: this.description,
+                recipients: formattedRecipients
+            }, {
+                loading: false,
+                showError: false
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                window.Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: data.message || 'Service records issued successfully.',
-                    background: 'var(--theme-panel-bg, #111827)',
-                    color: 'var(--theme-text-main, #ffffff)',
-                    showConfirmButton: false,
-                    timer: 1200
-                }).then(() => {
-                    this.reviewModalOpen = false;
-                    this.$dispatch('ajax-success');
-                });
+            if (ok) {
+                if (window.Swal && typeof window.Swal.fire === 'function') {
+                    window.Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: data.message || 'Service records issued successfully.',
+                        showConfirmButton: false,
+                        timer: 1200,
+                        ...window.Swal.themeConfig()
+                    }).then(() => {
+                        this.reviewModalOpen = false;
+                        this.$dispatch('ajax-success');
+                    });
+                }
             } else {
-                let errorMsg = 'Failed to issue service records.';
-                try {
-                    const data = await response.json();
-                    errorMsg = data.message || errorMsg;
-                } catch (e) { }
-                window.Swal.fire('Error', errorMsg, 'error');
+                const errorMsg = data.message || 'Failed to issue service records.';
+                window.Swal.error('Error', errorMsg);
             }
         } catch (error) {
-            window.Swal.fire('Error', 'A network error occurred.', 'error');
+            window.Swal.error('Error', 'A network error occurred.');
         }
     }
 });

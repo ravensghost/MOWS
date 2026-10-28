@@ -1,13 +1,14 @@
-export default function awardManager() {
+// resources/js/managers/distinctionManager.js
+export default function distinctionManager() {
     return {
         modalOpen: false,
-        categoryModalOpen: false, // New state for Subgroup Manager
+        categoryModalOpen: false, // State for Subgroup Manager
         isEdit: false,
         awardId: null,
         name: '',
         description: '',
 
-        // NEW PROPERTIES
+        // PROPERTIES
         master_group: 'BOTH',
         award_category_id: '',
 
@@ -25,6 +26,7 @@ export default function awardManager() {
         init() {
             this.loadImages();
         },
+
         updateColorFromPicker(model, value) {
             if (typeof this[model] !== 'undefined') {
                 this[model] = value;
@@ -33,10 +35,19 @@ export default function awardManager() {
 
         async loadImages() {
             try {
-                let res = await fetch('/admin/awards/images');
-                let data = await res.json();
-                this.available_images = data.images || [];
-                this.active_skin = data.active_skin || 'default';
+                // Leverage standardized window.Fetch helper
+                const { ok, data } = await window.Fetch.get('/admin/awards/images', {
+                    loading: false,
+                    showError: false
+                });
+
+                if (ok && data) {
+                    this.available_images = data.images || [];
+                    this.active_skin = data.active_skin || 'default';
+                } else {
+                    this.available_images = [];
+                    this.active_skin = 'default';
+                }
             } catch (e) {
                 this.available_images = [];
                 this.active_skin = 'default';

@@ -1,3 +1,4 @@
+// resources/js/managers/configurationManager.js
 export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
     // Initialise with the variables passed from Blade
     ai_mode: initialAiMode,
@@ -5,7 +6,7 @@ export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
 
     // Fuzzy search state (Fuse.js)
     searchQuery: '',
-    fuseInstance: null,
+    searchHelperInstance: null,
     matchedKeys: null,
     matchedGroups: null,
 
@@ -18,38 +19,40 @@ export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
 
     init() {
         this.initFuse();
+        this.$watch('searchQuery', () => {
+            this.filterSettings();
+        });
     },
 
     initFuse() {
-        if (this.$refs.settingsSearchData && window.Fuse) {
+        // Leverage the standardized global window.Search helper (powered by Fuse.js)
+        if (this.$refs.settingsSearchData && window.Search) {
             try {
-                const catalog = JSON.parse(this.$refs.settingsSearchData.textContent || '[]');
-                this.fuseInstance = new window.Fuse(catalog, {
-                    keys: ['label', 'key', 'group'],
-                    threshold: 0.35,
-                    ignoreLocation: true
+                this.searchHelperInstance = window.Search.create('#settings-search-catalog [data-setting-item], [data-settings-search-item]', ['label', 'key', 'group'], {
+                    threshold: 0.35
                 });
             } catch (e) {
-                this.fuseInstance = null;
+                this.searchHelperInstance = null;
             }
         }
     },
 
     filterSettings() {
         const q = this.searchQuery.trim();
-        if (!q || !this.fuseInstance) {
+        if (!q || !this.searchHelperInstance) {
             this.matchedKeys = null;
             this.matchedGroups = null;
             return;
         }
-        const results = this.fuseInstance.search(q);
-        this.matchedKeys = results.map(r => r.item.key);
-        this.matchedGroups = [...new Set(results.map(r => r.item.group))];
+        const results = this.searchHelperInstance.search(q);
+        this.matchedKeys = results ? results.map(id => String(id)) : [];
+        // If results return item keys, ensure matchedGroups extracts properly from matching data elements if needed
+        this.matchedGroups = null;
     },
 
     matchesSetting(key) {
         if (!this.searchQuery.trim() || this.matchedKeys === null) return true;
-        return this.matchedKeys.includes(key);
+        return this.matchedKeys.includes(String(key));
     },
 
     matchesGroup(group) {
@@ -58,23 +61,23 @@ export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
     },
 
     initModalSelect() {
-        if (this.tomSelectInstance) {
-            this.tomSelectInstance.destroy();
+        if (this.tomSelectInstance && window.Select) {
+            window.Select.destroy(this.$refs.modalSelect);
             this.tomSelectInstance = null;
         }
 
         if (this.modal.type === 'select') {
             this.$nextTick(() => {
                 const selectEl = this.$refs.modalSelect;
-                if (selectEl && window.TomSelect) {
-                    this.tomSelectInstance = new window.TomSelect(selectEl, {
+                if (selectEl && window.Select) {
+                    this.tomSelectInstance = window.Select.init(selectEl, {
                         searchField: ['text'],
                         maxOptions: null,
                         onChange: (val) => {
                             this.modal.value = val;
                         }
                     });
-                    this.tomSelectInstance.setValue(String(this.modal.value ?? ''), true);
+                    window.Select.setValue(selectEl, String(this.modal.value ?? ''), true);
                 }
             });
         }
@@ -120,14 +123,25 @@ export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
             this.mail_mailer = this.modal.value;
         }
 
-        window.updateDOM_US(this.$refs, ['mainSettingsTable', 'timeSystemsTable'], () => {
-            if (this.tomSelectInstance) {
-                this.tomSelectInstance.destroy();
+        // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
+        if (typeof window.updateDOM === 'function') {
+            await window.updateDOM(this.$refs, ['mainSettingsTable', 'timeSystemsTable'], () => {
+                if (this.tomSelectInstance && window.Select) {
+                    window.Select.destroy(this.$refs.modalSelect);
+                    this.tomSelectInstance = null;
+                }
+                this.modal.open = false;
+                this.tsModal.open = false;
+                this.filterSettings();
+            }, false);
+        } else {
+            if (this.tomSelectInstance && window.Select) {
+                window.Select.destroy(this.$refs.modalSelect);
                 this.tomSelectInstance = null;
             }
             this.modal.open = false;
             this.tsModal.open = false;
             this.filterSettings();
-        });
+        }
     }
 });

@@ -1,6 +1,7 @@
+// resources/js/managers/PublicationManager.js
 export default () => ({
     searchQuery: '',
-    fuseInstance: null,
+    searchHelperInstance: null,
     matchedBookcaseIds: null,
 
     bookcaseModalOpen: false,
@@ -36,31 +37,32 @@ export default () => ({
 
     init() {
         this.initFuse();
+        this.$watch('searchQuery', () => {
+            this.filterLibrary();
+        });
     },
 
     initFuse() {
-        if (this.$refs.storySearchData && window.Fuse) {
+        // Leverage the standardized global window.Search helper (powered by Fuse.js)
+        if (this.$refs.storySearchData && window.Search) {
             try {
-                const data = JSON.parse(this.$refs.storySearchData.textContent || '[]');
-                this.fuseInstance = new window.Fuse(data, {
-                    keys: ['name', 'books.title', 'books.description'],
-                    threshold: 0.35,
-                    ignoreLocation: true
+                this.searchHelperInstance = window.Search.create('[data-story-search-item], [data-bookcase-item]', ['name', 'books.title', 'books.description'], {
+                    threshold: 0.35
                 });
             } catch (e) {
-                this.fuseInstance = null;
+                this.searchHelperInstance = null;
             }
         }
     },
 
     filterLibrary() {
         const q = this.searchQuery.trim();
-        if (!q || !this.fuseInstance) {
+        if (!q || !this.searchHelperInstance) {
             this.matchedBookcaseIds = null;
             return;
         }
-        const results = this.fuseInstance.search(q);
-        this.matchedBookcaseIds = results.map(r => Number(r.item.id));
+        const results = this.searchHelperInstance.search(q);
+        this.matchedBookcaseIds = results ? results.map(id => Number(id)) : [];
     },
 
     matchesBookcase(id, name = '') {
@@ -79,20 +81,32 @@ export default () => ({
     },
 
     openStatusModal(detail = {}) {
-        this.statusMode = detail.mode || 'create';
-        this.statusId = detail.id || '';
-        this.statusName = detail.name || '';
-        this.statusFormAction = this.statusMode === 'edit' ? `/admin/statuses/${this.statusId}` : '/admin/statuses';
-        this.statusMethod = this.statusMode === 'edit' ? 'PUT' : 'POST';
+        if (detail.mode === 'edit') {
+            window.Modal.edit(this, { id: detail.id, name: detail.name }, (id) => `/admin/statuses/${id}`);
+            this.statusMode = 'edit';
+            this.statusFormAction = `/admin/statuses/${this.statusId}`;
+            this.statusMethod = 'PUT';
+        } else {
+            window.Modal.create(this, { name: '' }, '/admin/statuses');
+            this.statusMode = 'create';
+            this.statusFormAction = '/admin/statuses';
+            this.statusMethod = 'POST';
+        }
         this.statusModalOpen = true;
     },
 
     openBookcaseModal(detail = {}) {
-        this.bookcaseMode = detail.mode || 'create';
-        this.bookcaseId = detail.id || '';
-        this.bookcaseName = detail.name || '';
-        this.bookcaseFormAction = this.bookcaseMode === 'edit' ? `/admin/bookcases/${this.bookcaseId}` : '/admin/bookcases';
-        this.bookcaseMethod = this.bookcaseMode === 'edit' ? 'PUT' : 'POST';
+        if (detail.mode === 'edit') {
+            window.Modal.edit(this, { id: detail.id, name: detail.name }, (id) => `/admin/bookcases/${id}`);
+            this.bookcaseMode = 'edit';
+            this.bookcaseFormAction = `/admin/bookcases/${this.bookcaseId}`;
+            this.bookcaseMethod = 'PUT';
+        } else {
+            window.Modal.create(this, { name: '' }, '/admin/bookcases');
+            this.bookcaseMode = 'create';
+            this.bookcaseFormAction = '/admin/bookcases';
+            this.bookcaseMethod = 'POST';
+        }
         this.bookcaseModalOpen = true;
     },
 
@@ -110,8 +124,8 @@ export default () => ({
         this.bookModalOpen = true;
 
         this.$nextTick(() => {
-            if (this.$refs.bookDescTextarea && window.autosize) {
-                window.autosize.update(this.$refs.bookDescTextarea);
+            if (this.$refs.bookDescTextarea && window.Autosize) {
+                window.Autosize.update(this.$refs.bookDescTextarea);
             }
         });
     },
@@ -124,22 +138,32 @@ export default () => ({
     },
 
     async refreshDOM(responseData = {}) {
-        window.updateDOM_US(this.$refs, ['bookcasesWrapper', 'looseBooksWrapper', 'statusesWrapper'], () => {
+        // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
+        if (typeof window.updateDOM === 'function') {
+            await window.updateDOM(this.$refs, ['bookcasesWrapper', 'looseBooksWrapper', 'statusesWrapper'], () => {
+                this.bookcaseModalOpen = false;
+                this.bookModalOpen = false;
+                this.moveModalOpen = false;
+                this.statusModalOpen = false;
+                this.initFuse();
+                this.filterLibrary();
+
+                if (responseData && responseData.trigger_review && responseData.data) {
+                    window.dispatchEvent(new CustomEvent('open-book-review', {
+                        detail: {
+                            bookId: responseData.data.id,
+                            bookTitle: responseData.data.title
+                        }
+                    }));
+                }
+            }, false);
+        } else {
             this.bookcaseModalOpen = false;
             this.bookModalOpen = false;
             this.moveModalOpen = false;
             this.statusModalOpen = false;
             this.initFuse();
             this.filterLibrary();
-
-            if (responseData && responseData.trigger_review && responseData.data) {
-                window.dispatchEvent(new CustomEvent('open-book-review', {
-                    detail: {
-                        bookId: responseData.data.id,
-                        bookTitle: responseData.data.title
-                    }
-                }));
-            }
-        });
+        }
     }
 });

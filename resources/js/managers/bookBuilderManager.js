@@ -1,3 +1,4 @@
+// resources/js/managers/bookBuilderManager.js
 export default (initialLayouts = [], availableWidgets = [], widgetRegistry = {}) => ({
     availableLayouts: initialLayouts,
     widgetData: Object.keys(widgetRegistry).length > 0 ? widgetRegistry : availableWidgets,
@@ -6,45 +7,27 @@ export default (initialLayouts = [], availableWidgets = [], widgetRegistry = {})
     async syncWidgets() {
         this.isSyncing = true;
 
-        Swal.fire({
-            title: 'Scanning Widgets...',
-            html: 'Please wait while the registry is updated.',
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            background: 'var(--theme-bg-panel, #111827)',
-            color: 'var(--theme-text-p, #ffffff)',
-            didOpen: () => window.Swal.showLoading()
-        });
+        if (window.Swal && typeof window.Swal.loading === 'function') {
+            window.Swal.loading('Scanning Widgets...', 'Please wait while the registry is updated.');
+        }
 
         try {
-            const response = await fetch('/admin/widgets/sync', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                    'Accept': 'application/json'
-                }
+            const { ok, data } = await window.Fetch.post('/admin/widgets/sync', {}, {
+                loading: false,
+                showError: false
             });
-            const data = await response.json();
 
-            if (response.ok && data.status === 'success') {
+            if (ok && data && data.status === 'success') {
                 this.widgetData = data.data;
 
-                window.Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'success',
-                    title: data.message,
-                    showConfirmButton: false,
-                    timer: 3000,
-                    background: 'var(--theme-bg-panel, #111827)',
-                    color: 'var(--theme-text-p, #ffffff)'
-                });
+                if (window.Swal && typeof window.Swal.toast === 'function') {
+                    window.Swal.toast('success', data.message || 'Widgets synchronized successfully.');
+                }
             } else {
-                window.Swal.fire('Error', data.message || 'Synchronisation failed.', 'error');
+                window.Swal.error('Error', data?.message || 'Synchronisation failed.');
             }
         } catch (e) {
-            window.Swal.fire('Error', 'Network error occurred.', 'error');
+            window.Swal.error('Error', 'Network error occurred.');
         } finally {
             this.isSyncing = false;
         }
@@ -73,15 +56,15 @@ export default (initialLayouts = [], availableWidgets = [], widgetRegistry = {})
         this.modals.layout.open = false;
         this.modals.widget.open = false;
 
-        const updater = window.updateDOM || window.updateDOM_US;
-        if (typeof updater === 'function') {
-            updater(this.$refs, ['pagesTableContent', 'layoutsTableContent', 'widgetsTableContent'], (doc) => {
+        // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
+        if (typeof window.updateDOM === 'function') {
+            await window.updateDOM(this.$refs, ['pagesTableContent', 'layoutsTableContent', 'widgetsTableContent'], (doc) => {
                 const freshDataEl = doc?.getElementById('pb-fresh-data');
                 if (freshDataEl) {
                     this.availableLayouts = JSON.parse(freshDataEl.getAttribute('data-layouts') || '[]');
                     this.widgetData = JSON.parse(freshDataEl.getAttribute('data-widgets') || '{}');
                 }
-            });
+            }, false);
         }
     },
 

@@ -1,4 +1,4 @@
-// resources/js/components/adminModal.js
+// resources/js/managers/metadataManager.js
 export default () => ({
     modals: {
         form: { open: false, mode: 'create', id: '', name: '', is_visible: true, action: '/admin/forms', method: 'POST' },
@@ -22,10 +22,9 @@ export default () => ({
         this.modals.form.open = false;
         this.modals.field.open = false;
 
-        if (typeof window.updateDOM_US === 'function') {
-            window.updateDOM_US(this.$refs, ['formsTableContent', 'fieldsTableContent']);
-        } else if (typeof window.updateDOM === 'function') {
-            window.updateDOM(this.$refs, ['formsTableContent', 'fieldsTableContent']);
+        // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
+        if (typeof window.updateDOM === 'function') {
+            await window.updateDOM(this.$refs, ['formsTableContent', 'fieldsTableContent'], null, false);
         }
     },
 

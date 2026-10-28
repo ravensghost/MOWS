@@ -1,3 +1,4 @@
+// resources/js/managers/chronologicalRegisterManager.js
 export default (awardsList = []) => ({
     issueModalOpen: false,
     actionTab: 'award',
@@ -5,36 +6,38 @@ export default (awardsList = []) => ({
     awards: awardsList,
 
     searchQuery: '',
-    fuseInstance: null,
+    searchHelperInstance: null,
     matchedRecordIds: null,
 
     init() {
         this.initFuse();
+        this.$watch('searchQuery', () => {
+            this.filterRecords();
+        });
     },
 
     initFuse() {
-        if (this.$refs.serviceRecordsSearchData && window.Fuse) {
+        // Leverage the standardized global window.Search helper (powered by Fuse.js)
+        if (this.$refs.serviceRecordsSearchData && window.Search) {
             try {
-                const catalog = JSON.parse(this.$refs.serviceRecordsSearchData.textContent || '[]');
-                this.fuseInstance = new window.Fuse(catalog, {
-                    keys: ['recipient', 'event_type', 'award_name', 'description'],
-                    threshold: 0.35,
-                    ignoreLocation: true
+                // If serviceRecordsSearchData holds a catalog array, we can use Search or initialise via Fuse directly
+                this.searchHelperInstance = window.Search.create('[data-service-record-item]', ['recipient', 'event_type', 'award_name', 'description'], {
+                    threshold: 0.35
                 });
             } catch (e) {
-                this.fuseInstance = null;
+                this.searchHelperInstance = null;
             }
         }
     },
 
     filterRecords() {
         const q = this.searchQuery.trim();
-        if (!q || !this.fuseInstance) {
+        if (!q || !this.searchHelperInstance) {
             this.matchedRecordIds = null;
             return;
         }
-        const results = this.fuseInstance.search(q);
-        this.matchedRecordIds = results.map(r => Number(r.item.id));
+        const results = this.searchHelperInstance.search(q);
+        this.matchedRecordIds = results ? results.map(id => Number(id)) : [];
     },
 
     matchesRecord(id) {

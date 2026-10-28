@@ -1,3 +1,4 @@
+// resources/js/components/folioEdit.js
 export default () => ({
     isOpen: false,
     chapterId: null,
@@ -28,8 +29,8 @@ export default () => ({
             const idInput = form.querySelector('input[name="chapter_id"]');
             if (idInput) idInput.remove();
 
-            if (charSelect && charSelect.tomselect) {
-                charSelect.tomselect.clear(true);
+            if (charSelect) {
+                window.Select.clear(charSelect, true);
             }
 
             window.dispatchEvent(new CustomEvent('set-chapter-editor-content', { detail: { content: '' } }));
@@ -37,16 +38,13 @@ export default () => ({
         }
 
         try {
-            const response = await fetch(`/chapters/${id}/edit`, {
-                headers: {
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
+            // Leverage global window.Fetch helper
+            const { ok, data: chapter } = await window.Fetch.get(`/chapters/${id}/edit`, {
+                loading: false,
+                showError: true
             });
 
-            if (response.ok) {
-                const chapter = await response.json();
-
+            if (ok && chapter) {
                 // Populate standard form inputs
                 const setVal = (name, val) => {
                     const el = form.querySelector(`[name="${name}"]`);
@@ -64,11 +62,11 @@ export default () => ({
                 setVal('rating_v', chapter.rating_v);
                 setVal('status', chapter.status || 'draft');
 
-                // Populate Tom Select for Characters Present
-                if (charSelect && charSelect.tomselect) {
-                    charSelect.tomselect.clear(true);
+                // Populate Tom Select for Characters Present using window.Select helper
+                if (charSelect) {
+                    window.Select.clear(charSelect, true);
                     if (Array.isArray(chapter.character_ids)) {
-                        charSelect.tomselect.setValue(chapter.character_ids, true);
+                        window.Select.setValue(charSelect, chapter.character_ids, true);
                     }
                 }
 

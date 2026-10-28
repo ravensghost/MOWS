@@ -136,3 +136,8 @@ Before relying on a package's API, confirm its installed version:
 - Run `vendor/bin/phpunit` to call the test runner directly. It accepts the same file path and `--filter=testName` arguments.
 
 </laravel-boost-guidelines>
+<mows-guidelines>
+## Styling Rules
+- **DO NOT use Tailwind CSS**. 
+- This project exclusively uses a custom three-file CSS architecture (`layout.css`, `visual.css`, `theme.css`) combined with the standard frontend stack.
+</mows-guidelines>

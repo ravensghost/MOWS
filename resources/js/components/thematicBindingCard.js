@@ -1,3 +1,4 @@
+// resources/js/components/thematicBindingCard.js
 export default function themeVarCard(initialValue = '', varKey = '') {
     return {
         val: String(initialValue ?? '').trim(),
@@ -117,17 +118,17 @@ export default function themeVarCard(initialValue = '', varKey = '') {
         },
 
         initStructuralTomSelect(el) {
-            let ts = new window.TomSelect(el, {
+            let ts = window.Select.init(el, {
                 create: true,
                 controlInput: null,
                 onChange: (v) => { this.val = v; }
             });
 
             this.$watch('val', (v) => {
-                if (ts.getValue() !== v) ts.setValue(v, true);
+                if (ts && ts.getValue() !== v) ts.setValue(v, true);
             });
 
-            this.$cleanup(() => ts.destroy());
+            this.$cleanup(() => window.Select.destroy(el));
         },
 
         initUnitTomSelect(el, index) {
@@ -137,7 +138,7 @@ export default function themeVarCard(initialValue = '', varKey = '') {
                 .map(u => `<option value="${u}" ${u === currentUnit ? 'selected' : ''}>${u}</option>`)
                 .join('');
 
-            let ts = new window.TomSelect(el, {
+            let ts = window.Select.init(el, {
                 create: false,
                 controlInput: null,
                 onChange: (v) => {
@@ -149,10 +150,10 @@ export default function themeVarCard(initialValue = '', varKey = '') {
             });
 
             this.$watch(() => this.parts[index]?.unit, (v) => {
-                if (v && ts.getValue() !== v) ts.setValue(v, true);
+                if (v && ts && ts.getValue() !== v) ts.setValue(v, true);
             });
 
-            this.$cleanup(() => ts.destroy());
+            this.$cleanup(() => window.Select.destroy(el));
         },
 
         initEasingTomSelect(el, index) {
@@ -162,7 +163,7 @@ export default function themeVarCard(initialValue = '', varKey = '') {
                 .map(e => `<option value="${e}" ${e === currentEasing ? 'selected' : ''}>${e}</option>`)
                 .join('');
 
-            let ts = new window.TomSelect(el, {
+            let ts = window.Select.init(el, {
                 create: false,
                 controlInput: null,
                 onChange: (v) => {
@@ -174,10 +175,10 @@ export default function themeVarCard(initialValue = '', varKey = '') {
             });
 
             this.$watch(() => this.parts[index]?.easing, (v) => {
-                if (v && ts.getValue() !== v) ts.setValue(v, true);
+                if (v && ts && ts.getValue() !== v) ts.setValue(v, true);
             });
 
-            this.$cleanup(() => ts.destroy());
+            this.$cleanup(() => window.Select.destroy(el));
         },
 
         initTransitionPropTomSelect(el, index) {
@@ -187,7 +188,7 @@ export default function themeVarCard(initialValue = '', varKey = '') {
                 .map(p => `<option value="${p}" ${p === currentProp ? 'selected' : ''}>${p}</option>`)
                 .join('');
 
-            let ts = new window.TomSelect(el, {
+            let ts = window.Select.init(el, {
                 create: true,
                 controlInput: null,
                 onChange: (v) => {
@@ -199,10 +200,10 @@ export default function themeVarCard(initialValue = '', varKey = '') {
             });
 
             this.$watch(() => this.parts[index]?.prop, (v) => {
-                if (v && ts.getValue() !== v) ts.setValue(v, true);
+                if (v && ts && ts.getValue() !== v) ts.setValue(v, true);
             });
 
-            this.$cleanup(() => ts.destroy());
+            this.$cleanup(() => window.Select.destroy(el));
         },
 
         initFontStackTomSelect(el) {
@@ -213,10 +214,10 @@ export default function themeVarCard(initialValue = '', varKey = '') {
 
             const allOptions = Array.from(new Set([...currentFonts, ...this.commonFonts]));
 
-            let ts = new window.TomSelect(el, {
+            let ts = window.Select.init(el, {
                 options: allOptions.map(f => ({ value: f, text: f })),
                 items: currentFonts,
-                plugins: ['remove_button'],
+                multiple: true,
                 create: true,
                 persist: false,
                 delimiter: ',',
@@ -226,7 +227,7 @@ export default function themeVarCard(initialValue = '', varKey = '') {
                 }
             });
 
-            this.$cleanup(() => ts.destroy());
+            this.$cleanup(() => window.Select.destroy(el));
         }
     };
 }

@@ -27,5 +27,6 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 database.sql
-file-layout.text
+file-layout.txt
+/resources/js/JS.txt
 /mows_db

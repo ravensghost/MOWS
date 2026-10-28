@@ -1,4 +1,5 @@
-export default function rankManager(defaultDeptColor, baseLayer = '#1a1a1aFF') {
+// resources/js/managers/insigniaManager.js
+export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF') {
     return {
         modal: null,
         importModalOpen: false,
@@ -20,15 +21,18 @@ export default function rankManager(defaultDeptColor, baseLayer = '#1a1a1aFF') {
 
         handleImportSuccess(response) {
             this.importModalOpen = false;
-            window.Swal.fire({
-                icon: 'success',
-                title: 'Import Successful',
-                text: response.message || 'Ranks have been imported successfully.',
-                background: 'var(--theme-bg-panel, #111827)',
-                color: 'var(--theme-text-p, #ffffff)'
-            }).then(() => {
+            if (window.Swal && typeof window.Swal.fire === 'function') {
+                window.Swal.fire({
+                    icon: 'success',
+                    title: 'Import Successful',
+                    text: response.message || 'Insignia have been imported successfully.',
+                    ...window.Swal.themeConfig()
+                }).then(() => {
+                    window.location.reload();
+                });
+            } else {
                 window.location.reload();
-            });
+            }
         },
 
         resetRankForm() {
@@ -48,20 +52,28 @@ export default function rankManager(defaultDeptColor, baseLayer = '#1a1a1aFF') {
             }
             this.rankForm.loading_images = true;
             try {
-                const res = await fetch(`/admin/ranks/images?set_name=${encodeURIComponent(this.rankForm.set_name)}`);
-                const data = await res.json();
-                this.rankForm.available_images = data.images || [];
-
-                this.$nextTick(() => {
-                    if (preserveMid) {
-                        this.rankForm.mid_image = preserveMid;
-                        this.imageError.mid = false;
-                    }
-                    if (preserveTop) {
-                        this.rankForm.top_image = preserveTop;
-                        this.imageError.top = false;
-                    }
+                // Leverage standardized window.Fetch helper
+                const { ok, data } = await window.Fetch.get(`/admin/ranks/images?set_name=${encodeURIComponent(this.rankForm.set_name)}`, {
+                    loading: false,
+                    showError: false
                 });
+
+                if (ok && data) {
+                    this.rankForm.available_images = data.images || [];
+
+                    this.$nextTick(() => {
+                        if (preserveMid) {
+                            this.rankForm.mid_image = preserveMid;
+                            this.imageError.mid = false;
+                        }
+                        if (preserveTop) {
+                            this.rankForm.top_image = preserveTop;
+                            this.imageError.top = false;
+                        }
+                    });
+                } else {
+                    this.rankForm.available_images = [];
+                }
             } catch (e) {
                 this.rankForm.available_images = [];
             }
@@ -122,8 +134,9 @@ export default function rankManager(defaultDeptColor, baseLayer = '#1a1a1aFF') {
 
         async refreshDOM_US() {
             this.modal = null;
-            if (typeof window.updateDOM_US === 'function') {
-                await window.updateDOM_US(this.$refs, ['ranksList', 'rankSetSelect', 'assignSectionsList']);
+            // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
+            if (typeof window.updateDOM === 'function') {
+                await window.updateDOM(this.$refs, ['ranksList', 'rankSetSelect', 'assignSectionsList'], null, false);
             }
         }
     };

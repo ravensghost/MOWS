@@ -1,3 +1,4 @@
+// resources/js/managers/candidatePetitionManager.js
 export default (config = {}) => ({
     reviewModalOpen: false,
     appId: '',
@@ -44,42 +45,43 @@ export default (config = {}) => ({
         this.reassignModalOpen = true;
     },
 
-    refreshDOM() {
-        window.updateDOM_US(this.$refs, ['pendingAppsTableContent', 'activeRosterTableContent'], () => {
+    async refreshDOM() {
+        // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
+        if (typeof window.updateDOM === 'function') {
+            await window.updateDOM(this.$refs, ['pendingAppsTableContent', 'activeRosterTableContent'], () => {
+                this.reviewModalOpen = false;
+                this.reassignModalOpen = false;
+            }, false);
+        } else {
             this.reviewModalOpen = false;
             this.reassignModalOpen = false;
-        });
+        }
     },
 
-    rejectApplication() {
-        window.Swal.fire({
-            title: this.i18n.rejectConfirm,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: 'var(--theme-danger, #ef4444)',
-            cancelButtonColor: 'var(--theme-panel-header-bg, #1f2937)',
-            confirmButtonText: this.i18n.confirmRejectBtn,
-            background: 'var(--theme-panel-bg, #111827)',
-            color: 'var(--theme-text-main, #ffffff)'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                window.Swal.showLoading();
-                fetch(`/admin/applications/${this.appId}/reject`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
-                        'Accept': 'application/json'
-                    }
-                }).then(response => {
-                    if (response.ok) {
-                        this.refreshDOM();
-                    } else {
-                        window.Swal.fire('Error', this.i18n.rejectFailed, 'error');
-                    }
-                }).catch(() => {
-                    window.Swal.fire('Error', this.i18n.rejectFailed, 'error');
+    async rejectApplication() {
+        const result = await window.Swal.confirm(
+            this.i18n.rejectConfirm,
+            'You cannot revert this action!',
+            this.i18n.confirmRejectBtn
+        );
+
+        if (result.isConfirmed) {
+            try {
+                const { ok, data } = await window.Fetch.post(`/admin/applications/${this.appId}/reject`, {}, {
+                    loading: true,
+                    loadingTitle: 'Processing...',
+                    loadingHtml: 'Rejecting application...',
+                    showError: false
                 });
+
+                if (ok) {
+                    await this.refreshDOM();
+                } else {
+                    window.Swal.error('Error', data.message || this.i18n.rejectFailed);
+                }
+            } catch (error) {
+                window.Swal.error('Error', this.i18n.rejectFailed);
             }
-        });
+        }
     }
 });

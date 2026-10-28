@@ -1,11 +1,8 @@
-import Fuse from 'fuse.js';
-import TomSelect from 'tom-select';
-import Dropzone from 'dropzone';
-
+// resources/js/managers/lexiconCodexManager.js
 export default () => ({
     activeTab: 'gb',
     searchQuery: '',
-    fuse: null,
+    searchHelperInstance: null,
     termsList: [],
     matchedIds: new Set(),
     matchedMasters: new Set(),
@@ -69,28 +66,32 @@ export default () => ({
             };
         });
 
-        this.fuse = new Fuse(this.termsList, {
-            keys: ['key', 'master', 'sub', 'translations'],
-            threshold: 0.3,
-            ignoreLocation: true
-        });
+        // Utilize the standardized global window.Search helper (powered by Fuse.js)
+        if (window.Search) {
+            this.searchHelperInstance = window.Search.create('[data-term-row]', ['key', 'master', 'sub', 'translations'], {
+                threshold: 0.3
+            });
+        }
 
         this.performSearch();
     },
 
     performSearch() {
         const query = this.searchQuery.trim();
-        if (!query || !this.fuse) {
+        if (!query || !this.searchHelperInstance) {
             this.matchedIds = new Set(this.termsList.map(t => t.id));
             this.matchedMasters = new Set(this.termsList.map(t => t.master));
             this.matchedSubgroups = new Set(this.termsList.map(t => `${t.master}::${t.sub}`));
             return;
         }
 
-        const results = this.fuse.search(query);
-        this.matchedIds = new Set(results.map(r => r.item.id));
-        this.matchedMasters = new Set(results.map(r => r.item.master));
-        this.matchedSubgroups = new Set(results.map(r => `${r.item.master}::${r.item.sub}`));
+        const matchedIdsArray = this.searchHelperInstance.search(query) || [];
+        this.matchedIds = new Set(matchedIdsArray);
+
+        // Map matching items back to master and subgroup sets
+        const matchedItems = this.termsList.filter(t => this.matchedIds.has(t.id));
+        this.matchedMasters = new Set(matchedItems.map(t => t.master));
+        this.matchedSubgroups = new Set(matchedItems.map(t => `${t.master}::${t.sub}`));
     },
 
     termVisible(id) {
@@ -109,11 +110,8 @@ export default () => ({
     },
 
     initTomSelect() {
-        if (this.$refs.commonLangSelect) {
-            if (this.tomSelectInstance) {
-                this.tomSelectInstance.destroy();
-            }
-            this.tomSelectInstance = new TomSelect(this.$refs.commonLangSelect, {
+        if (this.$refs.commonLangSelect && window.Select) {
+            this.tomSelectInstance = window.Select.init(this.$refs.commonLangSelect, {
                 create: false,
                 sortField: { field: 'text', direction: 'asc' }
             });
@@ -127,8 +125,9 @@ export default () => ({
             this.dropzoneInstance.destroy();
         }
 
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
+        // Leverage Dropzone library directly or via DropzoneHelper wrapper
         this.dropzoneInstance = new Dropzone(this.$refs.lexiconDropzone, {
             url: '/admin/lexicon/import',
             paramName: 'import_file',
@@ -153,25 +152,26 @@ export default () => ({
             if (this.modals.importLang.langCode) {
                 formData.append('import_lang_code', this.modals.importLang.langCode);
             }
-            window.Swal?.fire({
-                title: 'Importing Lexicon...',
-                html: 'Parsing JSON and merging records...',
-                allowOutsideClick: false,
-                didOpen: () => window.Swal.showLoading()
-            });
+            if (window.Swal && typeof window.Swal.loading === 'function') {
+                window.Swal.loading('Importing Lexicon...', 'Parsing JSON and merging records...');
+            }
         });
 
         this.dropzoneInstance.on('success', (file, response) => {
             this.dropzoneInstance.removeAllFiles();
             this.modals.importLang.open = false;
             this.modals.importLang.langCode = '';
-            window.Swal?.fire({
-                icon: 'success',
-                title: 'Success',
-                text: response.message || 'Lexicon imported successfully.',
-                timer: 2000,
-                showConfirmButton: false
-            });
+
+            if (window.Swal && typeof window.Swal.fire === 'function') {
+                window.Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: response.message || 'Lexicon imported successfully.',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    ...window.Swal.themeConfig()
+                });
+            }
             this.refreshDOM();
         });
 
@@ -180,21 +180,23 @@ export default () => ({
             const msg = typeof errorMessage === 'object' && errorMessage.message
                 ? errorMessage.message
                 : (typeof errorMessage === 'string' ? errorMessage : 'Failed to import lexicon file.');
-            window.Swal?.fire({
-                icon: 'error',
-                title: 'Import Error',
-                text: msg
-            });
+
+            if (window.Swal && typeof window.Swal.error === 'function') {
+                window.Swal.error('Import Error', msg);
+            }
         });
     },
 
     submitImport() {
         if (!this.dropzoneInstance || this.dropzoneInstance.getQueuedFiles().length === 0) {
-            window.Swal?.fire({
-                icon: 'warning',
-                title: 'Missing File',
-                text: 'Please select a JSON file to import.'
-            });
+            if (window.Swal) {
+                window.Swal.fire({
+                    icon: 'warning',
+                    title: 'Missing File',
+                    text: 'Please select a JSON file to import.',
+                    ...window.Swal.themeConfig()
+                });
+            }
             return;
         }
         this.dropzoneInstance.processQueue();
@@ -202,17 +204,35 @@ export default () => ({
 
     async refreshDOM(isClearAction = false) {
         if (isClearAction) {
-            window.Swal?.update({ title: 'Rebuilding UI...', html: 'Auto-discovering fresh terms. Almost done!' });
-            await fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (window.Swal && typeof window.Swal.fire === 'function') {
+                window.Swal.fire({
+                    title: 'Rebuilding UI...',
+                    html: 'Auto-discovering fresh terms. Almost done!',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    didOpen: () => window.Swal.showLoading(),
+                    ...window.Swal.themeConfig()
+                });
+            }
+            await window.Fetch.get(window.location.href);
         }
 
-        window.updateDOM_US(this.$refs, ['lexiconTabsHeader', 'lexiconActiveToolbar', 'lexiconTableContent'], () => {
+        // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
+        if (typeof window.updateDOM === 'function') {
+            await window.updateDOM(this.$refs, ['lexiconTabsHeader', 'lexiconActiveToolbar', 'lexiconTableContent'], () => {
+                this.modals.term.open = false;
+                this.modals.addLang.open = false;
+                this.modals.importLang.open = false;
+                this.modals.editLang.open = false;
+                this.initFuse();
+            }, false);
+        } else {
             this.modals.term.open = false;
             this.modals.addLang.open = false;
             this.modals.importLang.open = false;
             this.modals.editLang.open = false;
             this.initFuse();
-        });
+        }
     },
 
     openTermModal(mode, id = '', code_key = '', master_group = '', subgroup = '', translations = {}) {

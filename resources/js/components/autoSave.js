@@ -1,3 +1,4 @@
+// resources/js/components/autoSave.js
 export default (initialInterval = 30000) => ({
     saving: false,
     lastSaved: null,
@@ -75,17 +76,13 @@ export default (initialInterval = 30000) => ({
                 this.log(`Target URL: ${url} (New Draft creation)`, 'info');
             }
 
-            const response = await fetch(url, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                }
+            // Utilize the standardized global window.Fetch helper
+            const { ok, status, data } = await window.Fetch.request(url, 'POST', formData, {
+                loading: false, // Background save; keep loading indicator disabled
+                showError: false // Handled gracefully via local component logs
             });
 
-            if (response.ok) {
-                const data = await response.json();
+            if (ok) {
                 this.lastSaved = new Date().toLocaleTimeString();
                 this.log(`Auto-save successful at ${this.lastSaved}`, 'success', data);
 
@@ -103,7 +100,7 @@ export default (initialInterval = 30000) => ({
 
                 this.$dispatch('autosave-success', data);
             } else {
-                this.log(`Auto-save failed with HTTP status: ${response.status} ${response.statusText}`, 'error');
+                this.log(`Auto-save failed with HTTP status: ${status}`, 'error');
             }
         } catch (err) {
             console.error('Auto-save network error:', err);

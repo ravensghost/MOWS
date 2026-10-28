@@ -1,3 +1,4 @@
+// resources/js/components/colourPicker.js
 export default function colourPicker(initialValue) {
     return {
         value: initialValue || '#1a1a1a',
