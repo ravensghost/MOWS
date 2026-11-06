@@ -17,16 +17,26 @@
             <x-slot:actions>
                 @can('manage_sections')
                     <div class="flex flex-row flex-wrap items-center gap-sm">
+                        {{-- NEW: Manage Catalogues Button --}}
                         <x-button type="button"
-                                  variant="success"
-                                  class="p-btn-sm text-sm flex items-center gap-xs"
-                                  @click="openCreateSection()"
-                                  aria-label="{{ lexicon('tooltip_SectionsPositions_CreateSection', 'Create a new organisational section') }}"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_CreateSection', 'Create a new organisational section')) }}'">
+                                variant="secondary"
+                                class="p-btn-sm text-sm flex items-center gap-xs"
+                                @click="openCatalogueModal('create')"
+                                aria-label="{{ lexicon('tooltip_SectionsPositions_ManageCatalogues', 'Manage division catalogues (ships, stations, or locations)') }}"
+                                x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_ManageCatalogues', 'Manage division catalogues (ships, stations, or locations)')) }}'">
+                            <i class="bi bi-folder-check" aria-hidden="true"></i>
+                            <span>{{ lexicon('btn_SectionsPositions_ManageCatalogues', 'Manage Catalogues') }}</span>
+                        </x-button>
+
+                        <x-button type="button"
+                                variant="success"
+                                class="p-btn-sm text-sm flex items-center gap-xs"
+                                @click="openCreateSection()"
+                                aria-label="{{ lexicon('tooltip_SectionsPositions_CreateSection', 'Create a new organisational section') }}"
+                                x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_CreateSection', 'Create a new organisational section')) }}'">
                             <i class="bi bi-plus-lg" aria-hidden="true"></i>
                             <span>{{ lexicon('btn_SectionsPositions_CreateSection', 'Create Section') }}</span>
                         </x-button>
-
                         <x-button variant="secondary"
                                   tag="a"
                                   href="{{ route('admin.sections.export') }}"
@@ -615,6 +625,102 @@
                                       aria-label="{{ lexicon('tooltip_SectionsPositions_UpdatePosition', 'Save changes to this position') }}"
                                       x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_UpdatePosition', 'Save changes to this position')) }}'">
                                 <span x-text="loading ? '{{ addslashes(lexicon('msg_common_Saving', 'Saving...')) }}' : '{{ addslashes(lexicon('btn_SectionsPositions_UpdatePosition', 'Update Position')) }}'"></span>
+                            </x-button>
+                        </div>
+                    </form>
+                </x-modal>
+
+                {{-- ========================================================= --}}
+                {{-- NEW: DIVISION CATALOGUE MODALS                           --}}
+                {{-- ========================================================= --}}
+
+                {{-- Catalogue Management Modal --}}
+                <x-modal show="catalogueModalOpen" onClose="catalogueModalOpen = false" maxWidth="max-w-2xl">
+                    <x-slot:top>
+                        {{ lexicon('label_SectionsPositions_ManageCatalogues', 'Manage Division Catalogues') }}
+                    </x-slot:top>
+
+                    <div class="flex flex-col gap-md">
+                        <form @submit.prevent="submitCatalogue()" class="bg-panel-sub border border-panel rounded-panel p-3 flex flex-col gap-sm">
+                            <x-form-input name="catalogue_title"
+                                        id="catalogue_title"
+                                        xModel="catalogueTitle"
+                                        :label="lexicon('label_SectionsPositions_CatalogueTitle', 'Catalogue Name')"
+                                        :placeholder="lexicon('label_SectionsPositions_CataloguePlaceholder', 'e.g. USS Enterprise, Deep Space 9...')"
+                                        :tooltip="lexicon('tooltip_SectionsPositions_CatalogueTitleInput', 'Enter the display title for this division catalogue')"
+                                        :required="true" />
+
+                            <div class="flex flex-col gap-xs">
+                                <label for="catalogue_description" class="text-xs font-bold text-input-muted">
+                                    {{ lexicon('label_SectionsPositions_CatalogueDesc', 'Catalogue Description (Optional)') }}
+                                </label>
+                                <textarea id="catalogue_description"
+                                        x-model="catalogueDesc" 
+                                        name="catalogue_description" 
+                                        rows="2" 
+                                        aria-label="{{ lexicon('label_SectionsPositions_CatalogueDesc', 'Catalogue Description (Optional)') }}"
+                                        x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_CatalogueDescInput', 'Provide a brief overview of this ship, station, or group')) }}'"
+                                        class="bg-input text-input border-input rounded-input p-input outline-none w-full box-border focus-border-accent focus-shadow-accent"></textarea>
+                            </div>
+
+                            <div class="flex justify-end gap-xs">
+                                <x-button type="submit" variant="primary">
+                                    <span x-text="catalogueMode === 'edit' ? '{{ addslashes(lexicon('btn_common_Update', 'Update')) }}' : '{{ addslashes(lexicon('btn_common_Save', 'Save')) }}'"></span>
+                                </x-button>
+                            </div>
+                        </form>
+
+                        <div class="flex flex-col gap-xs max-h-64 overflow-y-auto">
+                            @forelse($catalogues ?? [] as $cat)
+                                <div class="flex items-center justify-between bg-panel-sub border border-panel rounded-panel p-3">
+                                    <div>
+                                        <span class="font-bold text-h">{{ $cat->catalogue_title }}</span>
+                                        <span class="text-xs text-muted ml-2">({{ $cat->divisions->count() }} sections)</span>
+                                    </div>
+                                    <div class="flex items-center gap-xs">
+                                        <x-button type="button" variant="secondary" class="p-btn-sm text-xs" @click="openAssignCatalogueModal({{ $cat->id }}, @js($cat->divisions->pluck('id')))">
+                                            <i class="bi bi-diagram-3 mr-1"></i> Assign
+                                        </x-button>
+                                        <x-button type="button" variant="danger" class="p-btn-sm text-xs" @click="deleteCatalogue({{ $cat->id }})">
+                                            <i class="bi bi-trash"></i>
+                                        </x-button>
+                                    </div>
+                                </div>
+                            @empty
+                                <p class="text-sm text-muted text-center py-4 italic">{{ lexicon('msg_SectionsPositions_NoCatalogues', 'No division catalogues defined.') }}</p>
+                            @endforelse
+                        </div>
+                    </div>
+
+                    <x-slot:bottom>
+                        <x-button type="button" variant="secondary" @click="catalogueModalOpen = false">
+                            {{ lexicon('btn_common_Cancel', 'Cancel') }}
+                        </x-button>
+                    </x-slot:bottom>
+                </x-modal>
+
+                {{-- Assign Divisions to Catalogue Modal --}}
+                <x-modal show="assignCatalogueModalOpen" onClose="assignCatalogueModalOpen = false" maxWidth="max-w-md">
+                    <x-slot:top>
+                        Assign Divisions to Catalogue
+                    </x-slot:top>
+
+                    <form @submit.prevent="submitCatalogueAssignment()" class="flex flex-col gap-md">
+                        <div class="flex flex-col gap-xs max-h-64 overflow-y-auto bg-panel-sub border border-panel rounded-panel p-3">
+                            @foreach($sections as $sec)
+                                <label class="flex items-center gap-sm cursor-pointer p-1">
+                                    <input type="checkbox" value="{{ $sec->id }}" x-model="assignedSectionIds" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
+                                    <span class="text-sm text-p">{{ $sec->name }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+
+                        <div class="flex justify-end gap-xs">
+                            <x-button type="button" variant="secondary" @click="assignCatalogueModalOpen = false">
+                                {{ lexicon('btn_common_Cancel', 'Cancel') }}
+                            </x-button>
+                            <x-button type="submit" variant="primary">
+                                {{ lexicon('btn_common_Save', 'Save Changes') }}
                             </x-button>
                         </div>
                     </form>

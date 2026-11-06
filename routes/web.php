@@ -1,17 +1,21 @@
 <?php
 
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\PublicController;
-use App\Http\Controllers\WriteController;
-use App\Http\Controllers\MessengerController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PortalController;
+use App\Http\Controllers\FolioAuthoringController;
+use App\Http\Controllers\CorrespondenceController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\PublicFormController;
+use App\Http\Controllers\CandidatePetitionSubmissionController;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\DB;
+
+/*
+|--------------------------------------------------------------------------
+| Authenticated Member Routes
+|--------------------------------------------------------------------------
+*/
 
 Route::middleware('auth')->group(function () {
-    // User Dashboard (Invokable) & LOA Toggle
+    // Dashboard & Leave of Absence (LOA) Management
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::post('/dashboard/loa', [DashboardController::class, 'updateLoa'])->name('dashboard.loa');
 
@@ -19,37 +23,51 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Story Engine: Writing Chapters
-    Route::get('/chapters/create', [WriteController::class, 'createChapter'])->name('chapters.create');
-    Route::get('/chapters/{chapter}/edit', [WriteController::class, 'editChapter'])->name('chapters.edit');
-    Route::post('/chapters', [WriteController::class, 'storeChapter'])->name('chapters.store');
-    Route::post('/chapters/autosave', [WriteController::class, 'autoSave']);
-    Route::post('/chapters/{chapter}/autosave', [WriteController::class, 'autoSave']);
-    Route::post('/chapters/{chapter}/lock', [WriteController::class, 'acquireLock']);
-    Route::post('/chapters/{chapter}/ping', [WriteController::class, 'pingLockWriter']);
+    // Story Engine: Folio Authoring & Co-Writing Locks
+    Route::get('/folios/create', [FolioAuthoringController::class, 'createFolio'])->name('folios.create');
+    Route::get('/folios/{folio}/edit', [FolioAuthoringController::class, 'editFolio'])->name('folios.edit');
+    Route::post('/folios', [FolioAuthoringController::class, 'storeFolio'])->name('folios.store');
+    Route::post('/folios/autosave', [FolioAuthoringController::class, 'autoSave']);
+    Route::post('/folios/{folio}/autosave', [FolioAuthoringController::class, 'autoSave']);
+    Route::post('/folios/{folio}/lock', [FolioAuthoringController::class, 'acquireLock']);
+    Route::post('/folios/{folio}/ping', [FolioAuthoringController::class, 'pingLockWriter']);
 
-    // Private Messaging Engine
-    Route::get('/messenger/{threadId?}', [MessengerController::class, 'index'])->name('messenger.index');
-    Route::post('/messenger/new', [MessengerController::class, 'store'])->name('messenger.store');
-    Route::post('/messenger/{thread}/reply', [MessengerController::class, 'reply'])->name('messenger.reply');
+    // Correspondence Engine (Private Messaging)
+    Route::get('/correspondence/{threadId?}', [CorrespondenceController::class, 'index'])->name('correspondence.index');
+    Route::post('/correspondence/new', [CorrespondenceController::class, 'store'])->name('correspondence.store');
+    Route::post('/correspondence/{thread}/reply', [CorrespondenceController::class, 'reply'])->name('correspondence.reply');
 
-    // Character Avatar & Portrait Gallery Management (AJAX via Bio Page)
-    Route::post('/bio/{character}/avatar', [PublicController::class, 'uploadCharacterAvatar'])->name('bio.avatar.upload');
-    Route::post('/bio/{character}/avatar/primary', [PublicController::class, 'setPrimaryCharacterAvatar'])->name('bio.avatar.primary');
-    Route::delete('/bio/{character}/avatar', [PublicController::class, 'deleteCharacterAvatar'])->name('bio.avatar.delete');
+    // Persona Portrait & Gallery Management
+    Route::post('/bio/{persona}/avatar', [PortalController::class, 'uploadPersonaPortrait'])->name('bio.avatar.upload');
+    Route::post('/bio/{persona}/avatar/primary', [PortalController::class, 'setPrimaryPersonaPortrait'])->name('bio.avatar.primary');
+    Route::delete('/bio/{persona}/avatar', [PortalController::class, 'deletePersonaPortrait'])->name('bio.avatar.delete');
 
-    // Explicit Form Submission
-    Route::post('/form/submit/{identifier}', [PublicFormController::class, 'submit']);
+    // Explicit Candidate Petition Submission
+    Route::post('/form/submit/{identifier}', [CandidatePetitionSubmissionController::class, 'submit']);
 });
+
+/*
+|--------------------------------------------------------------------------
+| Core Framework & Modular Includes
+|--------------------------------------------------------------------------
+*/
 
 require __DIR__ . '/auth.php';
 require __DIR__ . '/admin.php';
 
-// Dynamic Secondary Forms
-Route::get('/form/{type}', [PublicFormController::class, 'show']);
-Route::post('/form/{type}', [PublicFormController::class, 'submit']);
 
-Route::get('/bio/{character}', [PublicController::class, 'showBio'])->name('bio.show');
+/*
+|--------------------------------------------------------------------------
+| Public Portal & Catch-All Routes
+|--------------------------------------------------------------------------
+*/
+// Dynamic Metadata Forms
 
-// The Page Builder Catch-All (Must remain absolute last)
-Route::get('/{slug?}', [PublicController::class, 'showPage'])->where('slug', '.*');
+Route::get('/form/{type}', [CandidatePetitionSubmissionController::class, 'show']);
+Route::post('/form/{type}', [CandidatePetitionSubmissionController::class, 'submit']);
+
+// Public Persona Biographies
+Route::get('/bio/{persona}', [PortalController::class, 'showBio'])->name('bio.show');
+
+// The Book Builder Catch-All (Must remain absolute last)
+Route::get('/{slug?}', [PortalController::class, 'showBook'])->where('slug', '.*');

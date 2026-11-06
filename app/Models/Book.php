@@ -3,44 +3,45 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Book extends Model
 {
     protected $guarded = [];
 
-    public function bookcase()
-    {
-        return $this->belongsTo(Bookcase::class);
-    }
+    protected $casts = [
+        'is_published' => 'boolean',
+    ];
 
-    public function chapters()
+    /**
+     * The grid layout assigned to this page.
+     */
+    public function layout(): BelongsTo
     {
-        return $this->hasMany(Chapter::class);
-    }
-
-    public function status()
-    {
-        return $this->belongsTo(BookStatus::class, 'status_id');
+        return $this->belongsTo(Grid::class);
     }
 
     /**
-     * Retrieve users subscribed/participating in this book (or active roster users).
+     * The form fields / widgets assigned to this page's layout blocks.
      */
-    public function getSubscribersAttribute()
+    public function widgets(): BelongsToMany
     {
-        $chapterIds = $this->chapters()->pluck('id');
+        return $this->belongsToMany(Modules::class, 'page_widget')
+            ->withPivot(['id', 'layout_block_id', 'sort_order', 'instance_options', 'required_permission', 'is_visible'])
+            ->withCasts([
+                'instance_options' => 'array',
+                'is_visible' => 'boolean',
+            ])
+            ->orderBy('page_widget.sort_order', 'asc')
+            ->withTimestamps();
+    }
 
-        $userIds = Character::whereHas('chapters', function ($q) use ($chapterIds) {
-            $q->whereIn('chapters.id', $chapterIds);
-        })->whereNotNull('user_id')->pluck('user_id')
-            ->merge($this->chapters()->whereNotNull('author_user_id')->pluck('author_user_id'))
-            ->unique()
-            ->filter();
-
-        if ($userIds->isEmpty()) {
-            return User::where('id', '!=', auth()->id())->get();
-        }
-
-        return User::whereIn('id', $userIds)->where('id', '!=', auth()->id())->get();
+    /**
+     * Only the visible widgets assigned to this page's layout blocks for public rendering.
+     */
+    public function visibleWidgets(): BelongsToMany
+    {
+        return $this->widgets()->wherePivot('is_visible', true);
     }
 }

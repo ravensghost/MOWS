@@ -3,7 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Chapter;
-use App\Models\Setting;
+use App\Models\Configuration;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -24,7 +24,7 @@ class LockPingMail extends Mailable
 
     public function build()
     {
-        $prefix = Setting::where('key', 'email_subject_prefix')->value('value') ?? '[MOWS Engine]';
+        $prefix = Configuration::where('configuration_token', 'email_subject_prefix')->value('configuration_payload') ?? '[MOWS Engine]';
         $subject = trim($prefix . ' Co-Writing Lock Ping: Chapter #' . $this->chapter->id);
 
         return $this->subject($subject)

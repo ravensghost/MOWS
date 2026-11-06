@@ -1,7 +1,8 @@
 <?php
 
-use App\Models\Term;
-use App\Models\TimeSystem;
+use App\Models\lexicon_codex;
+use App\Models\ChronologicalEngine;
+use App\Models\Configuration;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\App;
@@ -23,7 +24,7 @@ if (! function_exists('lexicon')) {
         // 1. Fetch raw array dictionary from Cache (No Eloquent collections to break unserialize)
         if ($memoryCache === null) {
             $memoryCache = Cache::rememberForever('mows_lexicon', function () {
-                return DB::table('terms')->pluck('translations', 'code_key')->toArray();
+                return DB::table('lexicon_codex')->pluck('translations', 'code_key')->toArray();
             });
             $lowerKeyMap = [];
             foreach (array_keys($memoryCache) as $k) {
@@ -58,12 +59,12 @@ if (! function_exists('lexicon')) {
 
             try {
                 // Includes display_value to satisfy strict MySQL table definitions
-                DB::table('terms')->insertOrIgnore([
-                    'code_key'      => $key,
-                    'master_group'  => $masterGroup,
-                    'subgroup'      => $subGroup,
-                    'display_value' => $default,
-                    'translations'  => json_encode($defaultTranslations),
+                DB::table('lexicon_codex')->insertOrIgnore([
+                    'semantic_token'      => $key,
+                    'prefix_group_title'  => $masterGroup,
+                    'group_title'      => $subGroup,
+                    'default_lexicon_string' => $default,
+                    'translation_payloads'  => json_encode($defaultTranslations),
                     'created_at'    => now(),
                     'updated_at'    => now(),
                 ]);
@@ -100,8 +101,6 @@ if (! function_exists('lexicon')) {
         }
 
         // 5. Intelligent Fallback Upgrade Logic
-        // If the stored value perfectly matches the generic Str::headline generation,
-        // and we now have a better, different fallback string, upgrade the database.
         if ($value && !empty($default) && $value !== $default) {
             $headlineMatch = Str::headline($actualKey);
             $navMatch = Str::headline(str_replace('nav_link_', '', $actualKey));
@@ -111,11 +110,11 @@ if (! function_exists('lexicon')) {
                 $value = $default;
 
                 try {
-                    DB::table('terms')
-                        ->where('code_key', $actualKey)
+                    DB::table('lexicon_codex')
+                        ->where('semantic_token', $actualKey)
                         ->update([
-                            'display_value' => $default,
-                            'translations'  => json_encode($translations),
+                            'default_lexicon_string' => $default,
+                            'translation_payloads'  => json_encode($translations),
                             'updated_at'    => now(),
                         ]);
                 } catch (\Throwable $e) {
@@ -134,7 +133,7 @@ if (! function_exists('lexicon')) {
 
 if (! function_exists('markdown')) {
     /**
-     * Convert raw markdown into safe, sanitized HTML using CommonMark and Purify.
+     * Convert raw markdown into safe, sanitised HTML using CommonMark and Purify.
      */
     function markdown(?string $content): string
     {
@@ -164,7 +163,9 @@ if (! function_exists('resolve_lexicon_locale')) {
         }
 
         $globalSetting = Cache::rememberForever('global_lexicon_setting', function () {
-            return DB::table('settings')->where('key', 'global_lexicon_setting')->value('value');
+            return DB::table('configurations')
+                ->where('configuration_token', 'global_lexicon_setting')
+                ->value('configuration_payload');
         });
 
         if (! $globalSetting || $globalSetting === 'auto') {
@@ -192,55 +193,7 @@ if (! function_exists('resolve_lexicon_locale')) {
     }
 }
 
-if (! function_exists('world_date')) {
-    function world_date($date, $fallbackFormat = 'M d, Y H:i')
-    {
-        if (!$date) return '';
-
-        $carbonDate = Carbon::parse($date);
-
-        // Cache the data as an array to completely bypass object serialization timing issues
-        $system = Cache::remember('active_time_system', 3600, function () {
-            $activeId = DB::table('settings')->where('key', 'universe_time_system')->value('value');
-            if (!$activeId) return null;
-            $ts = TimeSystem::find($activeId);
-            return $ts ? $ts->toArray() : null;
-        });
-
-        // Fallback to real world if no system is configured
-        if (!$system || $system['engine_type'] === 'real_world') {
-            return $carbonDate->format($fallbackFormat);
-        }
-
-        $prefix = $system['prefix'] ?? '';
-        $suffix = $system['suffix'] ?? '';
-        $baseEarthYear = $system['base_earth_year'] ?? $carbonDate->year;
-        $baseValue = $system['base_system_value'] ?? 0;
-        $multiplier = $system['multiplier'] ?? 1;
-        $engineType = $system['engine_type'] ?? 'real_world';
-
-        if ($engineType === 'fractional') {
-            // For systems like Stardates: Uses exact fraction of the year
-            $yearDiff = ($carbonDate->year - $baseEarthYear) * $multiplier;
-            $dayFraction = ($carbonDate->dayOfYear / $carbonDate->daysInYear) * $multiplier;
-            $calculatedValue = $baseValue + $yearDiff + $dayFraction;
-
-            // Automatically ensures a space exists if the prefix doesn't already end with whitespace
-            $safePrefix = (str_ends_with($prefix, ' ') || $prefix === '') ? $prefix : $prefix . ' ';
-
-            return $safePrefix . number_format($calculatedValue, 1, '.', '') . $suffix;
-        }
-
-        if ($engineType === 'offset') {
-            // For systems like Fantasy Epochs: Just shifts the year
-            $year = $carbonDate->year - ($baseEarthYear - $baseValue);
-            $output = $prefix . $year . $suffix;
-            return str_replace('{day}', $carbonDate->dayOfYear, $output);
-        }
-
-        return $carbonDate->format($fallbackFormat);
-    }
-    if (! function_exists('get_widget_manifest')) {
+if (! function_exists('get_widget_manifest')) {
     /**
      * Get the widget manifest cache, automatically self-healing/scanning if empty.
      */
@@ -289,5 +242,107 @@ if (! function_exists('world_date')) {
             return $discoveredWidgets;
         });
     }
+    if (! function_exists('world_date')) {
+    function world_date($date, $fallbackFormat = 'M d, Y H:i')
+    {
+        if (!$date) return '';
+
+        $carbonDate = Carbon::parse($date);
+
+        $system = Cache::remember('active_time_system', 3600, function () {
+            $activeId = DB::table('configurations')
+                ->where('configuration_token', 'universe_time_system')
+                ->value('configuration_payload');
+            if (!$activeId) return null;
+            $ts = ChronologicalEngine::find($activeId);
+            return $ts ? $ts->toArray() : null;
+        });
+
+        if (!$system || $system['calculation_algorithm'] === 'real_world') {
+            return $carbonDate->format($fallbackFormat);
+        }
+
+        $prefix = $system['date_prefix'] ?? '';
+        $suffix = $system['date_suffix'] ?? '';
+        $baseEarthYear = $system['base_earth_year'] ?? $carbonDate->year;
+        $baseValue = $system['base_system_value'] ?? 0;
+        $multiplier = $system['temporal_multiplier'] ?? 1;
+        $engineType = $system['calculation_algorithm'] ?? 'real_world';
+
+        if ($engineType === 'fractional') {
+            $yearDiff = ($carbonDate->year - $baseEarthYear) * $multiplier;
+            $dayFraction = ($carbonDate->dayOfYear / $carbonDate->daysInYear) * $multiplier;
+            $calculatedValue = $baseValue + $yearDiff + $dayFraction;
+
+            $safePrefix = (str_ends_with($prefix, ' ') || $prefix === '') ? $prefix : $prefix . ' ';
+
+            return $safePrefix . number_format($calculatedValue, 1, '.', '') . $suffix;
+        }
+
+        if ($engineType === 'offset') {
+            $year = $carbonDate->year - ($baseEarthYear - $baseValue);
+            $output = $prefix . $year . $suffix;
+            return str_replace('{day}', $carbonDate->dayOfYear, $output);
+        }
+
+        return $carbonDate->format($fallbackFormat);
+    }
 }
+
+    if (! function_exists('real_date')) {
+        /**
+         * Convert an in-game stardate into its corresponding future in-game calendar date 
+         * by applying the base_earth_modifier offset.
+         */
+        function real_date($stardate, string $fallbackFormat = 'M d, Y')
+        {
+            if ($stardate === '' || $stardate === null) return '';
+
+            // Extract numeric value from strings (e.g. "Stardate 43309.5" -> 43309.5)
+            $numericValue = floatval(preg_replace('/[^0-9.]/', '', (string) $stardate));
+
+            $system = Cache::remember('active_time_system', 3600, function () {
+                $activeId = DB::table('configurations')
+                    ->where('configuration_token', 'universe_time_system')
+                    ->value('configuration_payload');
+                if (!$activeId) return null;
+                $ts = ChronologicalEngine::find($activeId);
+                return $ts ? $ts->toArray() : null;
+            });
+
+            if (!$system || $system['calculation_algorithm'] === 'real_world') {
+                return Carbon::parse($stardate)->format($fallbackFormat);
+            }
+
+            // Base Earth Year PLUS the modifier to land in the correct future era (e.g., TNG 2364+)
+            $baseEarthYear = intval($system['base_earth_year'] ?? 1983) + intval($system['base_earth_modifier'] ?? 0);
+            $baseValue = floatval($system['base_system_value'] ?? 0);
+            $multiplier = floatval($system['temporal_multiplier'] ?? 1);
+            $engineType = $system['calculation_algorithm'] ?? 'real_world';
+
+            if ($engineType === 'fractional') {
+                $netValue = $numericValue - $baseValue;
+                $safeMultiplier = ($multiplier != 0) ? $multiplier : 1;
+                $totalYears = $netValue / $safeMultiplier;
+                
+                $yearOffset = floor($totalYears);
+                $fraction = $totalYears - $yearOffset;
+                
+                $targetYear = $baseEarthYear + intval($yearOffset);
+                
+                $dummyDate = Carbon::createFromDate($targetYear, 1, 1);
+                $daysInYear = $dummyDate->daysInYear;
+                $dayOfYear = max(1, min($daysInYear, (int) round($fraction * $daysInYear)));
+
+                return $dummyDate->addDays($dayOfYear - 1)->format($fallbackFormat);
+            }
+
+            if ($engineType === 'offset') {
+                $targetYear = $baseEarthYear - $baseValue + $numericValue;
+                return Carbon::createFromDate((int) $targetYear, 1, 1)->format($fallbackFormat);
+            }
+
+            return Carbon::parse($stardate)->format($fallbackFormat);
+        }
+    }
 }

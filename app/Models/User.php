@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Cache;
@@ -24,6 +25,7 @@ use Spatie\Permission\Traits\HasRoles;
     'loa_return_date',
     'last_login_at',
     'selected_skin',
+    'lexicon_version',
     'app_status',
     'content_shield_bypass',
     'twitter_handle',
@@ -53,6 +55,7 @@ class User extends Authenticatable
         'facebook_handle',
         'discord_id',
         'selected_skin',
+        'lexicon_version',
         'is_on_loa',
         'loa_return_date',
         'last_login_at',
@@ -125,27 +128,32 @@ class User extends Authenticatable
         });
     }
 
-    public function characters()
+    public function characters(): HasMany
     {
         return $this->hasMany(Character::class);
     }
 
-    public function posts()
+    public function folios(): HasMany
     {
-        return $this->hasMany(Chapter::class, 'author_user_id');
+        return $this->hasMany(Folio::class, 'user_id');
     }
 
-    public function oocAwards()
+    public function posts(): HasMany
+    {
+        return $this->folios();
+    }
+
+    public function oocAwards(): HasMany
     {
         return $this->hasMany(ServiceRecord::class);
     }
 
-    public function applicationVotes()
+    public function applicationVotes(): HasMany
     {
         return $this->hasMany(ApplicationVote::class, 'target_user_id');
     }
 
-    public function attributes()
+    public function attributes(): HasMany
     {
         return $this->hasMany(UserAttribute::class);
     }
@@ -186,7 +194,7 @@ class User extends Authenticatable
         } elseif ($value === null) {
             $storedValue = null;
         } else {
-            $storedValue = (string)$value;
+            $storedValue = (string) $value;
         }
 
         if (! $this->exists) {
@@ -255,6 +263,17 @@ class User extends Authenticatable
         );
     }
 
+    protected function lexiconVersion(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->getAttr('lexicon_version'),
+            set: function ($value) {
+                $this->pendingNormalizedAttributes['lexicon_version'] = $value;
+                return [];
+            }
+        );
+    }
+
     protected function isOnLoa(): Attribute
     {
         return Attribute::make(
@@ -303,6 +322,7 @@ class User extends Authenticatable
             }
         );
     }
+
     protected function lastLoginAt(): Attribute
     {
         return Attribute::make(

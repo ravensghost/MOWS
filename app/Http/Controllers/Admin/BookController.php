@@ -4,75 +4,154 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use App\Models\Book;
+use App\Models\Grid;
+use App\Models\Widget;
+use App\Models\FormField;
+use Spatie\Permission\Models\Permission;
+use Stevebauman\Purify\Facades\Purify;
 
 class BookController extends Controller
 {
+    public function index()
+    {
+        $systemPage = Book::with([
+            'layout.blocks',
+            'widgets' => function ($query) {
+                $query->orderBy('page_widget.sort_order');
+            }
+        ])
+            ->where('slug', 'admin/pages')
+            ->where('is_published', true)
+            ->firstOrFail();
+
+        $pages = Book::with(['widgets', 'layout'])->orderBy('books_title')->get();
+        $layouts = Grid::with('blocks')->orderBy('name')->get();
+        $widgets = Widget::orderBy('name')->get();
+        $availableWidgets = get_widget_manifest();
+        $forms = FormField::where('form_type', 'form')->orderBy('name')->get();
+        $permissions = Permission::orderBy('name')->get();
+
+        return view('admin.pages', compact('systemPage', 'pages', 'widgets', 'layouts', 'availableWidgets', 'permissions', 'forms'));
+    }
+
+    public function create()
+    {
+        $systemPage = Book::with([
+            'layout.blocks',
+            'widgets' => function ($query) {
+                $query->orderBy('page_widget.sort_order');
+            }
+        ])
+            ->where('slug', 'admin/page-builder')
+            ->where('is_published', true)
+            ->firstOrFail();
+
+        $layouts = Layout::with('blocks')->orderBy('name')->get();
+        $widgets = Widget::orderBy('name')->get();
+        $availableWidgets = get_widget_manifest();
+        $permissions = Permission::orderBy('name')->get();
+        $forms = FormField::where('form_type', 'form')->orderBy('name')->get();
+
+        $page = new Book();
+
+        return view('admin.page-builder', compact('systemPage', 'page', 'layouts', 'widgets', 'availableWidgets', 'permissions', 'forms'));
+    }
+
+    public function edit(Book $page)
+    {
+        $systemPage = Book::with([
+            'layout.blocks',
+            'widgets' => function ($query) {
+                $query->orderBy('page_widget.sort_order');
+            }
+        ])
+            ->where('slug', 'admin/page-builder')
+            ->where('is_published', true)
+            ->firstOrFail();
+
+        $page->load('widgets');
+        $layouts = Layout::with('blocks')->orderBy('name')->get();
+        $widgets = Widget::orderBy('name')->get();
+        $availableWidgets = get_widget_manifest();
+        $permissions = Permission::orderBy('name')->get();
+        $forms = FormField::where('form_type', 'form')->orderBy('name')->get();
+
+        return view('admin.page-builder', compact('systemPage', 'page', 'layouts', 'widgets', 'availableWidgets', 'permissions', 'forms'));
+    }
+
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'bookcase_id' => 'nullable|exists:bookcases,id',
-            'status_id' => 'required|exists:book_statuses,id',
-            'ic_day' => 'nullable|integer',
-            'ic_time' => 'nullable|string|max:255',
-        ]);
+        $rawSlug = $request->filled('slug') ? $request->slug : $request->title;
+        $slug = $rawSlug === '/' ? '/' : collect(explode('/', $rawSlug))->map(fn($s) => Str::slug($s))->filter()->implode('/');
 
-        $book = Book::create($validated);
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $book,
-            'message' => 'Book created successfully.'
-        ]);
-    }
-
-    public function update(Request $request, $id)
-    {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'bookcase_id' => 'nullable|exists:bookcases,id',
-            'status_id' => 'required|exists:book_statuses,id',
-            'ic_day' => 'nullable|integer',
-            'ic_time' => 'nullable|string|max:255',
-        ]);
-
-        $book = Book::findOrFail($id);
-        $wasCompleted = (int) $book->status_id === 3;
-        $book->update($validated);
-        $isNowCompleted = (int) $book->status_id === 3;
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $book,
-            'trigger_review' => (!$wasCompleted && $isNowCompleted),
-            'message' => 'Book updated successfully.'
-        ]);
-    }
-
-    public function destroy($id)
-    {
-        $book = Book::findOrFail($id);
-        $book->delete();
-
-        return response()->json([
-            'status' => 'success',
-            'data' => null,
-            'message' => 'Book deleted successfully.'
-        ]);
-    }
-
-    public function reorder(Request $request)
-    {
-        foreach ($request->input('items', []) as $item) {
-            Book::where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
+        if (Book::where('slug', $slug)->exists()) {
+            return response()->json(['message' => lexicon('msg_PageBuilder_SlugTaken', 'That URL slug is already taken.')], 422);
         }
-        return response()->json([
-            'status' => 'success',
-            'data' => null,
-            'message' => 'Books reordered successfully.'
+
+        $page = Book::create([
+            'title'        => $request->title,
+            'slug'         => $slug,
+            'content'      => '',
+            'is_published' => $request->boolean('is_published', false),
+            'layout_id'    => $request->layout_id,
         ]);
+
+        $this->syncPageWidgets($page, $request);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function update(Request $request, Book $page)
+    {
+        $rawSlug = $request->filled('slug') ? $request->slug : $request->title;
+        $slug = $rawSlug === '/' ? '/' : collect(explode('/', $rawSlug))->map(fn($s) => Str::slug($s))->filter()->implode('/');
+
+        if (Book::where('slug', $slug)->where('id', '!=', $page->id)->exists()) {
+            return response()->json(['message' => lexicon('msg_PageBuilder_SlugTaken', 'That URL slug is already taken.')], 422);
+        }
+
+        $page->update([
+            'title'        => $request->title,
+            'slug'         => $slug,
+            'is_published' => $request->boolean('is_published', false),
+            'layout_id'    => $request->layout_id,
+        ]);
+
+        $this->syncPageWidgets($page, $request);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function destroy(Book $page)
+    {
+        $page->delete();
+        return response()->json(['success' => true]);
+    }
+
+    private function syncPageWidgets($page, $request)
+    {
+        $syncData = [];
+        if ($request->has('widgets')) {
+            foreach ($request->widgets as $widgetId => $data) {
+                if (isset($data['selected']) && $data['selected'] == '1') {
+                    $options = $data['instance_options'] ?? [];
+
+                    if (isset($options['content'])) {
+                        $options['content'] = Purify::clean($options['content']);
+                    }
+
+                    $syncData[$widgetId] = [
+                        'layout_block_id'     => $data['layout_block_id'] ?? null,
+                        'sort_order'          => $data['sort_order'] ?? 0,
+                        'instance_options'    => empty($options) ? null : json_encode($options),
+                        'required_permission' => $data['required_permission'] ?? null,
+                        'is_visible'          => filter_var($data['is_visible'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                    ];
+                }
+            }
+        }
+        $page->widgets()->sync($syncData);
     }
 }

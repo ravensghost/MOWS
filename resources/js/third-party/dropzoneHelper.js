@@ -53,8 +53,7 @@ export default function dropzoneHelper(options = {}) {
                             icon: 'error',
                             title: 'Upload Error',
                             text: message,
-                            background: 'var(--theme-panel-bg, #111827)',
-                            color: 'var(--theme-text-p, #ffffff)'
+                            ...(window.Swal.themeConfig ? window.Swal.themeConfig() : {})
                         });
                     },
                     ...options

@@ -8,8 +8,8 @@ import Swal from 'sweetalert2';
 window.Swal = {
     themeConfig() {
         return {
-            background: 'var(--theme-bg-panel-body, #111827)',
-            color: 'var(--theme-text-p, #ffffff)'
+            background: window.getThemeColour ? window.getThemeColour('--theme-bg-panel-body') : '#111827',
+            color: window.getThemeColour ? window.getThemeColour('--theme-text-p') : '#ffffff'
         };
     },
     toast(icon, title, timer = 1500) {
@@ -42,8 +42,8 @@ window.Swal = {
             text: text,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: 'var(--theme-bg-danger-colour, #ef4444)',
-            cancelButtonColor: 'var(--theme-bg-primary-colour, #3b82f6)',
+            confirmButtonColor: window.getThemeColour ? window.getThemeColour('--theme-bg-danger-colour') : '#ef4444',
+            cancelButtonColor: window.getThemeColour ? window.getThemeColour('--theme-bg-primary-colour') : '#3b82f6',
             confirmButtonText: confirmText,
             cancelButtonText: 'Cancel',
             ...this.themeConfig()
@@ -72,7 +72,6 @@ window.Swal = {
 export default function sweetalert2Helper() {
     return {
         init() {
-            // Check for global session flash data injected from Laravel backend
             if (window.sessionFlash) {
                 const { type, message } = window.sessionFlash;
                 if (type && message) {

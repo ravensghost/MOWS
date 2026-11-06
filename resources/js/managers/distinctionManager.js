@@ -12,7 +12,7 @@ export default function distinctionManager() {
         master_group: 'BOTH',
         award_category_id: '',
 
-        base_color: '#1a1a1a',
+        base_color: window.getThemeColour ? window.getThemeColour('--theme-bg-rank') : '#1a1a1a',
         mid_type: 'css',
         mid_image: '',
         mid_css: 'original',

@@ -31,7 +31,7 @@
 
             <!-- Modal Body Form -->
             @php
-                $autoSaveInterval = \App\Models\Setting::where('key', 'draft_autosave_interval')->value('value') ?: 30000;
+                $autoSaveInterval = \App\Models\Configuration::where('configuration_token', 'draft_autosave_interval')->value('configuration_payload') ?: 30000;
             @endphp
             <div x-data="autoSave({{ $autoSaveInterval }})" class="flex flex-col gap-md p-panel overflow-y-auto max-h-70vh">
             <form action="/chapters"

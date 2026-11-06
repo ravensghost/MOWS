@@ -16,6 +16,15 @@
             {{ lexicon('label_common_Language', 'Language:') }} {{ app()->getLocale() }}
         </span>
 
+        {{-- Real World & Game System Dates --}}
+        <span class="text-sm text-muted">
+            📅 <span class="font-medium">{{ now()->format('M d, Y') }}</span> 
+            <span class="opacity-60 mx-1">/</span> 
+            ⭐ <span class="font-semibold text-main">@php $sd = world_date(now()); @endphp {{ $sd }}</span>
+            <span class="opacity-60 mx-1">/</span> 
+            🎮 <span class="font-medium">{{ real_date($sd) }}</span>
+        </span>
+
         @if(config('app.debug'))
             @php $hitData = session('debug_hits', ['queries' => 0, 'total_hits' => 1]); @endphp
             <span class="text-sm text-warning font-mono cursor-pointer"

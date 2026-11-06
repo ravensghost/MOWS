@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Cache;
 use App\Mail\Transport\PhpMailTransport;
 use App\Models\NavigationLink;
 use App\Models\User;
-use App\Models\Setting;
+use App\Models\Configuration;
 use App\Models\Skin;
 use App\Models\News;
 use App\Models\Chapter;
@@ -47,11 +47,11 @@ class AppServiceProvider extends ServiceProvider
             try {
                 // 1. Settings & Skins (Cached primitive arrays)
                 $globalSettings = Cache::rememberForever('global_settings', function () {
-                    return Setting::whereNot('key', 'like', 'theme_%')->pluck('value', 'key')->toArray();
+                    return Configuration::whereNot('configuration_token', 'like', 'theme_%')->pluck('configuration_payload', 'configuration_token')->toArray();
                 });
 
                 $skinSettings = Cache::rememberForever('skin_settings', function () {
-                    return Setting::where('key', 'like', 'theme_%')->pluck('value', 'key')->toArray();
+                    return Configuration::where('configuration_token', 'like', 'theme_%')->pluck('configuration_payload', 'configuration_token')->toArray();
                 });
 
                 // 2. Active Skin (Safe Array Cache)
@@ -143,7 +143,7 @@ class AppServiceProvider extends ServiceProvider
                     'drawerNav'       => $drawerNav,
                     'myCharacters'    => $myCharacters,
                     'users'           => $users,
-                    'characters'     => $characters,
+                    'characters'      => $characters,
                     'threads'         => $threads,
                     'activeBooks'     => $activeBooks,
                     'allCharacters'   => $allCharacters,

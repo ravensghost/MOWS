@@ -9,13 +9,24 @@ export default (config = {}) => ({
     importModalOpen: false,
     importMode: 'merge',
 
+    // Division Catalogues Management State
+    catalogueModalOpen: false,
+    catalogueMode: 'create',
+    catalogueId: '',
+    catalogueTitle: '',
+    catalogueDesc: '',
+    assignCatalogueModalOpen: false,
+    assignCatalogueId: '',
+    assignedSectionIds: [],
+
     section: {
         id: '',
         name: '',
-        color: '#374151',
+        color: window.getThemeColour ? window.getThemeColour('--theme-border-colour') : '#374151',
         description: '',
         order: 0,
-        is_visible: true
+        is_visible: true,
+        division_catalogue_id: ''
     },
 
     position: {
@@ -45,6 +56,68 @@ export default (config = {}) => ({
                     this.position.section_id = val;
                 }
             });
+        }
+    },
+
+    // --- Division Catalogue Handlers ---
+    openCatalogueModal(mode, data = {}) {
+        this.catalogueMode = mode;
+        this.catalogueId = data.id || '';
+        this.catalogueTitle = data.title || '';
+        this.catalogueDesc = data.description || '';
+        this.catalogueModalOpen = true;
+    },
+
+    openAssignCatalogueModal(catalogueId, currentSectionIds = []) {
+        this.assignCatalogueId = catalogueId;
+        this.assignedSectionIds = currentSectionIds.map(String);
+        this.assignCatalogueModalOpen = true;
+    },
+
+    async submitCatalogue() {
+        const url = this.catalogueMode === 'edit'
+            ? `/admin/division-catalogues/${this.catalogueId}`
+            : '/admin/division-catalogues';
+        const method = this.catalogueMode === 'edit' ? 'PUT' : 'POST';
+
+        const { ok, data } = await window.Fetch.request(url, method, {
+            catalogue_title: this.catalogueTitle,
+            catalogue_description: this.catalogueDesc
+        }, { loading: true, loadingTitle: 'Saving Catalogue...' });
+
+        if (ok) {
+            this.catalogueModalOpen = false;
+            if (window.Swal && typeof window.Swal.toast === 'function') {
+                window.Swal.toast('success', data.message || 'Catalogue saved successfully.');
+            }
+            await this.refreshDOM();
+        }
+    },
+
+    async deleteCatalogue(catalogueId) {
+        const result = await window.Swal.confirm('Delete Catalogue?', 'This will unassign its divisions.', 'Delete');
+        if (!result.isConfirmed) return;
+
+        const { ok, data } = await window.Fetch.delete(`/admin/division-catalogues/${catalogueId}`, {}, { loading: true });
+        if (ok) {
+            if (window.Swal && typeof window.Swal.toast === 'function') {
+                window.Swal.toast('success', data.message || 'Catalogue deleted.');
+            }
+            await this.refreshDOM();
+        }
+    },
+
+    async submitCatalogueAssignment() {
+        const { ok, data } = await window.Fetch.post(`/admin/division-catalogues/${this.assignCatalogueId}/assign`, {
+            sections: this.assignedSectionIds
+        }, { loading: true, loadingTitle: 'Updating Assignments...' });
+
+        if (ok) {
+            this.assignCatalogueModalOpen = false;
+            if (window.Swal && typeof window.Swal.toast === 'function') {
+                window.Swal.toast('success', data.message || 'Divisions assigned successfully.');
+            }
+            await this.refreshDOM();
         }
     },
 
@@ -78,10 +151,11 @@ export default (config = {}) => ({
         this.section = {
             id: '',
             name: '',
-            color: '#374151',
+            color: window.getThemeColour ? window.getThemeColour('--theme-border-colour') : '#374151',
             description: '',
             order: 0,
-            is_visible: true
+            is_visible: true,
+            division_catalogue_id: ''
         };
         this.modal = 'section-create';
         this.refreshAutosize();
@@ -91,10 +165,11 @@ export default (config = {}) => ({
         this.section = {
             id: secData.id,
             name: secData.name || '',
-            color: secData.color || '#374151',
-            description: secData.description || '',
+                color: secData.color || window.getThemeColour ? window.getThemeColour('--theme-border-colour') : '#374151',
+                description: secData.description || '',
             order: secData.order ?? 0,
-            is_visible: secData.is_visible !== undefined ? Boolean(secData.is_visible) : true
+            is_visible: secData.is_visible !== undefined ? Boolean(secData.is_visible) : true,
+            division_catalogue_id: secData.division_catalogue_id || ''
         };
         this.modal = 'section-edit';
         this.refreshAutosize();
@@ -105,7 +180,7 @@ export default (config = {}) => ({
             id: '',
             section_id: posData.section_id,
             section_name: posData.section_name || '',
-            section_color: posData.section_color || '#374151',
+            section_color: posData.section_color || window.getThemeColour ? window.getThemeColour('--theme-border-colour') : '#374151',
             name: '',
             description: '',
             capacity: 1,
@@ -148,7 +223,6 @@ export default (config = {}) => ({
         const q = this.searchQuery.trim();
         const haystack = [secName || '', secDesc || '', ...(posNames || [])];
 
-        // Leverage standardized window.Search helper if available, or fallback to Fuse
         if (window.Fuse) {
             const fuse = new window.Fuse(
                 haystack.map(item => ({ text: String(item) })),
@@ -189,7 +263,6 @@ export default (config = {}) => ({
 
         this.isGeneratingAi = true;
         try {
-            // Leverage standardized window.Fetch helper
             const { ok, data } = await window.Fetch.post(this.aiEndpoint, { name: this.section.name }, {
                 loading: false,
                 showError: false
@@ -206,14 +279,17 @@ export default (config = {}) => ({
         }
     },
 
-    async handleAjaxSuccess() {
-        // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
+    async refreshDOM() {
         if (typeof window.updateDOM === 'function') {
             await window.updateDOM(this.$refs, ['sectionsContainer'], () => {
                 this.closeModal();
+                this.catalogueModalOpen = false;
+                this.assignCatalogueModalOpen = false;
             }, false);
         } else {
             this.closeModal();
+            this.catalogueModalOpen = false;
+            this.assignCatalogueModalOpen = false;
         }
     }
 });

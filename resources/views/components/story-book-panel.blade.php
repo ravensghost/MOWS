@@ -38,7 +38,7 @@
             @endif
 
             <span class="text-xs text-muted">
-                ({{ count($book->chapters) }} {{ lexicon('label_Story_ChaptersCount', 'Chapters') }})
+                ({{ count($book->folios) }} {{ lexicon('label_Story_ChaptersCount', 'Chapters') }}
             </span>
         </div>
 
@@ -88,23 +88,23 @@
                 <th class="p-3 text-right">{{ lexicon('label_common_Actions', 'Actions') }}</th>
             </x-slot:headers>
 
-            @forelse($book->chapters as $chapter)
-                <tr class="border-b-table-row hover-bg-table-row" data-id="{{ $chapter->id }}">
+            @forelse($book->folios as $folio)
+                <tr class="border-b-table-row hover-bg-table-row" data-id="{{ $folio->id }}">
                     <td class="p-3 font-mono text-xs text-muted">
                         <div class="flex flex-row items-center gap-xs">
                             <i class="bi bi-grip-vertical text-muted cursor-move"
                                x-tooltip="'{{ addslashes(lexicon('tooltip_Story_DragReorderChapter', 'Drag to reorder chapter')) }}'"
                                aria-label="{{ lexicon('tooltip_Story_DragReorderChapter', 'Drag to reorder chapter') }}"></i>
-                            <span>#{{ $chapter->id }}</span>
+                            <span>#{{ $folio->id }}</span>
                         </div>
                     </td>
-                    <td class="p-3 font-bold text-p text-sm">{{ ucfirst(str_replace('_', ' ', $chapter->chapter_type)) }}</td>
-                    <td class="p-3 text-xs text-muted">{{ lexicon('label_common_Day', 'Day') }} {{ $chapter->ic_day }} | {{ $chapter->ic_time }}</td>
+                    <td class="p-3 font-bold text-p text-sm">{{ ucfirst(str_replace('_', ' ', $folio->chapter_type)) }}</td>
+                    <td class="p-3 text-xs text-muted">{{ lexicon('label_common_Day', 'Day') }} {{ $folio->ic_day }} | {{ $folio->ic_time }}</td>
                     <td class="p-3 text-xs font-mono">
                         <x-badge variant="info"
                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Story_ChapterLsvBadge', 'Language, Sex, and Violence content rating score')) }}'"
                                  aria-label="{{ lexicon('tooltip_Story_ChapterLsvBadge', 'Language, Sex, and Violence content rating score') }}">
-                            L{{ $chapter->rating_l ?? 0 }} S{{ $chapter->rating_s ?? 0 }} V{{ $chapter->rating_v ?? 0 }}
+                            L{{ $folio->rating_l ?? 0 }} S{{ $folio->rating_s ?? 0 }} V{{ $folio->rating_v ?? 0 }}
                         </x-badge>
                     </td>
                     <td class="p-3 text-right">
@@ -112,7 +112,7 @@
                             <x-button type="button" 
                                     variant="text" 
                                     class="text-warning hover-text-h flex flex-row items-center gap-xs" 
-                                    @click="$dispatch('open-chapter-modal', { chapterId: {{ $chapter->id }} })"
+                                    @click="$dispatch('open-chapter-modal', { chapterId: {{ $folio->id }} })"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_Story_EditChapter', 'Edit this chapter')) }}'">
                                 <i class="bi bi-pencil"></i>
                                 <span>{{ lexicon('btn_common_Edit', 'Edit') }}</span>
@@ -120,7 +120,7 @@
                             <x-button type="button" 
                                       variant="text" 
                                       class="text-accent hover-text-h text-xs flex flex-row items-center gap-xs" 
-                                      @click="$dispatch('open-move-chapter-modal', {{ json_encode(['chapterId' => $chapter->id, 'bookId' => $book->id]) }})"
+                                      @click="$dispatch('open-move-chapter-modal', {{ json_encode(['chapterId' => $folio->id, 'bookId' => $book->id]) }})"
                                       x-tooltip="'{{ addslashes(lexicon('tooltip_Story_MoveChapter', 'Relocate this chapter to another book')) }}'"
                                       aria-label="{{ lexicon('tooltip_Story_MoveChapter', 'Relocate this chapter to another book') }}">
                                 <i class="bi bi-arrows-move"></i>
@@ -129,7 +129,7 @@
                             <x-button type="button" 
                                       variant="text" 
                                       class="text-danger hover-text-h text-sm flex flex-row items-center gap-xs" 
-                                      x-data="deleteAction('/admin/chapters/{{ $chapter->id }}', 'DELETE', '{{ addslashes($chapter->title ?? lexicon('label_common_Chapter', 'Chapter') . ' #' . $chapter->id) }}')" 
+                                      x-data="deleteAction('/admin/chapters/{{ $folio->id }}', 'DELETE', '{{ addslashes($folio->title ?? lexicon('label_common_Chapter', 'Chapter') . ' #' . $folio->id) }}')" 
                                       @click.prevent="confirmDelete()"
                                       x-tooltip="'{{ addslashes(lexicon('tooltip_Story_DeleteChapter', 'Delete this chapter permanently')) }}'"
                                       aria-label="{{ lexicon('tooltip_Story_DeleteChapter', 'Delete this chapter permanently') }}">

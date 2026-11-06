@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Mail\MowsNotificationMail;
-use App\Models\Setting;
+use App\Models\Configuration;
 use App\Models\Thread;
 use App\Models\User;
 use Illuminate\Support\Facades\Config;
@@ -29,7 +29,7 @@ class NotificationService
             return false;
         }
 
-        $val = Setting::where('key', $key)->value('value');
+        $val = Configuration::where('configuration_token', $key)->value('configuration_payload');
 
         return in_array(strtolower((string) $val), ['1', 'true', 'yes', 'enabled'], true);
     }
@@ -39,7 +39,7 @@ class NotificationService
      */
     protected static function applyMailConfig(): string
     {
-        $settings = Setting::whereIn('key', [
+        $settings = Configuration::whereIn('configuration_token', [
             'mail_mailer',
             'mail_host',
             'mail_port',
@@ -48,7 +48,7 @@ class NotificationService
             'mail_password',
             'mail_from_address',
             'mail_from_name',
-        ])->pluck('value', 'key');
+        ])->pluck('configuration_payload', 'configuration_token');
 
         $mailer = strtolower(trim((string) ($settings['mail_mailer'] ?? 'smtp')));
         if (!in_array($mailer, ['smtp', 'phpmail', 'log'], true)) {
@@ -82,7 +82,7 @@ class NotificationService
 
         $mailer = self::applyMailConfig();
 
-        $prefix = Setting::where('key', 'email_subject_prefix')->value('value') ?? '[MOWS Engine]';
+        $prefix = Configuration::where('configuration_token', 'email_subject_prefix')->value('configuration_payload') ?? '[MOWS Engine]';
         $fullSubject = trim($prefix . ' ' . $subject);
 
         Mail::mailer($mailer)->to($to)->send(new MowsNotificationMail($fullSubject, $view, $data));
@@ -117,7 +117,7 @@ class NotificationService
             default    => 'discord_webhook_alerts',
         };
 
-        $url = Setting::where('key', $webhookKey)->value('value');
+        $url = Configuration::where('configuration_token', $webhookKey)->value('configuration_payload');
 
         if (empty($url)) {
             return false;

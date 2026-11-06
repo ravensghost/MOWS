@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Ranks extends Model
 {
@@ -27,13 +28,8 @@ class Ranks extends Model
         'is_visible' => 'boolean',
     ];
 
-    public function rankSet()
+    public function rankSet(): BelongsTo
     {
         return $this->belongsTo(RankSet::class);
-    }
-
-    public function rank()
-    {
-        return $this->belongsTo(Ranks::class, 'rank_id');
     }
 }

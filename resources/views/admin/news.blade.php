@@ -99,7 +99,7 @@
                 </x-slot:top>
 
                 @php
-                    $autoSaveInterval = \App\Models\Setting::where('key', 'draft_autosave_interval')->value('value') ?: 30000;
+                    $autoSaveInterval = \App\Models\Configuration::where('key', 'draft_autosave_interval')->value('value') ?: 30000;
                 @endphp
 
                 <div x-data="autoSave({{ $autoSaveInterval }})" class="flex flex-col gap-md">
