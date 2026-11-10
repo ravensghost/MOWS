@@ -19,11 +19,13 @@ class ChronologicalEngineController extends Controller
             'date_prefix'           => 'nullable|string|max:255',
             'date_suffix'           => 'nullable|string|max:255',
             'base_earth_year'       => 'nullable|integer',
+            'base_earth_modifier'   => 'nullable|integer',
             'base_system_value'     => 'nullable|integer',
             'temporal_multiplier'   => 'nullable|numeric',
         ]);
 
         ChronologicalEngine::create($validated);
+        Cache::forget('active_time_system');
 
         return response()->json([
             'success' => true,
@@ -41,6 +43,7 @@ class ChronologicalEngineController extends Controller
             'date_prefix'           => 'nullable|string|max:255',
             'date_suffix'           => 'nullable|string|max:255',
             'base_earth_year'       => 'nullable|integer',
+            'base_earth_modifier'   => 'nullable|integer',
             'base_system_value'     => 'nullable|integer',
             'temporal_multiplier'   => 'nullable|numeric',
         ]);

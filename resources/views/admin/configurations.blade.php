@@ -371,35 +371,33 @@
                             <th class="p-4 text-right">{{ lexicon('label_common_Actions', 'Actions') }}</th>
                         </x-slot:headers>
                         
+                        {{-- TIME SYSTEMS TABLE LOOP --}}
                         @forelse($timeSystems ?? [] as $ts)
                             <tr class="border-b-table-row hover-bg-table-row">
-                                <td class="p-4 font-bold text-p">{{ $ts->name }}</td>
+                                <td class="p-4 font-bold text-p">{{ $ts->engine_title }}</td>
                                 <td class="p-4 text-muted">
                                     <x-badge variant="info"
-                                             x-tooltip="'{{ addslashes(lexicon('tooltip_setting_EngineTypeBadge', 'Active calculation engine for this time system')) }}'"
-                                             aria-label="{{ lexicon('tooltip_setting_EngineTypeBadge', 'Active calculation engine for this time system') }}">
-                                        {{ ucfirst(str_replace('_', ' ', $ts->engine_type)) }}
+                                            x-tooltip="'{{ addslashes(lexicon('tooltip_setting_EngineTypeBadge', 'Active calculation engine for this time system')) }}'">
+                                        {{ ucfirst(str_replace('_', ' ', $ts->calculation_algorithm)) }}
                                     </x-badge>
                                 </td>
-                                <td class="p-4 text-muted font-mono text-xs">"{{ $ts->prefix }}..." / "...{{ $ts->suffix }}"</td>
+                                <td class="p-4 text-muted font-mono text-xs">"{{ $ts->date_prefix }}..." / "...{{ $ts->date_suffix }}"</td>
                                 <td class="p-4 text-right">
                                     <div class="flex flex-row flex-wrap items-center justify-end gap-sm text-sm">
                                         <x-button type="button" 
-                                                  variant="text" 
-                                                  class="text-warning hover-text-h flex flex-row items-center gap-xs" 
-                                                  @click="openTsModal({{ json_encode($ts) }})"
-                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_setting_EditTimeSystem', 'Edit this time system')) }}'"
-                                                  aria-label="{{ lexicon('tooltip_setting_EditTimeSystem', 'Edit this time system') }}">
+                                                variant="text" 
+                                                class="text-warning hover-text-h flex flex-row items-center gap-xs" 
+                                                @click="openTsModal({{ json_encode($ts) }})"
+                                                x-tooltip="'{{ addslashes(lexicon('tooltip_setting_EditTimeSystem', 'Edit this time system')) }}'">
                                             <i class="bi bi-pencil"></i>
                                             <span>{{ lexicon('btn_common_Edit', 'Edit') }}</span>
                                         </x-button>
                                         <x-button type="button" 
-                                                  variant="text" 
-                                                  class="text-danger hover-text-h flex flex-row items-center gap-xs" 
-                                                  x-data="deleteAction('/admin/time-systems/{{ $ts->id }}', 'DELETE', '{{ addslashes($ts->name) }}')" 
-                                                  @click.prevent="confirmDelete()"
-                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_setting_DeleteTimeSystem', 'Delete this time system')) }}'"
-                                                  aria-label="{{ lexicon('tooltip_setting_DeleteTimeSystem', 'Delete this time system') }}">
+                                                variant="text" 
+                                                class="text-danger hover-text-h flex flex-row items-center gap-xs" 
+                                                x-data="deleteAction('/admin/time-systems/{{ $ts->id }}', 'DELETE', '{{ addslashes($ts->engine_title) }}')" 
+                                                @click.prevent="confirmDelete()"
+                                                x-tooltip="'{{ addslashes(lexicon('tooltip_setting_DeleteTimeSystem', 'Delete this time system')) }}'">
                                             <i class="bi bi-trash"></i>
                                             <span>{{ lexicon('btn_common_Delete', 'Delete') }}</span>
                                         </x-button>
@@ -489,73 +487,81 @@
                         <input type="hidden" name="_method" value="PUT">
                     </template>
                     
-                    <x-form-input name="name"
-                                  id="ts-name-input"
-                                  :label="lexicon('label_setting_TimeSystemName', 'System Name (e.g., TNG Stardate)')"
-                                  :tooltip="lexicon('tooltip_setting_TimeSystemNameInput', 'Enter the display name for this universe time system')"
-                                  xModel="tsModal.data.name"
-                                  :required="true" />
+                    <x-form-input name="engine_title"
+                        id="ts-name-input"
+                        :label="lexicon('label_setting_TimeSystemName', 'System Name (e.g., TNG Stardate)')"
+                        :tooltip="lexicon('tooltip_setting_TimeSystemNameInput', 'Enter the display name for this universe time system')"
+                        xModel="tsModal.data.engine_title"
+                        :required="true" />
 
-                    <div class="flex flex-col gap-xs">
-                        <label for="ts-engine-type-select" class="text-xs font-bold text-input-muted">
-                            <span>{{ lexicon('label_setting_MathEngine', 'Math Engine') }}</span>
-                        </label>
-                        <select id="ts-engine-type-select"
-                                name="engine_type" 
-                                x-model="tsModal.data.engine_type" 
-                                aria-label="{{ lexicon('label_setting_MathEngine', 'Math Engine') }}"
-                                x-tooltip="'{{ addslashes(lexicon('tooltip_setting_MathEngineSelect', 'Choose how dates are calculated and formatted')) }}'"
-                                class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent">
-                            <option value="real_world">{{ lexicon('label_setting_OptEngineRealWorld', 'Real World (No Math)') }}</option>
-                            <option value="fractional">{{ lexicon('label_setting_OptEngineFractional', 'Fractional Base (Stardates)') }}</option>
-                            <option value="offset">{{ lexicon('label_setting_OptEngineOffset', 'Linear Offset (Fantasy/Sci-Fi Years)') }}</option>
-                        </select>
-                    </div>
-
-                    <div class="grid grid-cols-1 md-grid-cols-2 gap-md" x-show="tsModal.data.engine_type !== 'real_world'" x-cloak>
-                        <x-form-input name="prefix"
-                                      id="ts-prefix-input"
-                                      :label="lexicon('label_setting_PrefixString', 'Prefix String')"
-                                      :placeholder="lexicon('label_setting_PlaceholderPrefix', 'e.g. Stardate ')"
-                                      :tooltip="lexicon('tooltip_setting_PrefixInput', 'Text prepended before the calculated date value')"
-                                      xModel="tsModal.data.prefix" />
-
-                        <x-form-input name="suffix"
-                                      id="ts-suffix-input"
-                                      :label="lexicon('label_setting_SuffixString', 'Suffix String')"
-                                      :placeholder="lexicon('label_setting_PlaceholderSuffix', 'e.g.  AD')"
-                                      :tooltip="lexicon('tooltip_setting_SuffixInput', 'Text appended after the calculated date value')"
-                                      xModel="tsModal.data.suffix" />
-
-                        <x-form-input name="base_earth_year"
-                                      id="ts-base-earth-year-input"
-                                      type="number"
-                                      :label="lexicon('label_setting_BaseEarthYear', 'Base Earth Year')"
-                                      placeholder="2026"
-                                      :tooltip="lexicon('tooltip_setting_BaseEarthYearInput', 'Reference Earth year used as the zero point')"
-                                      xModel="tsModal.data.base_earth_year" />
-
-                        <div x-show="tsModal.data.engine_type === 'fractional'" x-cloak>
-                            <x-form-input name="base_system_value"
-                                          id="ts-base-system-value-input"
-                                          type="number"
-                                          :label="lexicon('label_setting_BaseSystemValue', 'Base System Value')"
-                                          placeholder="100000"
-                                          :tooltip="lexicon('tooltip_setting_BaseSystemValueInput', 'Starting stardate or fractional base number')"
-                                          xModel="tsModal.data.base_system_value" />
+                        <div class="flex flex-col gap-xs">
+                            <label for="ts-engine-type-select" class="text-xs font-bold text-input-muted">
+                                <span>{{ lexicon('label_setting_MathEngine', 'Math Engine') }}</span>
+                            </label>
+                            <select id="ts-engine-type-select"
+                                    name="calculation_algorithm" 
+                                    x-model="tsModal.data.calculation_algorithm" 
+                                    aria-label="{{ lexicon('label_setting_MathEngine', 'Math Engine') }}"
+                                    x-tooltip="'{{ addslashes(lexicon('tooltip_setting_MathEngineSelect', 'Choose how dates are calculated and formatted')) }}'"
+                                    class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent">
+                                <option value="real_world">{{ lexicon('label_setting_OptEngineRealWorld', 'Real World (No Math)') }}</option>
+                                <option value="fractional">{{ lexicon('label_setting_OptEngineFractional', 'Fractional Base (Stardates)') }}</option>
+                                <option value="offset">{{ lexicon('label_setting_LinearOffset', 'Linear Offset (Fantasy/Sci-Fi Years)') }}</option>
+                            </select>
                         </div>
 
-                        <div x-show="tsModal.data.engine_type === 'fractional'" x-cloak>
-                            <x-form-input name="multiplier"
-                                          id="ts-multiplier-input"
+                        <div class="grid grid-cols-1 md-grid-cols-2 gap-md" x-show="tsModal.data.calculation_algorithm !== 'real_world'" x-cloak>
+                            <x-form-input name="date_prefix"
+                                          id="ts-prefix-input"
+                                          :label="lexicon('label_setting_PrefixString', 'Prefix String')"
+                                          :placeholder="lexicon('label_setting_PlaceholderPrefix', 'e.g. Stardate ')"
+                                          :tooltip="lexicon('tooltip_setting_PrefixInput', 'Text prepended before the calculated date value')"
+                                          xModel="tsModal.data.date_prefix" />
+                        
+                            <x-form-input name="date_suffix"
+                                          id="ts-suffix-input"
+                                          :label="lexicon('label_setting_SuffixString', 'Suffix String')"
+                                          :placeholder="lexicon('label_setting_PlaceholderSuffix', 'e.g.  AD')"
+                                          :tooltip="lexicon('tooltip_setting_SuffixInput', 'Text appended after the calculated date value')"
+                                          xModel="tsModal.data.date_suffix" />
+                        
+                            <x-form-input name="base_earth_year"
+                                          id="ts-base-earth-year-input"
                                           type="number"
-                                          step="0.01"
-                                          :label="lexicon('label_setting_Multiplier', 'Multiplier')"
-                                          placeholder="1000"
-                                          :tooltip="lexicon('tooltip_setting_MultiplierInput', 'Units added per Earth year')"
-                                          xModel="tsModal.data.multiplier" />
+                                          :label="lexicon('label_setting_BaseEarthYear', 'Base Earth Year')"
+                                          placeholder="2026"
+                                          :tooltip="lexicon('tooltip_setting_BaseEarthYearInput', 'Reference Earth year used as the zero point')"
+                                          xModel="tsModal.data.base_earth_year" />
+                        
+                            <x-form-input name="base_earth_modifier"
+                                          id="ts-base-earth-modifier-input"
+                                          type="number"
+                                          :label="lexicon('label_setting_BaseEarthModifier', 'Base Earth Year Modifier')"
+                                          placeholder="0"
+                                          :tooltip="lexicon('tooltip_setting_BaseEarthModifierInput', 'Year offset added when converting stardates back to calendar dates')"
+                                          xModel="tsModal.data.base_earth_modifier" />
+                        
+                            <div x-show="tsModal.data.calculation_algorithm === 'fractional'" x-cloak>
+                                <x-form-input name="base_system_value"
+                                              id="ts-base-system-value-input"
+                                              type="number"
+                                              :label="lexicon('label_setting_BaseSystemValue', 'Base System Value')"
+                                              placeholder="100000"
+                                              :tooltip="lexicon('tooltip_setting_BaseSystemValueInput', 'Starting stardate or fractional base number')"
+                                              xModel="tsModal.data.base_system_value" />
+                            </div>
+                        
+                            <div x-show="tsModal.data.calculation_algorithm === 'fractional'" x-cloak>
+                                <x-form-input name="temporal_multiplier"
+                                              id="ts-multiplier-input"
+                                              type="number"
+                                              step="0.01"
+                                              :label="lexicon('label_setting_Multiplier', 'Multiplier')"
+                                              placeholder="1000"
+                                              :tooltip="lexicon('tooltip_setting_MultiplierInput', 'Units added per Earth year')"
+                                              xModel="tsModal.data.temporal_multiplier" />
+                            </div>
                         </div>
-                    </div>
 
                     <div class="border-t-actions pt-6 mt-4 flex flex-row flex-wrap items-center justify-end gap-md">
                         <x-button type="button" 

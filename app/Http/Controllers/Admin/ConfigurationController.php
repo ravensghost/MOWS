@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use App\Models\Configuration;
-use App\Models\Page;
+use App\Models\Book;
 use App\Models\ChronologicalEngine;
 
 class ConfigurationController extends Controller
@@ -15,10 +15,10 @@ class ConfigurationController extends Controller
     {
         abort_unless(auth()->user()?->can('manage_settings'), 403, lexicon('msg_Settings_Unauthorised', 'Unauthorised access to Global Settings.'));
 
-        $systemPage = Page::where('slug', 'admin/settings')
+        $systemPage = Book::where('books_uri', 'admin/settings')
             ->where('is_published', true)
             ->with(['layout.blocks', 'widgets' => function ($query) {
-                $query->orderBy('page_widget.sort_order');
+                $query->orderBy('book_modules.module_sort_order');
             }])
             ->firstOrFail();
 
@@ -31,8 +31,8 @@ class ConfigurationController extends Controller
         $customLanguages = Configuration::where('configuration_token', 'like', 'lexicon_label_%')
             ->get()
             ->mapWithKeys(function ($setting) {
-                $code = str_replace('lexicon_label_', '', $configuration->configuration_token);
-                return [$code => $configuration->configuration_payload];
+                $code = str_replace('lexicon_label_', '', $setting->configuration_token);
+                return [$code => $setting->configuration_payload];
             })
             ->toArray();
 
