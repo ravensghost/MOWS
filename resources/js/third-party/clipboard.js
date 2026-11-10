@@ -1,36 +1,34 @@
 // resources/js/third-party/clipboard.js
-import tippy from 'tippy.js';
-import 'tippy.js/dist/tippy.css';
 
 /**
- * Global Clipboard Utility
- * Programmatically copies text to the clipboard and shows a non-blocking toast notification.
+ * Global Clipboard Helper Wrapper
  */
 window.copyToClipboard = async function (text, successMessage = 'Copied to clipboard!') {
     try {
-        await navigator.clipboard.writeText(text);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            // Legacy fallback for unsupported contexts
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+        }
+
         if (window.Swal && typeof window.Swal.toast === 'function') {
             window.Swal.toast('success', successMessage);
         }
     } catch (err) {
-        console.error('Failed to copy text: ', err);
+        console.error('[Clipboard] Failed to copy text: ', err);
         if (window.Swal && typeof window.Swal.error === 'function') {
-            window.Swal.error('Error', 'Failed to copy text.');
+            window.Swal.error('Error', 'Failed to copy to clipboard.');
         }
     }
 };
 
-/**
- * Custom Alpine Directive: x-clipboard
- * Integrates clipboard copying via an Alpine directive.
- */
-document.addEventListener('alpine:init', () => {
-    window.Alpine.directive('clipboard', (el, { expression }, { evaluate }) => {
-        el.addEventListener('click', () => {
-            const textToCopy = evaluate(expression) || el.dataset.clipboardText || '';
-            if (textToCopy && window.copyToClipboard) {
-                window.copyToClipboard(textToCopy);
-            }
-        });
-    });
-});
+export default window.copyToClipboard;

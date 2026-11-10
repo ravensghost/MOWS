@@ -1,19 +1,15 @@
 // resources/js/managers/configurationManager.js
 export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
-    // Initialise with the variables passed from Blade
     ai_mode: initialAiMode,
     mail_mailer: initialMailMailer,
 
-    // Fuzzy search state (Fuse.js)
     searchQuery: '',
     searchHelperInstance: null,
     matchedKeys: null,
     matchedGroups: null,
 
-    // TomSelect instance reference
     tomSelectInstance: null,
 
-    // State objects
     modal: { open: false, key: '', title: '', value: '', type: 'select', options: {} },
     tsModal: { open: false, isEdit: false, data: {} },
 
@@ -25,7 +21,6 @@ export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
     },
 
     initFuse() {
-        // Leverage the standardized global window.Search helper (powered by Fuse.js)
         if (this.$refs.settingsSearchData && window.Search) {
             try {
                 this.searchHelperInstance = window.Search.create('#settings-search-catalog [data-setting-item], [data-settings-search-item]', ['label', 'key', 'group'], {
@@ -46,7 +41,6 @@ export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
         }
         const results = this.searchHelperInstance.search(q);
         this.matchedKeys = results ? results.map(id => String(id)) : [];
-        // If results return item keys, ensure matchedGroups extracts properly from matching data elements if needed
         this.matchedGroups = null;
     },
 
@@ -83,7 +77,6 @@ export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
         }
     },
 
-    // Methods
     openModal(key, title, value, type = 'select', options = {}) {
         this.modal.key = key;
         this.modal.title = title;
@@ -123,7 +116,6 @@ export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
             this.mail_mailer = this.modal.value;
         }
 
-        // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
         if (typeof window.updateDOM === 'function') {
             await window.updateDOM(this.$refs, ['mainSettingsTable', 'timeSystemsTable'], () => {
                 if (this.tomSelectInstance && window.Select) {

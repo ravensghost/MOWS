@@ -3,233 +3,237 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
-use App\Models\Application;
-use App\Models\Character;
-use App\Models\Position;
-use App\Models\Ranks;
-use App\Models\Section;
-use App\Models\RankSet;
-use App\Models\Page;
+use App\Models\Book;
+use App\Models\CandidatePetition;
 use App\Models\Configuration;
-use App\Models\ServiceRecord;
+use App\Models\Persona;
+use App\Models\Position;
+use App\Models\Insignia;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CandidatePetitionController extends Controller
 {
-    protected function authorizeApplicationAccess(array $permissions): void
-    {
-        $user = auth()->user();
-
-        if (!$user) {
-            abort(403, lexicon('msg_Applications_Unauthorised', 'Unauthorised access to Application Management.'));
-        }
-
-        // Allow webmaster role column or Spatie webmaster role automatically
-        if ($user->role === 'webmaster' || (method_exists($user, 'hasRole') && $user->hasRole('webmaster'))) {
-            return;
-        }
-
-        foreach ($permissions as $permission) {
-            if ($user->can($permission)) {
-                return;
-            }
-        }
-
-        abort(403, lexicon('msg_Applications_Unauthorised', 'Unauthorised access to Application Management.'));
-    }
-
+    /**
+     * Display the administrative candidate petitions management queue.
+     */
     public function index()
     {
-        $this->authorizeApplicationAccess(['applications_view', 'manage_applications']);
-        $systemPage = Page::where('slug', 'admin/applications')
+        abort_unless(
+            auth()->user()?->can('access-admin'),
+            403,
+            lexicon('msg_AdminPetitions_Unauthorised', 'Unauthorised access to candidate petitions.')
+        );
+
+        $systemPage = Book::where('slug', 'admin-applications')
+            ->orWhere('slug', 'admin')
             ->where('is_published', true)
-            ->with([
-                'layout.blocks',
-                'widgets' => function ($query) {
-                    $query->orderBy('page_widget.sort_order');
-                }
-            ])
-            ->firstOrFail();
+            ->with(['layout.blocks'])
+            ->first();
 
-        $applications = Application::with(['user', 'answers.formField', 'votes.councilMember'])
-            ->whereIn('status', ['Pending', 'pending'])
-            ->orderBy('submitted_at', 'desc')
+        $petitions = CandidatePetition::with([
+            'user',
+            'persona',
+            'answers.metadata',
+            'votes.user',
+        ])
+            ->orderByRaw("CASE WHEN petition_status = 'Pending' THEN 0 ELSE 1 END")
+            ->orderByDesc('lodged_at')
             ->get();
 
-        $activeCharacters = Character::with(['position.section', 'rank', 'user'])
-            ->where('status', 'active')
-            ->orderBy('name')
-            ->get();
+        $approvalReviewMode = Configuration::where('configuration_token', 'approval_review_mode')
+            ->value('configuration_payload') ?? 'single_admin';
 
-        $sections = Section::with(['positions' => function ($q) {
-            $q->where('is_open', true);
-        }])->orderBy('order')->get();
+        $characterLimitEnforced = filter_var(
+            Configuration::where('configuration_token', 'character_limit_enforced')->value('configuration_payload') ?? false,
+            FILTER_VALIDATE_BOOLEAN
+        );
 
-        $rankSets = RankSet::with(['ranks' => function ($q) {
-            $q->orderBy('sort_order');
-        }])->get();
+        $insignias = Insignia::orderBy('sort_order')->get();
+        $positions = Position::where('is_open', true)->orderBy('name')->get();
 
-        $reviewMode = Configuration::where('configuration_token', 'approval_review_mode')->value('configuration_payload') ?? 'single';
-        $rejectionProtocol = Configuration::where('configuration_token', 'rejection_protocol')->value('configuration_payload') ?? 'soft_lock';
-
-        return view('admin.applications', compact('applications', 'activeCharacters', 'sections', 'rankSets', 'systemPage', 'reviewMode', 'rejectionProtocol'));
+        return view('admin.petitions.index', compact(
+            'systemPage',
+            'petitions',
+            'approvalReviewMode',
+            'characterLimitEnforced',
+            'insignias',
+            'positions'
+        ));
     }
 
-    public function reject(Request $request, $id)
+    /**
+     * Retrieve a single candidate petition payload via AJAX for modal inspection.
+     */
+    public function show(CandidatePetition $petition)
     {
-        $this->authorizeApplicationAccess(['applications_approve', 'manage_applications']);
-        $application = Application::with('user')->findOrFail($id);
-        $protocol = Configuration::where('configuration_token', 'rejection_protocol')->value('configuration_payload') ?? 'soft_lock';
+        abort_unless(auth()->user()?->can('access-admin'), 403);
 
-        if ($protocol === 'hard_purge') {
-            DB::transaction(function () use ($application) {
-                $user = $application->user;
-                $hasActiveChars = $user ? $user->characters()->where('status', 'active')->exists() : false;
+        $petition->load(['user', 'persona', 'answers.metadata', 'votes.user']);
 
-                $application->answers()->delete();
-                $application->votes()->delete();
-                $application->delete();
-
-                if ($user && !$hasActiveChars) {
-                    $user->attributes()->delete();
-                    $user->delete();
-                }
-            });
-            $message = lexicon('msg_Applications_PurgedSuccess', 'Application hard-purged and unlinked user account removed.');
-        } else {
-            // Soft Lock protocol: set status to Rejected and user attribute app_status to rejected for resubmission
-            $application->update(['status' => 'Rejected']);
-            if ($application->user) {
-                $application->user->setAttr('app_status', 'rejected');
-            }
-            $message = lexicon('msg_Applications_RejectedSuccess', 'Application rejected. The applicant may revise and resubmit.');
-        }
-
-        if ($request->wantsJson()) {
-            return response()->json(['status' => 'success', 'success' => true, 'message' => $message]);
-        }
-
-        return redirect('/admin/applications')->with('status', $message);
+        return response()->json([
+            'status'   => 'success',
+            'success'  => true,
+            'petition' => $petition,
+        ]);
     }
 
-    public function approve(Request $request, $id)
+    /**
+     * Record a council evaluation vote on a pending candidate petition.
+     */
+    public function vote(Request $request, CandidatePetition $petition)
     {
-        $this->authorizeApplicationAccess(['applications_approve', 'manage_applications']);
+        abort_unless(auth()->user()?->can('access-admin'), 403);
+
         $validated = $request->validate([
-            'position_id' => 'required|exists:positions,id',
-            'rank_id'     => 'required|exists:ranks,id',
+            'vote_decision' => 'required|string|in:Approve,Reject,Abstain',
+            'vote_comment'  => 'nullable|string|max:2000',
         ]);
 
-        $application = Application::with('answers.formField')->findOrFail($id);
+        $evaluation = $petition->votes()->updateOrCreate(
+            ['user_id' => auth()->id()],
+            [
+                'vote_decision' => $validated['vote_decision'],
+                'vote_comment'  => $validated['vote_comment'] ?? null,
+            ]
+        );
 
-        // Enforce active character limit if enabled
-        $enforceLimit = filter_var(Configuration::where('configuration_token', 'character_limit_enforced')->value('configuration_payload') ?? 'true', FILTER_VALIDATE_BOOLEAN);
-        if ($enforceLimit) {
-            $pcLimit = (int) (Configuration::where('configuration_token', 'pc_limit')->value('configuration_payload') ?? 1);
-            $activePcsCount = Character::where('user_id', $application->user_id)
-                ->where('character_type', 'PC')
-                ->where('status', 'active')
+        return response()->json([
+            'status'     => 'success',
+            'success'    => true,
+            'message'    => lexicon('msg_AdminPetitions_VoteRecorded', 'Your council evaluation has been recorded.'),
+            'evaluation' => $evaluation->load('user'),
+        ]);
+    }
+
+    /**
+     * Approve a candidate petition and provision or link the active Persona.
+     */
+    public function approve(Request $request, CandidatePetition $petition)
+    {
+        abort_unless(auth()->user()?->can('access-admin'), 403);
+
+        if ($petition->petition_status === 'Approved') {
+            return response()->json([
+                'status'  => 'error',
+                'success' => false,
+                'message' => lexicon('msg_AdminPetitions_AlreadyApproved', 'This petition has already been approved.'),
+            ], 422);
+        }
+
+        // Enforce character limit configuration token if enabled
+        $limitEnforcedRaw = Configuration::where('configuration_token', 'character_limit_enforced')
+            ->value('configuration_payload');
+
+        $isLimitEnforced = filter_var($limitEnforcedRaw ?? false, FILTER_VALIDATE_BOOLEAN)
+            || in_array((string) $limitEnforcedRaw, ['1', 'true', 'yes', 'enabled'], true);
+
+        if ($isLimitEnforced) {
+            $maxCharacters = max(1, (int) (Configuration::where('configuration_token', 'max_active_characters')
+                ->value('configuration_payload') ?? 3));
+
+            $activeCount = Persona::where('user_id', $petition->user_id)
+                ->whereIn('status', ['active', 'loa', 'eloa'])
                 ->count();
 
-            if ($activePcsCount >= $pcLimit) {
-                $limitMsg = str_replace('{limit}', $pcLimit, lexicon('msg_Applications_CharLimitReached', 'You have reached the maximum number of active characters allowed ({limit}).'));
-                if ($request->wantsJson()) {
-                    return response()->json(['message' => $limitMsg], 422);
-                }
-                return back()->with('error', $limitMsg);
+            if ($activeCount >= $maxCharacters) {
+                return response()->json([
+                    'status'  => 'error',
+                    'success' => false,
+                    'message' => lexicon('msg_AdminPetitions_UserLimitExceeded', 'Cannot approve: applicant has reached the maximum active persona limit.'),
+                ], 422);
             }
         }
 
-        $position = Position::with('section')->findOrFail($validated['position_id']);
-        $rank = Ranks::findOrFail($validated['rank_id']);
+        // Enforce approval_review_mode quorum if configured for council consensus
+        $reviewMode = Configuration::where('configuration_token', 'approval_review_mode')
+            ->value('configuration_payload') ?? 'single_admin';
 
-        $character = Character::create([
-            'user_id'        => $application->user_id,
-            'position_id'    => $position->id,
-            'rank_id'        => $rank->id,
-            'character_type' => 'PC',
-            'name'           => $application->character_name,
-            'status'         => 'active',
-        ]);
+        if ($reviewMode === 'council_quorum') {
+            $requiredVotes = max(1, (int) (Configuration::where('configuration_token', 'council_quorum_count')
+                ->value('configuration_payload') ?? 2));
 
-        $application->update([
-            'status'       => 'Approved',
-            'character_id' => $character->id,
-        ]);
+            $approvalVotes = $petition->votes()
+                ->whereIn('vote_decision', ['Approve', 'approve', 'Approved'])
+                ->count();
 
-        // Integrate Applicant's Submitted Service Record Timeline Entries
-        $groupToEventTypes = ServiceRecord::eventTypeGroups();
-
-        foreach ($application->answers as $answer) {
-            if ($answer->formField && $answer->formField->type === 'service_record' && !empty($answer->answer)) {
-                $entries = json_decode($answer->answer, true);
-                $rawFieldOptions = $answer->formField->options;
-                $fieldGroups = is_array($rawFieldOptions)
-                    ? $rawFieldOptions
-                    : (json_decode((string) $rawFieldOptions, true) ?: []);
-
-                // Build allowed event types for this specific form field based on selected optgroups
-                $allowedEvents = [];
-                foreach ($fieldGroups as $groupKey) {
-                    if (is_string($groupKey) && isset($groupToEventTypes[$groupKey]['types'])) {
-                        $allowedEvents = array_merge($allowedEvents, array_keys($groupToEventTypes[$groupKey]['types']));
-                    }
-                }
-                // Fallback if none configured
-                if (empty($allowedEvents)) {
-                    $allowedEvents = ServiceRecord::allEventTypes();
-                }
-
-                if (is_array($entries)) {
-                    foreach ($entries as $entry) {
-                        $desc = trim($entry['description'] ?? '');
-                        if ($desc === '') {
-                            continue;
-                        }
-                        $era = trim($entry['era'] ?? '');
-                        $eventType = in_array($entry['event_type'] ?? '', $allowedEvents, true)
-                            ? $entry['event_type']
-                            : ($allowedEvents[0] ?? 'background');
-
-                        $fullDescription = $era !== '' ? "[{$era}] {$desc}" : $desc;
-
-                        ServiceRecord::create([
-                            'user_id'        => $character->user_id,
-                            'character_id'   => $character->id,
-                            'event_type'     => $eventType,
-                            'description'    => $fullDescription,
-                            'issued_by'      => auth()->id(),
-                            'display_target' => 'IC',
-                        ]);
-                    }
-                }
+            if ($approvalVotes < $requiredVotes && !$request->boolean('force_override')) {
+                return response()->json([
+                    'status'  => 'error',
+                    'success' => false,
+                    'message' => lexicon('msg_AdminPetitions_QuorumNotMet', 'Council quorum has not yet been met for this petition.'),
+                ], 422);
             }
         }
 
-        $positionLabel = $position->section
-            ? "{$position->name} ({$position->section->name})"
-            : $position->name;
+        DB::transaction(function () use ($request, $petition) {
+            $persona = $petition->persona;
 
-        // Automated Final Service Record Entry on Approval
-        ServiceRecord::create([
-            'user_id'        => $character->user_id,
-            'character_id'   => $character->id,
-            'event_type'     => 'transfer',
-            'description'    => "Application approved. Assigned as {$rank->name} — {$positionLabel}.",
-            'issued_by'      => auth()->id(),
-            'display_target' => 'BOTH',
+            if (!$persona) {
+                $persona = Persona::create([
+                    'user_id'     => $petition->user_id,
+                    'name'        => $request->input('proposed_persona_name', $petition->proposed_persona_name),
+                    'insignia_id' => $request->input('insignia_id', $request->input('rank_id')),
+                    'position_id' => $request->input('position_id'),
+                    'status'      => 'active',
+                ]);
+            } else {
+                $persona->update([
+                    'name'        => $request->input('proposed_persona_name', $persona->name),
+                    'insignia_id' => $request->input('insignia_id', $request->input('rank_id', $persona->insignia_id ?? $persona->rank_id)),
+                    'position_id' => $request->input('position_id', $persona->position_id),
+                    'status'      => 'active',
+                ]);
+            }
+
+            $petition->update([
+                'persona_id'      => $persona->id,
+                'petition_status' => 'Approved',
+            ]);
+        });
+
+        return response()->json([
+            'status'          => 'success',
+            'success'         => true,
+            'petition_status' => 'Approved',
+            'message'         => lexicon('msg_AdminPetitions_ApprovedSuccess', 'Candidate petition approved and persona activated.'),
         ]);
+    }
 
-        Cache::forget('widget_roster_sections');
+    /**
+     * Reject a candidate petition or execute an atomic hard_purge transaction.
+     */
+    public function reject(Request $request, CandidatePetition $petition)
+    {
+        abort_unless(auth()->user()?->can('access-admin'), 403);
 
-        $message = lexicon('msg_Applications_ApprovedSuccess', 'Application approved! Character linked to position, added to active roster, and logged in service record.');
+        $isHardPurge = $request->boolean('hard_purge') || $request->input('mode') === 'hard_purge';
 
-        if ($request->wantsJson()) {
-            return response()->json(['status' => 'success', 'success' => true, 'message' => $message]);
+        if ($isHardPurge) {
+            DB::transaction(function () use ($petition) {
+                $petition->answers()->delete();
+                $petition->votes()->delete();
+                $petition->delete();
+            });
+
+            return response()->json([
+                'status'  => 'success',
+                'success' => true,
+                'purged'  => true,
+                'message' => lexicon('msg_AdminPetitions_HardPurged', 'Candidate petition and associated records have been permanently purged.'),
+            ]);
         }
 
-        return redirect('/admin/applications')->with('status', $message);
+        $petition->update([
+            'petition_status' => 'Rejected',
+        ]);
+
+        return response()->json([
+            'status'          => 'success',
+            'success'         => true,
+            'purged'          => false,
+            'petition_status' => 'Rejected',
+            'message'         => lexicon('msg_AdminPetitions_RejectedSuccess', 'Candidate petition has been marked as rejected.'),
+        ]);
     }
 }

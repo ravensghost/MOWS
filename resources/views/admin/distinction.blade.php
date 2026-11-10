@@ -36,15 +36,15 @@
                     <th class="p-4 text-right">{{ lexicon('label_common_Actions', 'Actions') }}</th>
                 </x-slot:headers>
 
-                @forelse($awards as $award)
+                @forelse($distinctions as $award)
                     <tr class="table-row">
-                        <td class="p-4 text-sm font-bold text-main">{{ $award->name }}</td>
+                        <td class="p-4 text-sm font-bold text-main">{{ $award->distinction_title }}</td>
                         <td class="p-4 text-sm text-muted">
-                            <x-badge :variant="$award->master_group === 'IC' ? 'primary' : ($award->master_group === 'OOC' ? 'warning' : 'success')">
-                                {{ $award->master_group }}
+                            <x-badge :variant="$award->scope_target === 'IC' ? 'primary' : ($award->scope_target === 'OOC' ? 'warning' : 'success')">
+                                {{ $award->scope_target }}
                             </x-badge>
                             @if($award->category)
-                                <span class="text-xs ml-2 opacity-75">/ {{ $award->category->name }}</span>
+                                <span class="text-xs ml-2 opacity-75">/ {{ $award->category->catalogue_title ?? $award->category->name }}</span>
                             @endif
                         </td>
                         <td class="p-4 text-sm text-muted">
@@ -54,15 +54,15 @@
                         </td>
                         <td class="p-4">
                             <x-award-badge 
-                                :award-name="$award->name"
-                                :description="$award->description"
-                                :base-layer="$award->base_color"
-                                :mid-type="$award->mid_type"
-                                :mid-image="$award->mid_image"
-                                :mid-css="$award->mid_css"
-                                :top-type="$award->top_type"
-                                :top-image="$award->top_image"
-                                :top-css="$award->top_css"
+                                :award-name="$award->distinction_title"
+                                :description="$award->distinction_description"
+                                :base-layer="$award->distinction_base_colour"
+                                :mid-type="$award->mid_layer_mode"
+                                :mid-image="$award->mid_layer_asset"
+                                :mid-css="$award->mid_layer_modifier"
+                                :top-type="$award->top_layer_mode"
+                                :top-image="$award->top_layer_asset"
+                                :top-css="$award->top_layer_modifier"
                                 :skin="$activeSkin->folder_name ?? 'default'"
                             />
                         </td>
@@ -75,7 +75,7 @@
                             </x-button>
                             
                             <x-button variant="text" class="text-danger hover-danger" 
-                                x-data="deleteAction('{{ route('admin.awards.destroy', $award) }}', 'DELETE', '{{ addslashes($award->name) }}')" 
+                                x-data="deleteAction('{{ route('admin.awards.destroy', $award) }}', 'DELETE', '{{ addslashes($award->distinction_title) }}')" 
                                 @click="confirmDelete()"
                                 x-tooltip="'{{ addslashes(lexicon('tooltip_common_DeleteAward', 'Delete this award permanently')) }}'"
                                 aria-label="{{ lexicon('tooltip_common_DeleteAward', 'Delete this award permanently') }}">
@@ -106,9 +106,9 @@
                     </template>
 
                     <x-form-input 
-                        name="name" 
+                        name="distinction_title" 
                         :label="lexicon('label_awards_AwardName', 'Award Name')" 
-                        xModel="name" 
+                        xModel="distinction_title" 
                         :required="true"
                         :tooltip="lexicon('tooltip_awards_NameInput', 'Enter the full title of the award')" 
                     />
@@ -118,8 +118,8 @@
                             <span>{{ lexicon('label_common_Description', 'Description') }}</span>
                         </label>
                         <textarea id="award_description" 
-                                  name="description" 
-                                  x-model="description" 
+                                  name="distinction_description" 
+                                  x-model="distinction_description" 
                                   class="bg-input text-input border-input rounded-input p-input outline-none w-full box-border focus-border-accent focus-shadow-accent p-2" 
                                   rows="3"
                                   x-tooltip="'{{ addslashes(lexicon('tooltip_awards_DescriptionInput', 'Provide a brief explanation or citation for this award')) }}'"></textarea>
@@ -127,12 +127,12 @@
                     
                     <div class="grid grid-cols-1 md-grid-cols-2 gap-md w-full">
                         <div class="flex flex-col gap-xs">
-                            <label for="award_master_group" class="text-xs font-bold text-input-muted">
+                            <label for="award_scope_target" class="text-xs font-bold text-input-muted">
                                 <span>{{ lexicon('label_awards_MasterGroup', 'Master Group') }}</span>
                             </label>
-                            <select id="award_master_group" 
-                                    name="master_group" 
-                                    x-model="master_group" 
+                            <select id="award_scope_target" 
+                                    name="scope_target" 
+                                    x-model="scope_target" 
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent p-2" 
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_awards_MasterGroupSelect', 'Select whether this award targets users, characters, or both')) }}'"
                                     required>
@@ -146,20 +146,20 @@
                                 <span>{{ lexicon('label_awards_SubgroupCategory', 'Subgroup Category') }}</span>
                             </label>
                             <select id="award_category_id" 
-                                    name="award_category_id" 
-                                    x-model="award_category_id" 
+                                    name="distinction_catalogue_id" 
+                                    x-model="distinction_catalogue_id" 
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent p-2"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_awards_SubgroupSelect', 'Assign this award to a custom subgroup category')) }}'">
                                 <option value="">{{ lexicon('label_awards_NoSubgroup', '-- No Subgroup --') }}</option>
                                 @foreach($categories as $category)
-                                    <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                    <option value="{{ $category->id }}">{{ $category->catalogue_title ?? $category->name }}</option>
                                 @endforeach
                             </select>
                         </div>
                     </div>
 
                     <div class="flex flex-col gap-xs border-t border-panel pt-3">
-                        <x-colour-picker name="base_color" xModel="base_color" :label="lexicon('label_awards_BaseColor', 'Base Color / Background')" />
+                        <x-colour-picker name="distinction_base_colour" xModel="distinction_base_colour" :label="lexicon('label_awards_BaseColor', 'Base Color / Background')" />
                     </div>
 
                     <!-- Middle Layer Configuration -->
@@ -168,21 +168,21 @@
                             <span>{{ lexicon('label_awards_MidLayerType', 'Middle Layer Type') }}</span>
                         </label>
                         <select id="award_mid_type" 
-                                name="mid_type" 
-                                x-model="mid_type" 
+                                name="mid_layer_mode" 
+                                x-model="mid_layer_mode" 
                                 class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent p-2"
                                 x-tooltip="'{{ addslashes(lexicon('tooltip_awards_MidTypeSelect', 'Choose between a CSS shape or an image asset for the middle layer')) }}'">
                             <option value="css">{{ lexicon('label_awards_CssShape', 'CSS Shape Class') }}</option>
                             <option value="image">{{ lexicon('label_awards_ImageAsset', 'Image Asset') }}</option>
                         </select>
 
-                        <div class="mt-2" x-show="mid_type === 'image'">
+                        <div class="mt-2" x-show="mid_layer_mode === 'image'">
                             <label for="award_mid_image" class="text-xs font-bold text-input-muted">
                                 <span>{{ lexicon('label_awards_MidImage', 'Middle Image Asset (ml-*)') }}</span>
                             </label>
                             <select id="award_mid_image" 
-                                    name="mid_image" 
-                                    x-model="mid_image" 
+                                    name="mid_layer_asset" 
+                                    x-model="mid_layer_asset" 
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent p-2"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_awards_MidImageSelect', 'Select an image file from the skin award folder')) }}'">
                                 <option value="">{{ lexicon('msg_awards_SelectMidImage', 'Select Middle Image...') }}</option>
@@ -192,13 +192,13 @@
                             </select>
                         </div>
                         
-                        <div class="mt-2" x-show="mid_type === 'css'">
+                        <div class="mt-2" x-show="mid_layer_mode === 'css'">
                             <label for="award_mid_css" class="text-xs font-bold text-input-muted">
                                 <span>{{ lexicon('label_awards_MidCss', 'Middle CSS Shape') }}</span>
                             </label>
                             <select id="award_mid_css" 
-                                    name="mid_css" 
-                                    x-model="mid_css" 
+                                    name="mid_layer_modifier" 
+                                    x-model="mid_layer_modifier" 
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent p-2"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_awards_MidCssSelect', 'Select a predefined middle CSS shape')) }}'">
                                 <option value="">{{ lexicon('msg_awards_SelectShape', '-- Select Shape Modifier --') }}</option>
@@ -215,8 +215,8 @@
                             <span>{{ lexicon('label_awards_TopLayerType', 'Top Layer Type') }}</span>
                         </label>
                         <select id="award_top_type" 
-                                name="top_type" 
-                                x-model="top_type" 
+                                name="top_layer_mode" 
+                                x-model="top_layer_mode" 
                                 class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent p-2"
                                 x-tooltip="'{{ addslashes(lexicon('tooltip_awards_TopTypeSelect', 'Choose between an image asset or a CSS shape for the top layer')) }}'">
                             <option value="">{{ lexicon('label_awards_NoneDisabled', '-- None (Disabled) --') }}</option>
@@ -224,13 +224,13 @@
                             <option value="image">{{ lexicon('label_awards_ImageAsset', 'Image Asset') }}</option>
                         </select>
 
-                        <div class="mt-2" x-show="top_type === 'image'">
+                        <div class="mt-2" x-show="top_layer_mode === 'image'">
                             <label for="award_top_image" class="text-xs font-bold text-input-muted">
                                 <span>{{ lexicon('label_awards_TopImage', 'Top Image Asset (tl-*)') }}</span>
                             </label>
                             <select id="award_top_image" 
-                                    name="top_image" 
-                                    x-model="top_image" 
+                                    name="top_layer_asset" 
+                                    x-model="top_layer_asset" 
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent p-2"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_awards_TopImageSelect', 'Select a top layer image asset file')) }}'">
                                 <option value="">{{ lexicon('msg_awards_SelectTopImage', 'Select Top Image...') }}</option>
@@ -240,13 +240,13 @@
                             </select>
                         </div>
 
-                        <div class="mt-2" x-show="top_type === 'css'">
+                        <div class="mt-2" x-show="top_layer_mode === 'css'">
                             <label for="award_top_css" class="text-xs font-bold text-input-muted">
                                 <span>{{ lexicon('label_awards_TopCss', 'Top CSS Shape') }}</span>
                             </label>
                             <select id="award_top_css" 
-                                    name="top_css" 
-                                    x-model="top_css" 
+                                    name="top_layer_modifier" 
+                                    x-model="top_layer_modifier" 
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent p-2"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_awards_TopCssSelect', 'Select a predefined top CSS shape')) }}'">
                                 <option value="">{{ lexicon('msg_awards_SelectShape', '-- Select Shape Modifier --') }}</option>
@@ -311,7 +311,7 @@
                                     <input type="text" 
                                            name="name" 
                                            class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent p-2 text-sm" 
-                                           value="{{ $category->name }}" 
+                                           value="{{ $category->catalogue_title ?? $category->name }}" 
                                            x-tooltip="'{{ addslashes(lexicon('tooltip_awards_EditSubgroupInput', 'Edit category title')) }}'"
                                            aria-label="{{ lexicon('tooltip_awards_EditSubgroupInput', 'Edit category title') }}"
                                            required>
@@ -322,7 +322,7 @@
                             </td>
                             <td class="p-3 text-right">
                                 <x-button variant="text" class="text-danger hover-danger text-sm" 
-                                    x-data="deleteAction('/admin/awards/categories/{{ $category->id }}', 'DELETE', '{{ addslashes($category->name) }}')" 
+                                    x-data="deleteAction('/admin/awards/categories/{{ $category->id }}', 'DELETE', '{{ addslashes($category->catalogue_title ?? $category->name) }}')" 
                                     @click="confirmDelete()"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_common_DeleteSubgroup', 'Delete this subgroup')) }}'"
                                     aria-label="{{ lexicon('tooltip_common_DeleteSubgroup', 'Delete this subgroup') }}">

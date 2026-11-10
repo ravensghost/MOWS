@@ -5,34 +5,34 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use App\Models\ServiceRecord;
-use App\Models\Award;
+use App\Models\ChronologicalRegister;
+use App\Models\Distinction;
 use App\Models\User;
-use App\Models\Character;
-use App\Models\Page;
-use App\Models\Ranks;
+use App\Models\Persona;
+use App\Models\Book;
+use App\Models\Insignia;
 use App\Models\Position;
 
 class ChronologicalRegisterController extends Controller
 {
     public function index()
     {
-        // Eager load layout.blocks and widgets to keep queries under Q < 10
-        $systemPage = Page::with(['layout.blocks', 'widgets'])
+        // Eager load grid.gridModules and module to keep queries under Q < 10
+        $systemPage = Book::with(['grid.gridModules', 'module'])
             ->where('slug', 'admin/service-records')
             ->where('is_published', true)
             ->firstOrFail();
 
-        $awards = Award::with('category')->orderBy('name')->get();
+        $awards = Distinction::with('catalogue')->orderBy('distinction_title')->get();
         $users = User::orderBy('name')->get();
-        $characters = Character::with(['user', 'rank', 'position.section'])->orderBy('name')->get();
+        $characters = Persona::with(['user', 'rank', 'position'])->orderBy('persona_name')->get();
 
-        $ranks = Ranks::orderBy('sort_order', 'desc')->get();
+        $ranks = Insignia::orderBy('sort_order', 'desc')->get();
         $positions = Position::with('section')->orderBy('name')->get();
-        $eventTypeGroups = ServiceRecord::eventTypeGroups();
+        $eventTypeGroups = ChronologicalRegister::eventTypeGroups();
 
-        $recentRecords = ServiceRecord::select('service_records.*')
-            ->with(['award', 'user', 'character.user', 'issuer'])
+        $recentRecords = ChronologicalRegister::select('chronological_registers.*')
+            ->with(['distinction', 'user', 'persona.user', 'authorisingUser'])
             ->orderBy('created_at', 'desc')
             ->limit(25)
             ->get();
@@ -51,114 +51,137 @@ class ChronologicalRegisterController extends Controller
 
     public function issueAward(Request $request)
     {
-        $request->validate([
-            'award_id'     => 'required|exists:awards,id',
-            'reason'       => 'required|string',
-            'user_id'      => 'nullable|exists:users,id',
-            'character_id' => 'nullable|exists:characters,id',
+        $request->merge([
+            'distinction_id' => $request->distinction_id ?? $request->award_id,
+            'persona_id'     => $request->persona_id ?? $request->character_id,
+            'chronicle_text' => $request->chronicle_text ?? $request->reason ?? $request->description,
         ]);
 
-        if (!$request->user_id && !$request->character_id) {
-            return response()->json(['message' => 'You must select a user or character to receive this award.'], 422);
+        $request->validate([
+            'distinction_id' => 'required|exists:distinctions,id',
+            'chronicle_text' => 'required|string',
+            'user_id'        => 'nullable|exists:users,id',
+            'persona_id'     => 'nullable|exists:personae,id',
+        ]);
+
+        if (!$request->user_id && !$request->persona_id) {
+            return response()->json(['message' => 'You must select a user or persona to receive this distinction.'], 422);
         }
 
         if ($request->user_id && $request->user_id == auth()->id()) {
-            return response()->json(['message' => 'You cannot issue an award to your own user account.'], 422);
+            return response()->json(['message' => 'You cannot issue a distinction to your own user account.'], 422);
         }
 
         $targetUserId = $request->user_id;
 
-        if ($request->character_id) {
-            $character = Character::findOrFail($request->character_id);
-            if ($character->user_id == auth()->id()) {
-                return response()->json(['message' => 'You cannot issue an award to your own character.'], 422);
+        if ($request->persona_id) {
+            $persona = Persona::findOrFail($request->persona_id);
+            if ($persona->user_id == auth()->id()) {
+                return response()->json(['message' => 'You cannot issue a distinction to your own persona.'], 422);
             }
-            $targetUserId = $character->user_id;
+            $targetUserId = $persona->user_id;
         }
 
-        $award = Award::findOrFail($request->award_id);
+        $distinction = Distinction::findOrFail($request->distinction_id);
 
-        if ($award->master_group === 'IC' && $request->user_id && !$request->character_id) {
-            return response()->json(['message' => 'This is an In-Character award and cannot be given directly to a User.'], 422);
+        if ($distinction->scope_target === 'IC' && $request->user_id && !$request->persona_id) {
+            return response()->json(['message' => 'This is an In-Character distinction and cannot be given directly to a User.'], 422);
         }
-        if ($award->master_group === 'OOC' && $request->character_id) {
-            return response()->json(['message' => 'This is an Out-Of-Character award and cannot be given to a Character.'], 422);
+        if ($distinction->scope_target === 'OOC' && $request->persona_id) {
+            return response()->json(['message' => 'This is an Out-Of-Character distinction and cannot be given to a Persona.'], 422);
         }
 
-        ServiceRecord::create([
-            'user_id'        => $targetUserId,
-            'character_id'   => $request->character_id,
-            'award_id'       => $award->id,
-            'event_type'     => 'award',
-            'description'    => $request->reason,
-            'issued_by'      => auth()->id(),
-            'display_target' => $award->master_group,
+        ChronologicalRegister::create([
+            'user_id'             => $targetUserId,
+            'persona_id'          => $request->persona_id,
+            'distinction_id'      => $distinction->id,
+            'register_event_mode' => 'award',
+            'chronicle_text'      => $request->chronicle_text,
+            'authorising_user_id' => auth()->id(),
+            'scope_target'        => $distinction->scope_target,
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Award issued and added to service record!']);
+        return response()->json(['success' => true, 'message' => 'Distinction issued and added to chronological register!']);
     }
 
-    public function removeAward(Request $request, ServiceRecord $serviceRecord)
+    public function removeAward(Request $request, ChronologicalRegister $serviceRecord)
     {
+        $request->merge([
+            'chronicle_text' => $request->chronicle_text ?? $request->reason ?? $request->description,
+        ]);
+
         $request->validate([
-            'reason' => 'required|string',
+            'chronicle_text' => 'required|string',
         ]);
 
-        ServiceRecord::create([
-            'user_id'        => $serviceRecord->user_id,
-            'character_id'   => $serviceRecord->character_id,
-            'award_id'       => $serviceRecord->award_id,
-            'event_type'     => $serviceRecord->event_type,
-            'description'    => 'REVOKED: ' . $request->reason,
-            'issued_by'      => auth()->id(),
-            'display_target' => $serviceRecord->display_target ?? 'BOTH',
+        ChronologicalRegister::create([
+            'user_id'             => $serviceRecord->user_id,
+            'persona_id'          => $serviceRecord->persona_id,
+            'distinction_id'      => $serviceRecord->distinction_id,
+            'register_event_mode' => $serviceRecord->register_event_mode,
+            'chronicle_text'      => 'REVOKED: ' . $request->chronicle_text,
+            'authorising_user_id' => auth()->id(),
+            'scope_target'        => $serviceRecord->scope_target ?? 'BOTH',
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Action revoked and logged in service record.']);
+        return response()->json(['success' => true, 'message' => 'Action revoked and logged in chronological register.']);
     }
 
-    public function updateRecord(Request $request, ServiceRecord $serviceRecord)
+    public function updateRecord(Request $request, ChronologicalRegister $serviceRecord)
     {
+        $request->merge([
+            'chronicle_text'      => $request->chronicle_text ?? $request->description,
+            'scope_target'        => $request->scope_target ?? $request->display_target,
+            'register_event_mode' => $request->register_event_mode ?? $request->event_type,
+        ]);
+
         $validated = $request->validate([
-            'description'    => 'required|string',
-            'display_target' => 'required|in:IC,OOC,BOTH',
-            'event_type'     => ['nullable', 'string', Rule::in(ServiceRecord::allEventTypes())],
+            'chronicle_text'      => 'required|string',
+            'scope_target'        => 'required|in:IC,OOC,BOTH',
+            'register_event_mode' => ['nullable', 'string', Rule::in(ChronologicalRegister::allEventTypes())],
         ]);
 
         $updateData = [
-            'description'    => $validated['description'],
-            'display_target' => $validated['display_target'],
+            'chronicle_text' => $validated['chronicle_text'],
+            'scope_target'   => $validated['scope_target'],
         ];
 
-        if (!empty($validated['event_type']) && !$serviceRecord->award_id) {
-            $updateData['event_type'] = $validated['event_type'];
+        if (!empty($validated['register_event_mode']) && !$serviceRecord->distinction_id) {
+            $updateData['register_event_mode'] = $validated['register_event_mode'];
         }
 
         $serviceRecord->update($updateData);
 
-        return response()->json(['success' => true, 'message' => 'Service record updated successfully.']);
+        return response()->json(['success' => true, 'message' => 'Chronological register updated successfully.']);
     }
 
     public function issueManualEntry(Request $request)
     {
+        $request->merge([
+            'persona_id'          => $request->persona_id ?? $request->character_id,
+            'register_event_mode' => $request->register_event_mode ?? $request->event_type,
+            'scope_target'        => $request->scope_target ?? $request->display_target,
+            'chronicle_text'      => $request->chronicle_text ?? $request->description,
+        ]);
+
         $validated = $request->validate([
-            'character_id'   => 'required|exists:characters,id',
-            'event_type'     => ['nullable', 'string', Rule::in(ServiceRecord::allEventTypes())],
-            'display_target' => 'nullable|in:IC,OOC,BOTH',
-            'description'    => 'required|string',
+            'persona_id'          => 'required|exists:personae,id',
+            'register_event_mode' => ['nullable', 'string', Rule::in(ChronologicalRegister::allEventTypes())],
+            'scope_target'        => 'nullable|in:IC,OOC,BOTH',
+            'chronicle_text'      => 'required|string',
         ]);
 
-        $character = Character::findOrFail($validated['character_id']);
+        $persona = Persona::findOrFail($validated['persona_id']);
 
-        ServiceRecord::create([
-            'user_id'        => $character->user_id,
-            'character_id'   => $character->id,
-            'event_type'     => $validated['event_type'] ?? 'manual_entry',
-            'description'    => $validated['description'],
-            'issued_by'      => auth()->id(),
-            'display_target' => $validated['display_target'] ?? 'BOTH',
+        ChronologicalRegister::create([
+            'user_id'             => $persona->user_id,
+            'persona_id'          => $persona->id,
+            'register_event_mode' => $validated['register_event_mode'] ?? 'manual_entry',
+            'chronicle_text'      => $validated['chronicle_text'],
+            'authorising_user_id' => auth()->id(),
+            'scope_target'        => $validated['scope_target'] ?? 'BOTH',
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Service record entry added.']);
+        return response()->json(['success' => true, 'message' => 'Chronological register entry added.']);
     }
 }

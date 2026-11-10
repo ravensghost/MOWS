@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use App\Models\NavigationLink;
-use App\Models\NavigationOption;
-use App\Models\Page;
+use App\Models\TableOfContent;
+use App\Models\TableOfContentParameter;
+use App\Models\Book;
 use Spatie\Permission\Models\Permission;
 
 class TableOfContentsController extends Controller
@@ -16,31 +16,34 @@ class TableOfContentsController extends Controller
     {
         abort_unless(auth()->user()->can('manage_navigation'), 403, lexicon('msg_Navigation_Unauthorised', 'Unauthorised access to Navigation Management.'));
 
-        $systemPage = Page::where('slug', 'admin/navigation')
+        $systemPage = Book::where('', 'admin/navigation')
             ->where('is_published', true)
-            ->with(['layout.blocks', 'widgets' => function ($query) {
-                $query->orderBy('page_widget.sort_order');
-            }])
+            ->with([
+                'grid.gridModules',
+                'module' => function ($query) {
+                    $query->orderBy('module_sort_order');
+                }
+            ])
             ->firstOrFail();
 
-        $links = NavigationLink::whereNull('parent_id')
+        $links = TableOfContent::whereNull('parent_entry_id')
             ->with('children')
-            ->orderBy('location')
+            ->orderBy('display_location')
             ->orderBy('group_order')
-            ->orderBy('group_name')
-            ->orderBy('order')
+            ->orderBy('group_title')
+            ->orderBy('entry_sort_order')
             ->get();
 
-        $parentOptions = NavigationLink::whereNull('parent_id')
-            ->where('location', 'primary')
-            ->orderBy('lexicon_key')
+        $parentOptions = TableOfContent::whereNull('parent_entry_id')
+            ->where('display_location', 'primary')
+            ->orderBy('translation_code_key')
             ->get();
 
-        $allOptions = NavigationOption::orderBy('option_type')
-            ->orderBy('sort_order')
+        $allOptions = TableOfContentParameter::orderBy('parameter_mode')
+            ->orderBy('parameter_sort_order')
             ->get();
 
-        $grouped = $allOptions->groupBy('option_type');
+        $grouped = $allOptions->groupBy('parameter_mode');
 
         $permissions = Permission::orderBy('name')->get();
 
@@ -56,46 +59,12 @@ class TableOfContentsController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function update(Request $request, TableOfContent $link)
     {
         abort_unless(auth()->user()->can('manage_navigation'), 403, lexicon('msg_Navigation_Unauthorised', 'Unauthorised access to Navigation Management.'));
 
         $validated = $request->validate([
-            'parent_id'           => 'nullable|exists:navigation_links,id',
-            'lexicon_key'         => 'required|string',
-            'url'                 => 'required|string',
-            'location'            => 'required|string|exists:navigation_options,value',
-            'visibility'          => 'required|string|exists:navigation_options,value',
-            'required_permission' => 'nullable|string|exists:permissions,name',
-            'target'              => 'required|in:_self,_blank',
-            'order'               => 'required|integer',
-            'group_name'          => 'nullable|string|max:255',
-            'group_order'         => 'nullable|integer',
-            'is_visible'          => 'nullable|boolean',
-        ]);
-
-        $validated['is_visible'] = $request->boolean('is_visible', false);
-        NavigationLink::create($validated);
-
-        if (!empty($validated['group_name']) && isset($validated['group_order'])) {
-            NavigationLink::where('group_name', $validated['group_name'])
-                ->update(['group_order' => $validated['group_order']]);
-        }
-
-        Cache::forget('navigation_links_all_array');
-
-        return response()->json([
-            'success' => true,
-            'message' => lexicon('msg_Navigation_Saved', 'Navigation item saved successfully.')
-        ]);
-    }
-
-    public function update(Request $request, NavigationLink $link)
-    {
-        abort_unless(auth()->user()->can('manage_navigation'), 403, lexicon('msg_Navigation_Unauthorised', 'Unauthorised access to Navigation Management.'));
-
-        $validated = $request->validate([
-            'parent_id'           => 'nullable|exists:navigation_links,id',
+            'parent_entry_id'     => 'nullable|exists:table_of_contents,id',
             'lexicon_key'         => 'required|string',
             'url'                 => 'required|string',
             'location'            => 'required|string|exists:navigation_options,value',
@@ -112,7 +81,7 @@ class TableOfContentsController extends Controller
         $link->update($validated);
 
         if (!empty($validated['group_name']) && isset($validated['group_order'])) {
-            NavigationLink::where('group_name', $validated['group_name'])
+            TableOfContent::where('group_name', $validated['group_name'])
                 ->update(['group_order' => $validated['group_order']]);
         }
 
@@ -124,7 +93,7 @@ class TableOfContentsController extends Controller
         ]);
     }
 
-    public function destroy(NavigationLink $link)
+    public function destroy(TableOfContent $link)
     {
         abort_unless(auth()->user()->can('manage_navigation'), 403, lexicon('msg_Navigation_Unauthorised', 'Unauthorised access to Navigation Management.'));
 
@@ -141,7 +110,7 @@ class TableOfContentsController extends Controller
     {
         abort_unless(auth()->user()->can('manage_navigation'), 403, lexicon('msg_Navigation_Unauthorised', 'Unauthorised access to Navigation Management.'));
 
-        $systemPage = Page::where('slug', 'admin/navigation/options')
+        $systemPage = Book::where('slug', 'admin/navigation/options')
             ->where('is_published', true)
             ->with(['layout.blocks', 'widgets' => function ($query) {
                 $query->orderBy('page_widget.sort_order');

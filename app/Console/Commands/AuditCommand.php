@@ -18,6 +18,7 @@ class AuditCommand extends Command
                             {table? : The specific target or legacy table name to inspect (e.g. configurations, candidate_petitions, personae)} 
                             {--bundle : Export a compact AI refactor bundle (audit_bundle.txt) for the specified table}
                             {--all-details : Show detailed column diffs for every table in the overview}';
+
     /**
      * The console command description.
      *
@@ -44,7 +45,6 @@ class AuditCommand extends Command
                     'persona_id' => 'character_id',
                     'proposed_persona_name' => 'character_name',
                     'petition_status' => 'status',
-                    'character_limit_enforced' => 'character_limit_enforced',
                     'lodged_at' => 'submitted_at',
                     'created_at' => 'created_at',
                     'updated_at' => 'updated_at',
@@ -68,8 +68,7 @@ class AuditCommand extends Command
                     'resources/views/widgets/character_personality.blade.php',
                 ],
                 'notes' => [
-                    'Ensure character_limit_enforced is present on candidate_petitions.',
-                    'Ensure candidate_petitions uses approval_review_mode from configurations.',
+                    'Ensure candidate_petitions logic reads character_limit_enforced and approval_review_mode tokens from configurations.',
                     'Verify DB facade import in CandidatePetitionController::reject() for hard_purge transactions.',
                 ],
             ],
@@ -129,11 +128,11 @@ class AuditCommand extends Command
                 'legacy_model' => 'App\Models\Award',
                 'columns' => [
                     'id' => 'id',
-                    'distinction_catalogue_id' => 'award_category_id',
-                    'distinction_title' => 'name',
+                    'distinction_catalogue_id' => ['award_category_id', 'distinctions_catalogue_id'],
+                    'distinction_title' => ['name', 'distinctions_title'],
                     'scope_target' => 'master_group',
                     'distinction_description' => 'description',
-                    'distinction_base_colour' => 'base_color',
+                    'distinction_base_colour' => ['base_color', 'distinction_base_color'],
                     'mid_layer_mode' => 'mid_type',
                     'mid_layer_asset' => 'mid_image',
                     'mid_layer_modifier' => 'mid_css',
@@ -321,7 +320,6 @@ class AuditCommand extends Command
                 'target_model' => null,
                 'legacy_model' => null,
                 'columns' => [
-                    'id' => 'id',
                     'folio_id' => 'chapter_id',
                     'persona_id' => 'character_id',
                 ],
@@ -447,7 +445,7 @@ class AuditCommand extends Command
                     'tier_level' => 'short_rating',
                     'tier_label' => 'long_rating',
                     'category_sort_order' => 'sort_rating_group',
-                    'insignia_sort_order' => 'sort_rating',
+                    'tier_sort_order' => 'sort_rating',
                 ],
                 'relationships' => [],
                 'controllers' => [
@@ -469,7 +467,7 @@ class AuditCommand extends Command
                     'id' => 'id',
                     'metadata_title' => 'name',
                     'metadata_mode' => ['type', 'metadata_type'],
-                    'metadata_namespace' => 'form_type',
+                    'meta_mode' => 'form_type',
                     'linked_metadata' => 'form_linked',
                     'metadata_payloads' => 'options',
                     'is_required' => 'is_required',
@@ -498,7 +496,7 @@ class AuditCommand extends Command
                 ],
             ],
 
-            'books_grids' => [
+            'grids' => [
                 'legacy_table' => 'layouts',
                 'target_model' => 'App\Models\Grid',
                 'legacy_model' => 'App\Models\Layout',
@@ -525,7 +523,7 @@ class AuditCommand extends Command
                 ],
             ],
 
-            'book_grid_modules' => [
+            'grid_modules' => [
                 'legacy_table' => 'layout_blocks',
                 'target_model' => 'App\Models\GridModule',
                 'legacy_model' => 'App\Models\LayoutBlock',
@@ -558,7 +556,7 @@ class AuditCommand extends Command
                 'legacy_model' => 'App\Models\Thread',
                 'columns' => [
                     'id' => 'id',
-                    'thread_classification' => 'type',
+                    'thread_mode' => 'type',
                     'thread_title' => 'title',
                     'created_at' => 'created_at',
                     'updated_at' => 'updated_at',
@@ -635,7 +633,7 @@ class AuditCommand extends Command
                     'id' => 'id',
                     'parent_entry_id' => 'parent_id',
                     'translation_code_key' => 'lexicon_key',
-                    'destination_uri' => 'url',
+                    'destination_url' => 'url',
                     'group_title' => 'group_name',
                     'group_sort_order' => 'group_order',
                     'display_location' => 'location',
@@ -697,8 +695,8 @@ class AuditCommand extends Command
                 'columns' => [
                     'id' => 'id',
                     'user_id' => 'author_id',
-                    'bulletin_title' => ['title', 'bulletins_title'],
-                    'bulletin_text' => ['content', 'bulletins_text'],
+                    'bulletin_title' => ['title', 'bulletin_title'],
+                    'bulletin_text' => ['content', 'bulletin_text'],
                     'published_at' => 'published_at',
                     'created_at' => 'created_at',
                     'updated_at' => 'updated_at',
@@ -720,14 +718,13 @@ class AuditCommand extends Command
 
             'books' => [
                 'legacy_table' => 'pages',
-                'target_model' => 'App\Models\Books',
+                'target_model' => 'App\Models\Book',
                 'legacy_model' => 'App\Models\Page',
                 'columns' => [
                     'id' => 'id',
                     'grid_id' => 'layout_id',
-                    'book_uri' => 'slug',
+                    'book_url' => 'slug',
                     'book_title' => 'title',
-                    'book_text' => 'content',
                     'is_published' => 'is_published',
                     'created_at' => 'created_at',
                     'updated_at' => 'updated_at',
@@ -752,7 +749,7 @@ class AuditCommand extends Command
 
             'modules' => [
                 'legacy_table' => 'widgets',
-                'target_model' => 'App\Models\Modules',
+                'target_model' => 'App\Models\Module',
                 'legacy_model' => 'App\Models\Widget',
                 'columns' => [
                     'id' => 'id',
@@ -1100,6 +1097,7 @@ class AuditCommand extends Command
                     'date_prefix' => 'prefix',
                     'date_suffix' => 'suffix',
                     'base_earth_year' => 'base_earth_year',
+                    'base_earth_modifier' => 'base_earth_modifier',
                     'base_system_value' => 'base_system_value',
                     'temporal_multiplier' => 'multiplier',
                     'is_active' => 'is_active',
@@ -1232,6 +1230,63 @@ class AuditCommand extends Command
     }
 
     /**
+     * Determine whether a colliding file (like Book.php or BookController.php)
+     * belongs to 'volumes' (legacy story books) or 'books' (CMS pages).
+     */
+    protected function isLegacyFileStillForTable(string $targetTable, string $relPath): bool
+    {
+        $fullPath = base_path($relPath);
+        if (! File::exists($fullPath)) {
+            return false;
+        }
+
+        // Only 'volumes' and 'books' share colliding class names (Book.php / BookController.php)
+        if (! in_array(basename($relPath), ['Book.php', 'BookController.php'], true)) {
+            return true;
+        }
+
+        $content = File::get($fullPath);
+
+        // Signatures that prove the file is for CMS 'books' (formerly 'pages')
+        $isCmsBooksFile = preg_match('/\b(grid_id|layout_id|book_url|is_published|book_modules|page_widget|Grid::|Layout::)\b/', $content) === 1;
+
+        // Signatures that prove the file is for story 'volumes' (formerly 'books')
+        $isStoryVolumesFile = preg_match('/\b(shelf_id|bookcase_id|publication_state_id|volume_synopsis|ic_day|Shelf::|Bookcase::)\b/', $content) === 1;
+
+        if ($targetTable === 'volumes') {
+            // When auditing 'volumes', only include Book.php / BookController.php if it still has story volume code
+            return $isStoryVolumesFile && ! $isCmsBooksFile;
+        }
+
+        if ($targetTable === 'books') {
+            // When auditing 'books', only include Book.php / BookController.php if it has CMS page/book code (or isn't purely story volumes)
+            return $isCmsBooksFile || ! $isStoryVolumesFile;
+        }
+
+        return true;
+    }
+
+    /**
+     * Strip standard AJAX response envelopes and unrelated model queries from file content
+     * before running column-drift regex checks for a specific table.
+     */
+    protected function sanitiseContentForColumnScan(string $targetTable, string $content): string
+    {
+        // 1. Strip standard redirect flash messages: ->with('status', ...)
+        $clean = preg_replace('/->with\(\s*[\'"]status[\'"]\s*,/', '->with(\'__flash_ok__\',', $content);
+
+        // 2. When auditing tables other than 'personae', ignore Persona:: / $persona-> queries
+        //    so 'candidate_petitions' isn't penalised for Persona's columns (e.g. 'status' or 'name').
+        if ($targetTable !== 'personae') {
+            $clean = preg_replace('/\bPersona::(?:where|create|update)[a-zA-Z0-9_]*\s*\((?:[^()]+|\((?:[^()]+|\([^()]*\))*\))*\)/s', '', $clean);
+            $clean = preg_replace('/\$persona->(?:where|create|update)[a-zA-Z0-9_]*\s*\((?:[^()]+|\((?:[^()]+|\([^()]*\))*\))*\)/s', '', $clean);
+            $clean = preg_replace('/->whereIn\(\s*[\'"]status[\'"]\s*,\s*\[\s*[\'"]active[\'"]/', '->whereIn(\'__persona_state__\', [\'active\'', $clean);
+        }
+
+        return $clean ?? $content;
+    }
+
+    /**
      * Resolve either a target table name or legacy table name to its blueprint key.
      */
     protected function resolveTableKey(string $input, array $blueprint): ?string
@@ -1260,7 +1315,10 @@ class AuditCommand extends Command
         $this->info(' MOWS ENGINE - PHASE 7 THREE-WAY DRIFT AUDITOR (DB <-> OUTLINE <-> LARAVEL)');
         $this->info('================================================================================');
 
-        $liveTables = collect(Schema::getTables())->pluck('name')->map(fn($t) => strtolower($t))->toArray();
+        $liveTables = collect(Schema::getTables(Schema::getCurrentSchemaName()))
+            ->pluck('name')
+            ->map(fn($t) => strtolower($t))
+            ->toArray();
         $rows = [];
 
         foreach ($blueprint as $targetTable => $spec) {
@@ -1268,6 +1326,7 @@ class AuditCommand extends Command
 
             $dbStatus = match ($audit['table_state']) {
                 'TARGET_EXISTS' => '<fg=green>TARGET (' . $audit['active_table'] . ')</>',
+                'INTERMEDIATE_EXISTS' => '<fg=cyan>INTERM (' . $audit['active_table'] . ')</>',
                 'LEGACY_EXISTS' => '<fg=yellow>LEGACY (' . $audit['active_table'] . ')</>',
                 'MISSING' => '<fg=red>MISSING IN DB</>',
             };
@@ -1290,8 +1349,20 @@ class AuditCommand extends Command
                 default => '<fg=red>Missing</>',
             };
 
+            $isTableAligned = ($audit['table_state'] === 'TARGET_EXISTS');
+            $isColumnsAligned = ($colIssues === 0);
+            $isModelAligned = in_array($audit['model_state'], ['TARGET_FOUND', 'PIVOT'], true);
+            $isCodeAligned = ($audit['legacy_code_hits'] === 0);
+
+            if ($isTableAligned && $isColumnsAligned && $isModelAligned && $isCodeAligned) {
+                $statusDisplay = '<fg=green;options=bold>[PASSED]</>';
+            } else {
+                $statusDisplay = '<fg=yellow>[PENDING]</>';
+            }
+
             $rows[] = [
                 $targetTable,
+                $statusDisplay,
                 $dbStatus,
                 $colStatus,
                 $modelStatus,
@@ -1300,11 +1371,10 @@ class AuditCommand extends Command
         }
 
         $this->table(
-            ['Target Table', 'DB Table State', 'Columns (Miss / Old / Extra)', 'Model State', 'Legacy Code Hits'],
+            ['Target Table', 'Status', 'DB Table State', 'Columns (Miss / Old / Extra)', 'Model State', 'Legacy Code Hits'],
             $rows
         );
 
-        // Check for completely unknown tables in the database (excluding standard Laravel/Spatie tables)
         $standardFrameworkTables = [
             'migrations',
             'password_reset_tokens',
@@ -1319,6 +1389,7 @@ class AuditCommand extends Command
             'model_has_permissions',
             'model_has_roles',
             'role_has_permissions',
+            'agent_conversations',
             'agent_prompt_cache',
             'agent_conversation_messages',
         ];
@@ -1326,7 +1397,7 @@ class AuditCommand extends Command
         $knownBlueprintTables = array_merge(
             array_keys($blueprint),
             array_column($blueprint, 'legacy_table'),
-            ['grids', 'grid_modules'],
+            ['books_grids', 'book_grid_modules'],
             $standardFrameworkTables
         );
 
@@ -1358,7 +1429,10 @@ class AuditCommand extends Command
      */
     protected function analyseTable(string $targetTable, array $spec, ?array $liveTables = null): array
     {
-        $liveTables = $liveTables ?? collect(Schema::getTables())->pluck('name')->map(fn($t) => strtolower($t))->toArray();
+        $liveTables = $liveTables ?? collect(Schema::getTables(Schema::getCurrentSchemaName()))
+            ->pluck('name')
+            ->map(fn($t) => strtolower($t))
+            ->toArray();
         $legacyTable = strtolower($spec['legacy_table'] ?? '');
 
         $activeTable = null;
@@ -1367,12 +1441,12 @@ class AuditCommand extends Command
         if (in_array(strtolower($targetTable), $liveTables, true)) {
             $activeTable = $targetTable;
             $tableState = 'TARGET_EXISTS';
-        } elseif ($targetTable === 'books_grids' && in_array('grids', $liveTables, true)) {
-            $activeTable = 'grids';
-            $tableState = 'TARGET_EXISTS';
-        } elseif ($targetTable === 'book_grid_modules' && in_array('grid_modules', $liveTables, true)) {
-            $activeTable = 'grid_modules';
-            $tableState = 'TARGET_EXISTS';
+        } elseif ($targetTable === 'grids' && in_array('books_grids', $liveTables, true)) {
+            $activeTable = 'books_grids';
+            $tableState = 'INTERMEDIATE_EXISTS';
+        } elseif ($targetTable === 'grid_modules' && in_array('book_grid_modules', $liveTables, true)) {
+            $activeTable = 'book_grid_modules';
+            $tableState = 'INTERMEDIATE_EXISTS';
         } elseif ($legacyTable && in_array($legacyTable, $liveTables, true)) {
             $activeTable = $legacyTable;
             $tableState = 'LEGACY_EXISTS';
@@ -1416,7 +1490,6 @@ class AuditCommand extends Command
             }
         }
 
-        // Flag any column in live DB that is neither in target columns nor legacy/intermediate columns
         $extraHallucinatedCols = [];
         foreach ($liveColumns as $liveCol) {
             $lcLower = strtolower($liveCol);
@@ -1425,14 +1498,23 @@ class AuditCommand extends Command
             }
         }
 
-        // Check Model existence
+        // Cross-platform relative paths for Models (avoids Windows DIRECTORY_SEPARATOR bugs)
         $modelState = 'PIVOT';
-        $targetModelPath = $spec['target_model'] ? base_path(str_replace(['App\\', '\\'], ['app/', '/'], $spec['target_model']) . '.php') : null;
-        $legacyModelPath = $spec['legacy_model'] ? base_path(str_replace(['App\\', '\\'], ['app/', '/'], $spec['legacy_model']) . '.php') : null;
+        $targetModelRelPath = $spec['target_model'] ? str_replace(['App\\', '\\'], ['app/', '/'], $spec['target_model']) . '.php' : null;
+        $legacyModelRelPath = $spec['legacy_model'] ? str_replace(['App\\', '\\'], ['app/', '/'], $spec['legacy_model']) . '.php' : null;
 
         if ($spec['target_model']) {
-            $hasTarget = $targetModelPath && File::exists($targetModelPath);
-            $hasLegacy = $legacyModelPath && File::exists($legacyModelPath) && ($targetModelPath !== $legacyModelPath);
+            $hasTarget = $targetModelRelPath && File::exists(base_path($targetModelRelPath));
+            $hasLegacy = $legacyModelRelPath
+                && File::exists(base_path($legacyModelRelPath))
+                && ($targetModelRelPath !== $legacyModelRelPath)
+                && $this->isLegacyFileStillForTable($targetTable, $legacyModelRelPath);
+
+            // If legacy model was repurposed for another table (e.g. Book.php now belongs to 'books' instead of 'volumes'),
+            // do not scan it as part of this table's legacy model.
+            if (! $hasLegacy) {
+                $legacyModelRelPath = null;
+            }
 
             if ($hasTarget && $hasLegacy) {
                 $modelState = 'BOTH_FOUND';
@@ -1445,16 +1527,40 @@ class AuditCommand extends Command
             }
         }
 
-        // Scan linked files for legacy column/table references
-        $fileFindings = [];
-        $legacyCodeHits = 0;
+        // Filter out controllers that have been repurposed for another table (e.g. BookController for 'books' vs 'volumes')
+        $controllersToScan = array_filter(
+            $spec['controllers'] ?? [],
+            fn($ctrlPath) => $this->isLegacyFileStillForTable($targetTable, $ctrlPath)
+        );
 
         $filesToScan = array_unique(array_filter(array_merge(
-            [$targetModelPath ? str_replace(base_path() . DIRECTORY_SEPARATOR, '', $targetModelPath) : null],
-            [$legacyModelPath ? str_replace(base_path() . DIRECTORY_SEPARATOR, '', $legacyModelPath) : null],
-            $spec['controllers'] ?? [],
+            [$targetModelRelPath, $legacyModelRelPath],
+            $controllersToScan,
             $spec['views'] ?? []
         )));
+
+        // Check Eloquent Relationship methods on active Model class
+        $missingRelationships = [];
+        $activeModelClass = null;
+        if ($spec['target_model'] && class_exists($spec['target_model'])) {
+            $activeModelClass = $spec['target_model'];
+        } elseif ($spec['legacy_model'] && class_exists($spec['legacy_model'])) {
+            $activeModelClass = $spec['legacy_model'];
+        }
+
+        if ($activeModelClass && ! empty($spec['relationships'])) {
+            foreach ($spec['relationships'] as $relMethod) {
+                if (! method_exists($activeModelClass, $relMethod)) {
+                    $missingRelationships[] = $relMethod;
+                }
+            }
+        }
+
+        // Generic words that frequently appear in HTML attributes, JSON envelopes, or unrelated code
+        $ambiguousWords = ['name', 'type', 'title', 'value', 'key', 'status', 'order', 'url', 'target', 'location', 'content', 'description'];
+
+        $fileFindings = [];
+        $legacyCodeHits = 0;
 
         foreach ($filesToScan as $relPath) {
             $fullPath = base_path($relPath);
@@ -1462,7 +1568,8 @@ class AuditCommand extends Command
                 continue;
             }
 
-            $content = File::get($fullPath);
+            $rawContent = File::get($fullPath);
+            $content = $this->sanitiseContentForColumnScan($targetTable, $rawContent);
             $issuesInFile = [];
 
             if ($spec['legacy_table'] && $spec['legacy_table'] !== $targetTable) {
@@ -1481,7 +1588,17 @@ class AuditCommand extends Command
                     if ($targetCol === $legacyCol) {
                         continue;
                     }
-                    $pattern = '/(->' . preg_quote($legacyCol, '/') . '\b|[\'"]' . preg_quote($legacyCol, '/') . '[\'"])/';
+
+                    $quotedCol = preg_quote($legacyCol, '/');
+
+                    // For generic words (like 'type', 'name', or 'status'), only match property access (->status),
+                    // array index (['status']), or array key assignment ('status' =>) while ignoring JSON status envelopes ('status' => 'success'|'error').
+                    if (in_array(strtolower($legacyCol), $ambiguousWords, true)) {
+                        $pattern = '/(->' . $quotedCol . '\b|\[\s*[\'"]' . $quotedCol . '[\'"]\s*\]|[\'"]' . $quotedCol . '[\'"]\s*=>(?!\s*[\'"](?:success|error|warning|info)[\'"]))/i';
+                    } else {
+                        $pattern = '/(->' . $quotedCol . '\b|[\'"]' . $quotedCol . '[\'"])/';
+                    }
+
                     if (preg_match($pattern, $content)) {
                         $issuesInFile[] = "References legacy/intermediate column '{$legacyCol}' (Target: '{$targetCol}')";
                     }
@@ -1503,8 +1620,10 @@ class AuditCommand extends Command
             'unmigrated_legacy_cols' => $unmigratedLegacyCols,
             'extra_hallucinated_cols' => $extraHallucinatedCols,
             'model_state' => $modelState,
-            'target_model_path' => $targetModelPath,
-            'legacy_model_path' => $legacyModelPath,
+            'target_model_rel_path' => $targetModelRelPath,
+            'legacy_model_rel_path' => $legacyModelRelPath,
+            'controllers_to_scan' => $controllersToScan,
+            'missing_relationships' => $missingRelationships,
             'file_findings' => $fileFindings,
             'legacy_code_hits' => $legacyCodeHits,
         ];
@@ -1524,46 +1643,49 @@ class AuditCommand extends Command
 
         $this->line("<options=bold>1. LIVE MYSQL SCHEMA STATUS:</>");
         if ($audit['table_state'] === 'MISSING') {
-            $this->error("   [FAIL] Neither '{$targetTable}' nor '{$spec['legacy_table']}' exists in the database!");
+            $this->error("    [FAIL] Neither '{$targetTable}' nor '{$spec['legacy_table']}' exists in the database!");
         } else {
-            $this->line("   Active Table Found: <fg=cyan>{$audit['active_table']}</> ({$audit['table_state']})");
-            $this->line("   Verified Target Columns (" . count($audit['verified_target_cols']) . "): <fg=green>" . implode(', ', $audit['verified_target_cols']) . "</>");
+            $this->line("    Active Table Found: <fg=cyan>{$audit['active_table']}</> ({$audit['table_state']})");
+            $this->line("    Verified Target Columns (" . count($audit['verified_target_cols']) . "): <fg=green>" . implode(', ', $audit['verified_target_cols']) . "</>");
 
             if (! empty($audit['unmigrated_legacy_cols'])) {
-                $this->warn("   [UNMIGRATED LEGACY / INTERMEDIATE COLUMNS IN DB]:");
+                $this->warn("    [UNMIGRATED LEGACY / INTERMEDIATE COLUMNS IN DB]:");
                 foreach ($audit['unmigrated_legacy_cols'] as $oldCol => $newCol) {
-                    $this->line("     - <fg=yellow>{$oldCol}</> -> needs renaming to <fg=green>{$newCol}</>");
+                    $this->line("      - <fg=yellow>{$oldCol}</> -> needs renaming to <fg=green>{$newCol}</>");
                 }
             }
 
             if (! empty($audit['missing_target_cols'])) {
-                $this->error("   [MISSING TARGET COLUMNS IN DB (Dropped or Not Created Yet)]:");
+                $this->error("    [MISSING TARGET COLUMNS IN DB (Dropped or Not Created Yet)]:");
                 foreach ($audit['missing_target_cols'] as $newCol => $oldCol) {
-                    $this->line("     - <fg=red>{$newCol}</> (formerly '{$oldCol}') is completely missing from MySQL!");
+                    $this->line("      - <fg=red>{$newCol}</> (formerly '{$oldCol}') is completely missing from MySQL!");
                 }
             }
 
             if (! empty($audit['extra_hallucinated_cols'])) {
-                $this->warn("   [EXTRA / HALLUCINATED COLUMNS IN DB (Not in MOWS Blueprint)]:");
+                $this->warn("    [EXTRA / HALLUCINATED COLUMNS IN DB (Not in MOWS Blueprint)]:");
                 foreach ($audit['extra_hallucinated_cols'] as $extraCol) {
-                    $this->line("     - <fg=magenta>{$extraCol}</> (Exists in MySQL, but not in Blueprint)");
+                    $this->line("      - <fg=magenta>{$extraCol}</> (Exists in MySQL, but not in Blueprint)");
                 }
             }
         }
 
         $this->newLine();
         $this->line("<options=bold>2. ELOQUENT MODEL STATUS:</>");
-        $this->line("   Target Model: " . ($spec['target_model'] ?? 'None (Pivot)') . " -> State: <fg=cyan>{$audit['model_state']}</>");
+        $this->line("    Target Model: " . ($spec['target_model'] ?? 'None (Pivot)') . " -> State: <fg=cyan>{$audit['model_state']}</>");
+        if (! empty($audit['missing_relationships'])) {
+            $this->warn("    Missing Relationship Methods on Model: <fg=yellow>" . implode(', ', $audit['missing_relationships']) . "</>");
+        }
 
         $this->newLine();
         $this->line("<options=bold>3. LINKED CODEBASE DRIFT (MODELS, CONTROLLERS & BLADE VIEWS):</>");
         if (empty($audit['file_findings'])) {
-            $this->info("   [PASS] No legacy column or table references detected in linked files.");
+            $this->info("    [PASS] No legacy column or table references detected in linked files.");
         } else {
             foreach ($audit['file_findings'] as $file => $issues) {
-                $this->warn("   File: {$file}");
+                $this->warn("    File: {$file}");
                 foreach ($issues as $issue) {
-                    $this->line("     * {$issue}");
+                    $this->line("      * {$issue}");
                 }
             }
         }
@@ -1572,7 +1694,7 @@ class AuditCommand extends Command
             $this->newLine();
             $this->line("<options=bold>4. ARCHITECTURAL NOTES FOR THIS TABLE:</>");
             foreach ($spec['notes'] as $note) {
-                $this->line("   - <fg=cyan>{$note}</>");
+                $this->line("    - <fg=cyan>{$note}</>");
             }
         }
 
@@ -1603,6 +1725,7 @@ class AuditCommand extends Command
         $bundleLines[] = "Unmigrated Legacy Columns: " . json_encode($audit['unmigrated_legacy_cols']);
         $bundleLines[] = "Missing Target Columns: " . json_encode($audit['missing_target_cols']);
         $bundleLines[] = "Extra/Hallucinated DB Columns: " . implode(', ', $audit['extra_hallucinated_cols']);
+        $bundleLines[] = "Missing Model Relationships: " . implode(', ', $audit['missing_relationships']);
         $bundleLines[] = "";
 
         if ($audit['active_table']) {
@@ -1633,9 +1756,8 @@ class AuditCommand extends Command
 
         $bundleLines[] = "### 4. RELEVANT SOURCE FILES (EXISTING ON DISK)";
         $candidateFiles = array_unique(array_filter(array_merge(
-            $audit['target_model_path'] ? [str_replace(base_path() . DIRECTORY_SEPARATOR, '', $audit['target_model_path'])] : [],
-            $audit['legacy_model_path'] ? [str_replace(base_path() . DIRECTORY_SEPARATOR, '', $audit['legacy_model_path'])] : [],
-            $spec['controllers'] ?? [],
+            [$audit['target_model_rel_path'], $audit['legacy_model_rel_path']],
+            $audit['controllers_to_scan'] ?? ($spec['controllers'] ?? []),
             $spec['views'] ?? []
         )));
 

@@ -3,14 +3,19 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\View;
 use App\Models\Book;
-use App\Models\News;
-use App\Models\Chapter;
-use App\Models\Character;
-use App\Models\CharacterAttribute;
+use App\Models\Module;
+use App\Models\Grid;
+use App\Models\GridModule;
+use App\Models\Bulletin;
+use App\Models\Folio;
+use App\Models\Persona;
+use App\Models\PersonaMetadata;
 use App\Models\Configuration;
 
 class PortalController extends Controller
@@ -23,44 +28,56 @@ class PortalController extends Controller
             ->where('is_published', true)
             ->with([
                 'grid.gridModules',
-                'widgets' => function ($query) {
+                'module' => function ($query) {
                     $query->wherePivot('is_visible', true)
-                        ->orderBy('grid_module_sort_order');
+                        ->orderBy('module_sort_order');
                 }
             ])
             ->firstOrFail();
 
         $user = auth()->user();
-        $systemPage->setRelation('widgets', $systemPage->widgets->filter(function ($widget) use ($user) {
+        $systemPage->setRelation('module', ($systemPage->module ?? collect())->filter(function ($widget) use ($user) {
             if (!($widget->pivot->is_visible ?? true)) {
                 return false;
             }
-            $required = $widget->pivot->required_permission;
+            $required = $widget->pivot->access_clearance;
             if (empty($required)) {
                 return true;
             }
             return $user ? $user->can($required) : false;
         })->values());
 
+        $lookupUrl = $systemPage->book_url === '/' ? '/' : '/' . ltrim($systemPage->book_url, '/');
+
+        $navKey = Cache::remember('nav_lexicon_' . md5($lookupUrl), 3600, function () use ($lookupUrl) {
+            return DB::table('table_of_contents')
+                ->where('destination_url', $lookupUrl)
+                ->value('translation_code_key');
+        });
+
+        $pageKey = $navKey ?: ('public_label_' . ($systemPage->book_url === '/' ? 'Landing' : Str::studly(basename($systemPage->book_url))));
+
         $data = [
             'page'       => $systemPage,
             'systemPage' => $systemPage,
+            'navKey'     => $navKey,
+            'pageKey'    => $pageKey,
             'newsItems'  => null,
             'storyPosts' => null,
         ];
 
-        $widgetKeys = $systemPage->widgets->pluck('widget_key')->toArray();
+        $widgetKeys = $systemPage->module->pluck('module_token')->toArray();
 
         if (in_array('news', $widgetKeys) || in_array('widget_news', $widgetKeys)) {
-            $data['newsItems'] = News::with('author')
+            $data['newsItems'] = Bulletin::with('author')
                 ->orderBy('published_at', 'desc')
                 ->take(5)
                 ->get();
         }
 
         if (in_array('posts', $widgetKeys) || in_array('widget_posts', $widgetKeys)) {
-            $data['storyPosts'] = Chapter::with('activeCharacter')
-                ->where('status', 'published')
+            $data['storyPosts'] = Folio::with('activePersona')
+                ->where('folio_status', 'published')
                 ->orderBy('created_at', 'desc')
                 ->take(5)
                 ->get();
@@ -69,34 +86,32 @@ class PortalController extends Controller
         return view('page', $data);
     }
 
-    public function showBio(Character $character)
+    public function showBio(Persona $persona)
     {
-        // Fetch the bio page blueprint for the hybrid grid system
-        $systemPage = Page::where('slug', 'bio')
+        $systemPage = Book::where('book_url', 'bio')
             ->where('is_published', true)
             ->with([
-                'layout.blocks',
-                'widgets' => function ($query) {
+                'Grid.gridModules',
+                'gridModules' => function ($query) {
                     $query->wherePivot('is_visible', true)
-                        ->orderBy('page_widget.sort_order');
+                        ->orderBy('grid_module_sort_order');
                 }
             ])
             ->firstOrFail();
 
         $user = auth()->user();
-        $systemPage->setRelation('widgets', $systemPage->widgets->filter(function ($widget) use ($user) {
-            if (!($widget->pivot->is_visible ?? true)) {
+        $systemPage->setRelation('GridModule', $systemPage->GridModule->filter(function ($module) use ($user) {
+            if (!($module->pivot->is_visible ?? true)) {
                 return false;
             }
-            $required = $widget->pivot->required_permission;
+            $required = $module->pivot->access_clearance;
             if (empty($required)) {
                 return true;
             }
             return $user ? $user->can($required) : false;
         })->values());
 
-        // Eager load all nested relationships required by bio widgets to maintain Q < 10
-        $character->load([
+        $persona->load([
             'user',
             'rank' => function ($query) {
                 $query->where('is_visible', true)->with([
@@ -118,13 +133,22 @@ class PortalController extends Controller
             'attributes',
         ]);
 
-        // Share the character globally with all views/widgets for this request
-       View::share('character', $character);
+        View::share('character', $persona);
+
+        $lookupUrl = '/bio';
+        $navKey = Cache::remember('nav_lexicon_' . md5($lookupUrl), 3600, function () use ($lookupUrl) {
+            return DB::table('table_of_contents')
+                ->where('destination_url', $lookupUrl)
+                ->value('translation_code_key');
+        });
+
+        $pageKey = $navKey ?: 'public_label_Bio';
 
         $data = [
             'page'       => $systemPage,
             'systemPage' => $systemPage,
-            'character'  => $character,
+            'pageKey'    => $pageKey,
+            'character'  => $persona,
             'newsItems'  => null,
             'storyPosts' => null,
         ];
@@ -132,15 +156,12 @@ class PortalController extends Controller
         return view('page', $data);
     }
 
-    /**
-     * Verify if the authenticated user is allowed to manage this character's portraits.
-     */
-    protected function authorizeAvatarAction(Character $character): void
+    protected function authorizeAvatarAction(Persona $persona): void
     {
         $user = auth()->user();
 
         $isAuthorized = $user && (
-            (int) $user->id === (int) $character->user_id ||
+            (int) $user->id === (int) $persona->user_id ||
             $user->hasRole('webmaster') ||
             $user->can('manage_roster_assignments') ||
             $user->can('manage_users')
@@ -149,23 +170,20 @@ class PortalController extends Controller
         abort_unless($isAuthorized, 403, lexicon('msg_CharacterAvatar_Unauthorised', 'Unauthorised to modify character portraits.'));
     }
 
-    /**
-     * Build the current portrait payload for reactive Alpine state updates.
-     */
-    protected function getPortraitPayload(Character $character): array
+    protected function getPortraitPayload(Persona $persona): array
     {
-        $character->refresh();
-        $character->load('attributes');
+        $persona->refresh();
+        $persona->load('attributes');
 
-        $primaryUrl = $character->avatar
-            ? (Str::startsWith($character->avatar, ['http://', 'https://', '/']) ? $character->avatar : asset('images/characters/' . $character->avatar))
+        $primaryUrl = $persona->primary_portrait_url
+            ? (Str::startsWith($persona->primary_portrait_url, ['http://', 'https://', '/']) ? $persona->primary_portrait_url : asset('images/characters/' . $persona->primary_portrait_url))
             : null;
 
-        $gallery = $character->attributes
-            ->where('key', 'gallery_image')
+        $gallery = $persona->attributes
+            ->where('attribute_key', 'gallery_image')
             ->values()
             ->map(function ($attr) {
-                $val = $attr->value;
+                $val = $attr->attribute_value;
                 return [
                     'id'       => $attr->id,
                     'filename' => $val,
@@ -175,18 +193,15 @@ class PortalController extends Controller
             ->all();
 
         return [
-            'primary_filename' => $character->avatar,
+            'primary_filename' => $persona->primary_portrait_url,
             'primary_url'      => $primaryUrl,
             'gallery'          => $gallery,
         ];
     }
 
-    /**
-     * Upload a new character portrait via Dropzone to /public/images/characters/.
-     */
-    public function uploadCharacterAvatar(Request $request, Character $character)
+    public function uploadCharacterAvatar(Request $request, Persona $persona)
     {
-        $this->authorizeAvatarAction($character);
+        $this->authorizeAvatarAction($persona);
 
         $request->validate([
             'file' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:5120'],
@@ -199,65 +214,59 @@ class PortalController extends Controller
 
         $file = $request->file('file');
         $extension = strtolower($file->getClientOriginalExtension() ?: 'webp');
-        $filename = 'char_' . $character->id . '_' . time() . '_' . Str::lower(Str::random(5)) . '.' . $extension;
+        $filename = 'char_' . $persona->id . '_' . time() . '_' . Str::lower(Str::random(5)) . '.' . $extension;
 
         $file->move($destinationPath, $filename);
 
-        if (empty($character->avatar)) {
-            $character->update(['avatar' => $filename]);
+        if (empty($persona->primary_portrait_url)) {
+            $persona->update(['primary_portrait_url' => $filename]);
         } else {
-            CharacterAttribute::create([
-                'character_id' => $character->id,
-                'key'          => 'gallery_image',
-                'value'        => $filename,
+            PersonaMetadata::create([
+                'persona_id'    => $persona->id,
+                'attribute_key'   => 'gallery_image',
+                'attribute_value' => $filename,
             ]);
         }
 
         return response()->json([
             'message'   => lexicon('msg_CharacterAvatar_UploadSuccess', 'Character portrait uploaded successfully.'),
-            'portraits' => $this->getPortraitPayload($character),
+            'portraits' => $this->getPortraitPayload($persona),
         ]);
     }
 
-    /**
-     * Promote a gallery image from character_attributes to be the primary characters.avatar.
-     */
-    public function setPrimaryCharacterAvatar(Request $request, Character $character)
+    public function setPrimaryCharacterAvatar(Request $request, Persona $persona)
     {
-        $this->authorizeAvatarAction($character);
+        $this->authorizeAvatarAction($persona);
 
         $validated = $request->validate([
             'attribute_id' => ['required', 'integer'],
         ]);
 
-        $attribute = CharacterAttribute::where('character_id', $character->id)
-            ->where('key', 'gallery_image')
+        $attribute = PersonaMetadata::where('persona_id', $persona->id)
+            ->where('attribute_key', 'gallery_image')
             ->where('id', $validated['attribute_id'])
             ->firstOrFail();
 
-        $oldPrimary = $character->avatar;
-        $newPrimary = $attribute->value;
+        $oldPrimary = $persona->primary_portrait_url;
+        $newPrimary = $attribute->attribute_value;
 
-        $character->update(['avatar' => $newPrimary]);
+        $persona->update(['primary_portrait_url' => $newPrimary]);
 
         if (!empty($oldPrimary)) {
-            $attribute->update(['value' => $oldPrimary]);
+            $attribute->update(['attribute_value' => $oldPrimary]);
         } else {
             $attribute->delete();
         }
 
         return response()->json([
             'message'   => lexicon('msg_CharacterAvatar_PrimaryUpdated', 'Primary character portrait updated.'),
-            'portraits' => $this->getPortraitPayload($character),
+            'portraits' => $this->getPortraitPayload($persona),
         ]);
     }
 
-    /**
-     * Delete either the primary avatar or a secondary gallery image and unlink the file.
-     */
-    public function deleteCharacterAvatar(Request $request, Character $character)
+    public function deleteCharacterAvatar(Request $request, Persona $persona)
     {
-        $this->authorizeAvatarAction($character);
+        $this->authorizeAvatarAction($persona);
 
         $validated = $request->validate([
             'type'         => ['required', 'in:primary,gallery'],
@@ -265,7 +274,7 @@ class PortalController extends Controller
         ]);
 
         if ($validated['type'] === 'primary') {
-            $filename = $character->avatar;
+            $filename = $persona->primary_portrait_url;
 
             if ($filename && !Str::startsWith($filename, ['http://', 'https://'])) {
                 $filePath = public_path('images/characters/' . ltrim($filename, '/'));
@@ -274,25 +283,24 @@ class PortalController extends Controller
                 }
             }
 
-            // Automatically promote the oldest gallery portrait if one exists
-            $nextGalleryAttr = CharacterAttribute::where('character_id', $character->id)
-                ->where('key', 'gallery_image')
+            $nextGalleryAttr = PersonaMetadata::where('persona_id', $persona->id)
+                ->where('attribute_key', 'gallery_image')
                 ->orderBy('id', 'asc')
                 ->first();
 
             if ($nextGalleryAttr) {
-                $character->update(['avatar' => $nextGalleryAttr->value]);
+                $persona->update(['primary_portrait_url' => $nextGalleryAttr->attribute_value]);
                 $nextGalleryAttr->delete();
             } else {
-                $character->update(['avatar' => null]);
+                $persona->update(['primary_portrait_url' => null]);
             }
         } else {
-            $attribute = CharacterAttribute::where('character_id', $character->id)
-                ->where('key', 'gallery_image')
+            $attribute = PersonaMetadata::where('persona_id', $persona->id)
+                ->where('attribute_key', 'gallery_image')
                 ->where('id', $validated['attribute_id'])
                 ->firstOrFail();
 
-            $filename = $attribute->value;
+            $filename = $attribute->attribute_value;
 
             if ($filename && !Str::startsWith($filename, ['http://', 'https://'])) {
                 $filePath = public_path('images/characters/' . ltrim($filename, '/'));
@@ -306,16 +314,12 @@ class PortalController extends Controller
 
         return response()->json([
             'message'   => lexicon('msg_CharacterAvatar_Deleted', 'Character portrait removed.'),
-            'portraits' => $this->getPortraitPayload($character),
+            'portraits' => $this->getPortraitPayload($persona),
         ]);
     }
 
-    /**
-     * Determine if a chapter exceeds mature content thresholds and whether the user has bypassed it.
-     */
-    protected function evaluateContentShield(Chapter $chapter): array
+    protected function evaluateContentShield(Folio $chapter): array
     {
-        // Define severe/mature threshold (e.g., any score >= 3 or specific configurations)
         $isMature = ($chapter->rating_l >= 3 || $chapter->rating_s >= 3 || $chapter->rating_v >= 3);
 
         $user = auth()->user();
@@ -327,7 +331,7 @@ class PortalController extends Controller
         }
 
         return [
-            'is_mature'    => $isMature,
+            'is_mature'     => $isMature,
             'requires_gate' => $isMature && !$userBypassed,
         ];
     }

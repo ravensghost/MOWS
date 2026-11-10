@@ -52,7 +52,6 @@ export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF
             }
             this.rankForm.loading_images = true;
             try {
-                // Leverage standardized window.Fetch helper
                 const { ok, data } = await window.Fetch.get(`/admin/ranks/images?set_name=${encodeURIComponent(this.rankForm.set_name)}`, {
                     loading: false,
                     showError: false
@@ -132,9 +131,8 @@ export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF
             return `/images/ranks/${encodeURIComponent(this.rankForm.set_name)}/${encodeURIComponent(this.rankForm.top_image)}`;
         },
 
-        async refreshDOM_US() {
+        async refreshDOM() {
             this.modal = null;
-            // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
             if (typeof window.updateDOM === 'function') {
                 await window.updateDOM(this.$refs, ['ranksList', 'rankSetSelect', 'assignSectionsList'], null, false);
             }

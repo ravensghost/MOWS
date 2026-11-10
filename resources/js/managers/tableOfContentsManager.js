@@ -38,7 +38,6 @@ export default () => ({
     },
 
     initFuse() {
-        // Leverage the standardized global window.Search helper (powered by Fuse.js)
         if (window.Search) {
             this.searchHelperInstance = window.Search.create('[data-nav-search-item]', ['lexicon_key', 'url', 'group_name', 'location'], {
                 threshold: 0.35
@@ -53,7 +52,6 @@ export default () => ({
     },
 
     async refreshDOM() {
-        // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
         if (typeof window.updateDOM === 'function') {
             await window.updateDOM(this.$refs, ['navTableContent', 'navModalDropdowns'], () => {
                 this.linkModal.open = false;
@@ -83,7 +81,6 @@ export default () => ({
             window.Modal.edit(this.linkModal, data, (id) => `/admin/navigation/${id}`);
         }
 
-        // Handle specific nullable/formatting edge cases cleanly
         this.linkModal.group_name = data.group_name && data.group_name !== 'null' ? data.group_name : '';
         this.linkModal.required_permission = data.required_permission && data.required_permission !== 'null' ? data.required_permission : '';
         this.linkModal.is_visible = data.is_visible !== undefined ? Boolean(data.is_visible) : true;

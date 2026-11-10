@@ -22,14 +22,9 @@ export default () => ({
         this.modals.form.open = false;
         this.modals.field.open = false;
 
-        // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
         if (typeof window.updateDOM === 'function') {
             await window.updateDOM(this.$refs, ['formsTableContent', 'fieldsTableContent'], null, false);
         }
-    },
-
-    async refreshDOM_US() {
-        return this.refreshDOM();
     },
 
     openForm(mode, data = {}) {
@@ -47,7 +42,6 @@ export default () => ({
             window.Modal.edit(this.modals.field, data, (id) => `/admin/forms/fields/${id}`);
         }
 
-        // Domain-specific serviceRecordGroups parsing logic handled cleanly here
         let groups = [];
         if (Array.isArray(data.serviceRecordGroups)) {
             groups = [...data.serviceRecordGroups];

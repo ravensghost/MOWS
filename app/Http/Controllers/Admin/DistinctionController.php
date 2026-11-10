@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Award;
+use App\Models\Distinction;
 use Illuminate\Http\Request;
 use App\Models\Page;
-use App\Models\AwardCategory;
+use App\Models\DistinctionCatalogue;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Cache;
 
@@ -14,7 +14,7 @@ class DistinctionController extends Controller
 {
     public function index()
     {
-        abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorized action.');
+        abort_unless(auth()->user()->can('issue_awards'), 403, 'Authorised action.');
 
         $systemPage = Page::with([
             'layout.blocks',
@@ -26,8 +26,8 @@ class DistinctionController extends Controller
             ->where('is_published', true)
             ->firstOrFail();
 
-        $awards = Award::orderBy('name')->get();
-        $categories = AwardCategory::orderBy('name')->get();
+        $distinctions = Distinction::orderBy('distinction_title')->get();
+        $categories = DistinctionCatalogue::orderBy('catalogue_title')->get();
 
         $activeSkinArray = Cache::get('active_skin_default_array');
         $skinFolder = $activeSkinArray['folder_name'] ?? 'default';
@@ -54,96 +54,96 @@ class DistinctionController extends Controller
             }
         }
 
-        return view('admin.awards', compact('awards', 'systemPage', 'midShapes', 'topShapes', 'categories'));
+        return view('admin.awards', compact('distinctions', 'systemPage', 'midShapes', 'topShapes', 'categories'));
     }
 
     public function store(Request $request)
     {
-        abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorized action.');
+        abort_unless(auth()->user()->can('issue_awards'), 403, 'Authorised action.');
 
         $request->merge([
-            'award_category_id' => $request->award_category_id ?: null,
-            'mid_type' => $request->mid_type ?: null,
-            'mid_image' => $request->mid_image ?: null,
-            'mid_css' => $request->mid_css ?: null,
-            'top_type' => $request->top_type ?: null,
-            'top_image' => $request->top_image ?: null,
-            'top_css' => $request->top_css ?: null,
+            'distinction_catalogue_id' => $request->distinction_catalogue_id ?: null,
+            'mid_layer_mode'           => $request->mid_layer_mode ?: null,
+            'mid_layer_asset'          => $request->mid_layer_asset ?: null,
+            'mid_layer_modifier'       => $request->mid_layer_modifier ?: null,
+            'top_layer_mode'           => $request->top_layer_mode ?: null,
+            'top_layer_asset'          => $request->top_layer_asset ?: null,
+            'top_layer_modifier'       => $request->top_layer_modifier ?: null,
         ]);
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'master_group' => 'required|in:BOTH,IC,OOC',
-            'award_category_id' => 'nullable|exists:award_categories,id',
-            'base_color' => 'required|string|max:50',
-            'mid_type' => 'nullable|string|max:50',
-            'mid_image' => 'nullable|string|max:255',
-            'mid_css' => 'nullable|string|max:255',
-            'top_type' => 'nullable|string|max:50',
-            'top_image' => 'nullable|string|max:255',
-            'top_css' => 'nullable|string|max:255',
+            'distinction_title'        => 'required|string|max:255',
+            'distinction_description'  => 'nullable|string',
+            'scope_target'             => 'required|in:BOTH,IC,OOC',
+            'distinction_catalogue_id' => 'nullable|exists:distinction_catalogues,id',
+            'distinction_base_colour'  => 'required|string|max:50',
+            'mid_layer_mode'           => 'nullable|string|max:50',
+            'mid_layer_asset'          => 'nullable|string|max:255',
+            'mid_layer_modifier'       => 'nullable|string|max:255',
+            'top_layer_mode'           => 'nullable|string|max:50',
+            'top_layer_asset'          => 'nullable|string|max:255',
+            'top_layer_modifier'       => 'nullable|string|max:255',
         ]);
 
-        Award::create($validated);
+        Distinction::create($validated);
 
         return response()->json([
-            'status' => 'success',
-            'message' => lexicon('msg_award_created', 'Award created successfully!')
+            'status'  => 'success',
+            'message' => lexicon('msg_award_created', 'Distinction created successfully!')
         ]);
     }
 
-    public function update(Request $request, Award $award)
+    public function update(Request $request, Distinction $distinction)
     {
-        abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorized action.');
+        abort_unless(auth()->user()->can('issue_awards'), 403, 'Authorised action.');
 
         $request->merge([
-            'award_category_id' => $request->award_category_id ?: null,
-            'mid_type' => $request->mid_type ?: null,
-            'mid_image' => $request->mid_image ?: null,
-            'mid_css' => $request->mid_css ?: null,
-            'top_type' => $request->top_type ?: null,
-            'top_image' => $request->top_image ?: null,
-            'top_css' => $request->top_css ?: null,
+            'distinction_catalogue_id' => $request->distinction_catalogue_id ?: null,
+            'mid_layer_mode'           => $request->mid_layer_mode ?: null,
+            'mid_layer_asset'          => $request->mid_layer_asset ?: null,
+            'mid_layer_modifier'       => $request->mid_layer_modifier ?: null,
+            'top_layer_mode'           => $request->top_layer_mode ?: null,
+            'top_layer_asset'          => $request->top_layer_asset ?: null,
+            'top_layer_modifier'       => $request->top_layer_modifier ?: null,
         ]);
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'master_group' => 'required|in:BOTH,IC,OOC',
-            'award_category_id' => 'nullable|exists:award_categories,id',
-            'base_color' => 'required|string|max:50',
-            'mid_type' => 'nullable|string|max:50',
-            'mid_image' => 'nullable|string|max:255',
-            'mid_css' => 'nullable|string|max:255',
-            'top_type' => 'nullable|string|max:50',
-            'top_image' => 'nullable|string|max:255',
-            'top_css' => 'nullable|string|max:255',
+            'distinction_title'        => 'required|string|max:255',
+            'distinction_description'  => 'nullable|string',
+            'scope_target'             => 'required|in:BOTH,IC,OOC',
+            'distinction_catalogue_id' => 'nullable|exists:distinction_catalogues,id',
+            'distinction_base_colour'  => 'required|string|max:50',
+            'mid_layer_mode'           => 'nullable|string|max:50',
+            'mid_layer_asset'          => 'nullable|string|max:255',
+            'mid_layer_modifier'       => 'nullable|string|max:255',
+            'top_layer_mode'           => 'nullable|string|max:50',
+            'top_layer_asset'          => 'nullable|string|max:255',
+            'top_layer_modifier'       => 'nullable|string|max:255',
         ]);
 
-        $award->update($validated);
+        $distinction->update($validated);
 
         return response()->json([
-            'status' => 'success',
-            'message' => lexicon('msg_award_updated', 'Award updated successfully!')
+            'status'  => 'success',
+            'message' => lexicon('msg_award_updated', 'Distinction updated successfully!')
         ]);
     }
 
-    public function destroy(Award $award)
+    public function destroy(Distinction $distinction)
     {
-        abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorized action.');
+        abort_unless(auth()->user()->can('issue_awards'), 403, 'Authorised action.');
 
-        $award->delete();
+        $distinction->delete();
 
         return response()->json([
-            'status' => 'success',
-            'message' => lexicon('msg_award_deleted', 'Award deleted successfully!')
+            'status'  => 'success',
+            'message' => lexicon('msg_award_deleted', 'Distinction deleted successfully!')
         ]);
     }
 
     public function images(Request $request)
     {
-        abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorized action.');
+        abort_unless(auth()->user()->can('issue_awards'), 403, 'Authorised action.');
 
         $activeSkinArray = Cache::get('active_skin_default_array');
         $activeSkin = $activeSkinArray['folder_name'] ?? 'default';
@@ -163,7 +163,7 @@ class DistinctionController extends Controller
         sort($images);
 
         return response()->json([
-            'images' => $images,
+            'images'      => $images,
             'active_skin' => $activeSkin
         ]);
     }

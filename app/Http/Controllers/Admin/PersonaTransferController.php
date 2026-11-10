@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use App\Models\Character;
+use App\Models\Persona;
 use App\Models\Position;
 use App\Models\ServiceRecord;
 
@@ -14,16 +14,16 @@ class PersonaTransferController extends Controller
     public function __invoke(Request $request)
     {
         $validated = $request->validate([
-            'character_id' => 'required|exists:characters,id',
+            'character_id' => 'required|exists:personae,id',
             'position_id'  => 'required|exists:positions,id',
             'description'  => 'required|string',
         ]);
 
-        $character = Character::findOrFail($validated['character_id']);
+        $persona = Persona::findOrFail($validated['character_id']);
         $newPosition = Position::with('section')->findOrFail($validated['position_id']);
 
-        $character->position_id = $newPosition->id;
-        $character->save();
+        $persona->assignment_id = $newPosition->id;
+        $persona->save();
 
         Cache::forget('widget_roster_sections');
 
@@ -32,8 +32,8 @@ class PersonaTransferController extends Controller
             : $newPosition->name;
 
         ServiceRecord::create([
-            'user_id'        => $character->user_id,
-            'character_id'   => $character->id,
+            'user_id'        => $persona->user_id,
+            'character_id'   => $persona->id,
             'event_type'     => 'transfer',
             'description'    => "Transferred to {$positionLabel}. Orders: " . $validated['description'],
             'issued_by'      => auth()->id(),

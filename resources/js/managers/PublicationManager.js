@@ -2,53 +2,61 @@
 export default () => ({
     searchQuery: '',
     searchHelperInstance: null,
-    matchedBookcaseIds: null,
+    matchedShelfIds: null,
 
-    bookcaseModalOpen: false,
-    bookcaseMode: 'create',
-    bookcaseId: '',
-    bookcaseName: '',
-    bookcaseFormAction: '/admin/bookcases',
-    bookcaseMethod: 'POST',
+    shelfModal: {
+        open: false,
+        mode: 'create',
+        id: '',
+        shelf_title: '',
+        action: '/admin/bookcases',
+        method: 'POST'
+    },
 
-    bookModalOpen: false,
-    bookMode: 'create',
-    bookId: '',
-    bookTitle: '',
-    bookDesc: '',
-    bookStatusId: '',
-    bookDay: '',
-    bookTime: '',
-    bookBookcaseId: '',
-    bookFormAction: '/admin/books',
-    bookMethod: 'POST',
+    volumeModal: {
+        open: false,
+        mode: 'create',
+        id: '',
+        volume_title: '',
+        volume_synopsis: '',
+        publication_state_id: '',
+        ic_day: '',
+        ic_time: '',
+        shelf_id: '',
+        action: '/admin/books',
+        method: 'POST'
+    },
 
-    moveModalOpen: false,
-    moveChapterId: '',
-    moveBookId: '',
-    moveFormAction: '',
+    moveModal: {
+        open: false,
+        folio_id: '',
+        volume_id: '',
+        action: ''
+    },
 
-    statusModalOpen: false,
-    statusMode: 'create',
-    statusId: '',
-    statusName: '',
-    statusFormAction: '/admin/statuses',
-    statusMethod: 'POST',
+    statusModal: {
+        open: false,
+        mode: 'create',
+        id: '',
+        state_title: '',
+        action: '/admin/statuses',
+        method: 'POST'
+    },
 
     init() {
         this.initFuse();
-        this.$watch('searchQuery', () => {
-            this.filterLibrary();
-        });
+        this.$watch('searchQuery', () => this.filterLibrary());
     },
 
     initFuse() {
-        // Leverage the standardized global window.Search helper (powered by Fuse.js)
-        if (this.$refs.storySearchData && window.Search) {
+        if (this.$refs.publicationSearchData && window.Search) {
             try {
-                this.searchHelperInstance = window.Search.create('[data-story-search-item], [data-bookcase-item]', ['name', 'books.title', 'books.description'], {
-                    threshold: 0.35
-                });
+                const items = JSON.parse(this.$refs.publicationSearchData.textContent || '[]');
+                this.searchHelperInstance = window.Search.create(
+                    items,
+                    ['shelf_title', 'volumes.volume_title', 'volumes.volume_synopsis'],
+                    { threshold: 0.35 }
+                );
             } catch (e) {
                 this.searchHelperInstance = null;
             }
@@ -58,112 +66,89 @@ export default () => ({
     filterLibrary() {
         const q = this.searchQuery.trim();
         if (!q || !this.searchHelperInstance) {
-            this.matchedBookcaseIds = null;
+            this.matchedShelfIds = null;
             return;
         }
         const results = this.searchHelperInstance.search(q);
-        this.matchedBookcaseIds = results ? results.map(id => Number(id)) : [];
+        this.matchedShelfIds = results ? results.map(Number) : [];
     },
 
-    matchesBookcase(id, name = '') {
+    matchesShelf(id, title = '') {
         const q = this.searchQuery.trim().toLowerCase();
         if (!q) return true;
-        if (this.matchedBookcaseIds !== null) {
-            return this.matchedBookcaseIds.includes(Number(id));
-        }
-        return String(name).toLowerCase().includes(q);
+        return this.matchedShelfIds !== null
+            ? this.matchedShelfIds.includes(Number(id))
+            : String(title).toLowerCase().includes(q);
     },
 
-    matchesBook(title = '', desc = '') {
+    matchesVolume(title = '', synopsis = '') {
         const q = this.searchQuery.trim().toLowerCase();
         if (!q) return true;
-        return String(title).toLowerCase().includes(q) || String(desc).toLowerCase().includes(q);
+        return String(title).toLowerCase().includes(q) || String(synopsis).toLowerCase().includes(q);
+    },
+
+    openShelfModal(detail = {}) {
+        detail.mode === 'edit'
+            ? window.Modal.edit(this.shelfModal, detail, '/admin/bookcases')
+            : window.Modal.create(this.shelfModal, { shelf_title: '' }, '/admin/bookcases');
     },
 
     openStatusModal(detail = {}) {
-        if (detail.mode === 'edit') {
-            window.Modal.edit(this, { id: detail.id, name: detail.name }, (id) => `/admin/statuses/${id}`);
-            this.statusMode = 'edit';
-            this.statusFormAction = `/admin/statuses/${this.statusId}`;
-            this.statusMethod = 'PUT';
-        } else {
-            window.Modal.create(this, { name: '' }, '/admin/statuses');
-            this.statusMode = 'create';
-            this.statusFormAction = '/admin/statuses';
-            this.statusMethod = 'POST';
-        }
-        this.statusModalOpen = true;
+        detail.mode === 'edit'
+            ? window.Modal.edit(this.statusModal, detail, '/admin/statuses')
+            : window.Modal.create(this.statusModal, { state_title: '' }, '/admin/statuses');
     },
 
-    openBookcaseModal(detail = {}) {
+    openVolumeModal(detail = {}) {
         if (detail.mode === 'edit') {
-            window.Modal.edit(this, { id: detail.id, name: detail.name }, (id) => `/admin/bookcases/${id}`);
-            this.bookcaseMode = 'edit';
-            this.bookcaseFormAction = `/admin/bookcases/${this.bookcaseId}`;
-            this.bookcaseMethod = 'PUT';
+            window.Modal.edit(this.volumeModal, {
+                ...detail,
+                publication_state_id: String(detail.publication_state_id ?? ''),
+                shelf_id: String(detail.shelf_id ?? '')
+            }, '/admin/books');
         } else {
-            window.Modal.create(this, { name: '' }, '/admin/bookcases');
-            this.bookcaseMode = 'create';
-            this.bookcaseFormAction = '/admin/bookcases';
-            this.bookcaseMethod = 'POST';
+            window.Modal.create(this.volumeModal, {
+                volume_title: '',
+                volume_synopsis: '',
+                publication_state_id: '',
+                ic_day: '',
+                ic_time: '',
+                shelf_id: String(detail.shelf_id ?? '')
+            }, '/admin/books');
         }
-        this.bookcaseModalOpen = true;
-    },
-
-    openBookModal(detail = {}) {
-        this.bookMode = detail.mode || 'create';
-        this.bookId = detail.id || '';
-        this.bookTitle = detail.title || '';
-        this.bookDesc = detail.desc || '';
-        this.bookStatusId = detail.bookStatusId !== undefined && detail.bookStatusId !== null ? String(detail.bookStatusId) : '';
-        this.bookDay = detail.day !== undefined && detail.day !== null ? detail.day : '';
-        this.bookTime = detail.time || '';
-        this.bookBookcaseId = detail.bookcaseId !== undefined && detail.bookcaseId !== null ? String(detail.bookcaseId) : '';
-        this.bookFormAction = this.bookMode === 'edit' ? `/admin/books/${this.bookId}` : '/admin/books';
-        this.bookMethod = this.bookMode === 'edit' ? 'PUT' : 'POST';
-        this.bookModalOpen = true;
 
         this.$nextTick(() => {
-            if (this.$refs.bookDescTextarea && window.Autosize) {
-                window.Autosize.update(this.$refs.bookDescTextarea);
+            if (this.$refs.volumeSynopsisTextarea && window.Autosize) {
+                window.Autosize.update(this.$refs.volumeSynopsisTextarea);
             }
         });
     },
 
-    openMoveChapterModal(detail = {}) {
-        this.moveChapterId = detail.chapterId || '';
-        this.moveBookId = detail.bookId !== undefined && detail.bookId !== null ? String(detail.bookId) : '';
-        this.moveFormAction = `/admin/chapters/${this.moveChapterId}/move`;
-        this.moveModalOpen = true;
+    openMoveFolioModal(detail = {}) {
+        this.moveModal.folio_id = detail.id || '';
+        this.moveModal.volume_id = String(detail.volume_id ?? '');
+        this.moveModal.action = `/admin/chapters/${this.moveModal.folio_id}/move`;
+        this.moveModal.open = true;
     },
 
     async refreshDOM(responseData = {}) {
-        // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
-        if (typeof window.updateDOM === 'function') {
-            await window.updateDOM(this.$refs, ['bookcasesWrapper', 'looseBooksWrapper', 'statusesWrapper'], () => {
-                this.bookcaseModalOpen = false;
-                this.bookModalOpen = false;
-                this.moveModalOpen = false;
-                this.statusModalOpen = false;
-                this.initFuse();
-                this.filterLibrary();
-
-                if (responseData && responseData.trigger_review && responseData.data) {
-                    window.dispatchEvent(new CustomEvent('open-book-review', {
-                        detail: {
-                            bookId: responseData.data.id,
-                            bookTitle: responseData.data.title
-                        }
-                    }));
-                }
-            }, false);
-        } else {
-            this.bookcaseModalOpen = false;
-            this.bookModalOpen = false;
-            this.moveModalOpen = false;
-            this.statusModalOpen = false;
+        const refs = ['publicationSearchData', 'shelvesWrapper', 'looseVolumesWrapper', 'statusesWrapper'];
+        await window.updateDOM(this.$refs, refs, () => {
+            window.Modal.close(this.shelfModal);
+            window.Modal.close(this.volumeModal);
+            window.Modal.close(this.moveModal);
+            window.Modal.close(this.statusModal);
             this.initFuse();
             this.filterLibrary();
-        }
+
+            if (responseData?.trigger_review && responseData?.data) {
+                window.dispatchEvent(new CustomEvent('open-book-review', {
+                    detail: {
+                        bookId: responseData.data.id,
+                        bookTitle: responseData.data.volume_title
+                    }
+                }));
+            }
+        }, false);
     }
 });

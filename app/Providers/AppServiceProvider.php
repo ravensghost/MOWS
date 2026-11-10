@@ -7,16 +7,15 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use App\Mail\Transport\PhpMailTransport;
-use App\Models\NavigationLink;
+use App\Models\TableOfContent;
 use App\Models\User;
 use App\Models\Configuration;
-use App\Models\Skin;
-use App\Models\News;
-use App\Models\Chapter;
-use App\Models\Character;
-use App\Models\Thread;
-use App\Models\ThreadParticipant;
+use App\Models\Bulletin;
+use App\Models\Folio;
+use App\Models\Persona;
+use App\Models\Volume;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -47,32 +46,36 @@ class AppServiceProvider extends ServiceProvider
             try {
                 // 1. Settings & Skins (Cached primitive arrays)
                 $globalSettings = Cache::rememberForever('global_settings', function () {
-                    return Configuration::whereNot('configuration_token', 'like', 'theme_%')->pluck('configuration_payload', 'configuration_token')->toArray();
+                    return Configuration::whereNot('configuration_token', 'like', 'theme_%')
+                        ->pluck('configuration_payload', 'configuration_token')
+                        ->toArray();
                 });
 
                 $skinSettings = Cache::rememberForever('skin_settings', function () {
-                    return Configuration::where('configuration_token', 'like', 'theme_%')->pluck('configuration_payload', 'configuration_token')->toArray();
+                    return Configuration::where('configuration_token', 'like', 'theme_%')
+                        ->pluck('configuration_payload', 'configuration_token')
+                        ->toArray();
                 });
 
-                // 2. Active Skin (Safe Array Cache)
+                // 2. Active Skin (Safe Array Cache from thematic_bindings)
                 $activeSkinArray = Cache::rememberForever('active_skin_default_array', function () {
-                    $skin = Skin::where('is_global_default', 1)->first();
-                    return $skin ? $skin->toArray() : null;
+                    $skin = DB::table('thematic_bindings')->where('is_global_default', 1)->first();
+                    return $skin ? (array) $skin : null;
                 });
                 $activeSkin = $activeSkinArray ? (object) $activeSkinArray : null;
 
-                // 3. Navigation Links (Safe Array Cache)
+                // 3. Navigation Links (Safe Array Cache from table_of_contents)
                 $linksArray = Cache::rememberForever('navigation_links_all_array', function () {
-                    return NavigationLink::orderBy('group_order')
-                        ->orderBy('group_name')
-                        ->orderBy('order')
+                    return TableOfContent::orderBy('group_sort_order')
+                        ->orderBy('group_title')
+                        ->orderBy('entry_sort_order')
                         ->where('is_visible', true)
                         ->get()
                         ->toArray();
                 });
                 $allRawLinks = collect(json_decode(json_encode($linksArray)));
 
-                // 4. In-memory session-aware filtering (Spatie permission + visibility fallback)
+                // 4. In-memory session-aware filtering (Spatie permission + access_clearance fallback)
                 $user         = auth()->user();
                 $isAuthed     = auth()->check();
                 $isAdmin      = $isAuthed && $user && $user->can('access-admin');
@@ -83,7 +86,7 @@ class AppServiceProvider extends ServiceProvider
                         return $isAuthed && $user && $user->can($link->required_permission);
                     }
 
-                    $vis = strtolower(trim((string) $link->visibility));
+                    $vis = strtolower(trim((string) ($link->access_clearance ?? $link->visibility ?? 'public')));
 
                     return match ($vis) {
                         'public'      => true,
@@ -96,44 +99,48 @@ class AppServiceProvider extends ServiceProvider
                 });
 
                 $primaryNav = $visibleLinks->filter(function ($link) {
-                    return strtolower(trim((string) $link->location)) === 'primary';
+                    return strtolower(trim((string) ($link->display_location ?? $link->location ?? ''))) === 'primary';
                 });
 
                 $drawerNav = $visibleLinks->filter(function ($link) {
-                    return strtolower(trim((string) $link->location)) === 'drawer';
+                    return strtolower(trim((string) ($link->display_location ?? $link->location ?? ''))) === 'drawer';
                 });
 
-                // 5. Messenger Globals for Authenticated Users
-                $myCharacters = collect();
-                $users = collect();
-                $characters = collect();
-                $threads = collect();
+                // 5. Messenger & Chapter Modal Globals (Isolated so secondary table changes never break Navigation)
+                $myCharacters    = collect();
+                $users           = collect();
+                $characters      = collect();
+                $threads         = collect();
+                $activeBooks     = collect();
+                $allCharacters   = collect();
+                $languageRatings = collect();
+                $sexRatings      = collect();
+                $violenceRatings = collect();
 
-                if ($isAuthed && $user) {
-                    $myCharacters = Character::where('user_id', $user->id)->get();
-                    $users = User::all(['id', 'name']);
-                    $characters = Character::all(['id', 'name']);
+                try {
+                    if ($isAuthed && $user) {
+                        $myCharacters = Persona::where('user_id', $user->id)->get();
+                        $users = User::all(['id', 'name']);
+                        $characters = Persona::select('id', 'persona_name as name', 'persona_name')->get();
+                    }
 
-                    $threadIds = ThreadParticipant::where('user_id', $user->id)->pluck('thread_id');
-                    $threads = Thread::whereIn('id', $threadIds)
-                        ->with(['participants.user', 'participants.character', 'messages.user', 'messages.character'])
-                        ->orderByDesc('updated_at')
+                    $activeBooks = Volume::with('shelf')
+                        ->whereHas('publicationState', function ($q) {
+                            $q->where('book_url', 'active');
+                        })
+                        ->orderBy('volume_sort_order')
                         ->get();
+
+                    $allCharacters = Persona::where('persona_status', 'active')
+                        ->orderBy('persona_name')
+                        ->get();
+
+                    $languageRatings = DB::table('content_tiers')->where('tier_category', 'Language')->orderBy('tier_sort_order')->get();
+                    $sexRatings      = DB::table('content_tiers')->where('tier_category', 'Sex')->orderBy('tier_sort_order')->get();
+                    $violenceRatings = DB::table('content_tiers')->where('tier_category', 'Violence')->orderBy('tier_sort_order')->get();
+                } catch (\Throwable $modalErr) {
+                    logger()->warning('AppServiceProvider Modal Globals Warning: ' . $modalErr->getMessage());
                 }
-
-                // 6. Chapter Modal Globals
-                $activeBooks = \App\Models\Book::with('bookcase')
-                    ->whereHas('status', function ($q) {
-                        $q->where('slug', 'active');
-                    })
-                    ->orderBy('sort_order')
-                    ->get();
-
-                $allCharacters = Character::where('status', 'active')->orderBy('name')->get();
-
-                $languageRatings = \App\Models\ContentRating::where('name', 'Language')->orderBy('sort_rating')->get();
-                $sexRatings = \App\Models\ContentRating::where('name', 'Sex')->orderBy('sort_rating')->get();
-                $violenceRatings = \App\Models\ContentRating::where('name', 'Violence')->orderBy('sort_rating')->get();
 
                 $view->with([
                     'globalSettings'  => $globalSettings,
@@ -172,50 +179,22 @@ class AppServiceProvider extends ServiceProvider
         View::composer('widgets.news', function ($view) {
             $data = $view->getData();
             if (empty($data['newsItems']) || ($data['newsItems'] instanceof \Illuminate\Support\Collection && $data['newsItems']->isEmpty())) {
-                $view->with('newsItems', News::with('author')->orderBy('published_at', 'desc')->take(5)->get());
+                $view->with('newsItems', Bulletin::with('author')->orderBy('published_at', 'desc')->take(5)->get());
             }
         });
 
         View::composer('widgets.posts', function ($view) {
             $data = $view->getData();
             if (empty($data['storyPosts']) || ($data['storyPosts'] instanceof \Illuminate\Support\Collection && $data['storyPosts']->isEmpty())) {
-                $view->with('storyPosts', Chapter::with('activeCharacter')->where('status', 'published')->orderBy('created_at', 'desc')->take(5)->get());
+                $view->with('storyPosts', Folio::with('activePersona')->where('folio_status', 'published')->orderBy('created_at', 'desc')->take(5)->get());
             }
         });
+
         View::composer('widgets.user_drafts', function ($view) {
             $data = $view->getData();
             if (empty($data['draftChapters']) || ($data['draftChapters'] instanceof \Illuminate\Support\Collection && $data['draftChapters']->isEmpty())) {
                 $userId = auth()->id();
-                $view->with('draftChapters', $userId ? Chapter::where('author_user_id', $userId)->where('status', 'draft')->orderBy('updated_at', 'desc')->get() : collect());
-            }
-        });
-        View::composer('widgets.unread_messages', function ($view) {
-            $data = $view->getData();
-            if (empty($data['unreadMessages']) || ($data['unreadMessages'] instanceof \Illuminate\Support\Collection && $data['unreadMessages']->isEmpty())) {
-                $user = auth()->user();
-                if ($user) {
-                    $threadIds = \App\Models\ThreadParticipant::where('user_id', $user->id)->pluck('thread_id');
-
-                    // Retrieve messages in threads where the message wasn't sent by the current user 
-                    // and has not been marked read (using the thread_participants last_read_at timestamp)
-                    $unreadMessages = \App\Models\Message::whereIn('thread_id', $threadIds)
-                        ->where('user_id', '!=', $user->id)
-                        ->where(function ($query) use ($user, $threadIds) {
-                            $query->whereHas('thread.participants', function ($subq) use ($user) {
-                                $subq->where('user_id', $user->id)
-                                    ->where(function ($q) {
-                                        $q->whereColumn('messages.created_at', '>', 'thread_participants.last_read_at')
-                                            ->orWhereNull('thread_participants.last_read_at');
-                                    });
-                            });
-                        })
-                        ->orderBy('created_at', 'desc')
-                        ->get();
-
-                    $view->with('unreadMessages', $unreadMessages);
-                } else {
-                    $view->with('unreadMessages', collect());
-                }
+                $view->with('draftChapters', $userId ? Folio::where('user_id', $userId)->where('folio_status', 'draft')->orderBy('updated_at', 'desc')->get() : collect());
             }
         });
     }

@@ -14,6 +14,7 @@ window.appStorage = {
             return fallback;
         }
     },
+
     set(key, value) {
         try {
             localStorage.setItem(key, JSON.stringify(value));
@@ -21,7 +22,10 @@ window.appStorage = {
             console.error('Storage Write Error:', e);
         }
     },
+
     remove(key) {
         localStorage.removeItem(key);
     }
 };
+
+export default window.appStorage;

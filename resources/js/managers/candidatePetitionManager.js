@@ -46,7 +46,6 @@ export default (config = {}) => ({
     },
 
     async refreshDOM() {
-        // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
         if (typeof window.updateDOM === 'function') {
             await window.updateDOM(this.$refs, ['pendingAppsTableContent', 'activeRosterTableContent'], () => {
                 this.reviewModalOpen = false;

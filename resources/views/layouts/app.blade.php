@@ -24,11 +24,11 @@
 
     @php
         $sectionColors = \Illuminate\Support\Facades\Cache::rememberForever('global_section_colors', function() { 
-            return \App\Models\Section::all(['id', 'color'])->toArray(); 
+            return \App\Models\Division::all(['id', 'division_base_colour'])->toArray(); 
         });
 
         $sectionCss = collect($sectionColors)
-            ->map(fn($sec) => ".section-theme-{$sec['id']} { --section-color: {$sec['color']}; }")
+            ->map(fn($sec) => ".section-theme-{$sec['id']} { --section-color: {$sec['division_base_colour']}; }")
             ->implode("\n        ");
     @endphp
 

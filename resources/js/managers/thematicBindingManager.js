@@ -8,7 +8,6 @@ export default function thematicBindingManager() {
         searchHelperInstance: null,
 
         init() {
-            // Initialise search helper if a catalog or search element exists
             this.initFuse();
         },
 
@@ -27,9 +26,7 @@ export default function thematicBindingManager() {
         matchesVarSearch(label, key, usage) {
             if (!this.varSearchQuery.trim()) return true;
 
-            // Leverage window.Search or fallback to direct Fuse instance check
             if (this.searchHelperInstance) {
-                // If using the global helper instance, or evaluate via local Fuse
                 const fuse = new window.Fuse([{ label, key, usage }], {
                     keys: ['label', 'key', 'usage'],
                     threshold: 0.35
@@ -47,7 +44,6 @@ export default function thematicBindingManager() {
 
         async refreshDOM() {
             this.modals.uploadSkin.open = false;
-            // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
             if (typeof window.updateDOM === 'function') {
                 await window.updateDOM(this.$refs, ['skinsTableWrapper'], () => {
                     this.initFuse();

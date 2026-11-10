@@ -27,7 +27,6 @@ export default (initialInterval = 30000) => ({
     },
 
     async triggerAutoSave() {
-        // Resolve form whether this element is the form itself, a child, or a wrapper parent
         const form = this.$el.tagName === 'FORM'
             ? this.$el
             : (this.$el.closest('form') || this.$el.querySelector('form'));
@@ -37,7 +36,6 @@ export default (initialInterval = 30000) => ({
             return;
         }
 
-        // Try to grab content directly from TipTap editor instance if available
         let htmlContent = '';
         const editorEl = form.querySelector('[x-data*="tiptapEditor"]');
         if (editorEl && window.Alpine) {
@@ -47,7 +45,6 @@ export default (initialInterval = 30000) => ({
             }
         }
 
-        // Fallback to hidden input if needed
         if (!htmlContent) {
             const contentInput = form.querySelector('input[name="content"]');
             htmlContent = contentInput ? contentInput.value : '';
@@ -76,10 +73,9 @@ export default (initialInterval = 30000) => ({
                 this.log(`Target URL: ${url} (New Draft creation)`, 'info');
             }
 
-            // Utilize the standardized global window.Fetch helper
             const { ok, status, data } = await window.Fetch.request(url, 'POST', formData, {
-                loading: false, // Background save; keep loading indicator disabled
-                showError: false // Handled gracefully via local component logs
+                loading: false,
+                showError: false
             });
 
             if (ok) {

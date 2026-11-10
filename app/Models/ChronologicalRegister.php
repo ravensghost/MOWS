@@ -2,14 +2,26 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ServiceRecord extends Model
+class ChronologicalRegister extends Model
 {
-    protected $guarded = [];
+    protected $table = 'chronological_registers';
+
+    protected $fillable = [
+        'user_id',
+        'persona_id',
+        'distinction_id',
+        'register_event_mode',
+        'chronicle_text',
+        'authorising_user_id',
+        'scope_target',
+    ];
 
     /**
-     * Return all 20 service record event types grouped into their 4 logical optgroups.
+     * Return all 20 register event modes grouped into their 4 logical optgroups.
      */
     public static function eventTypeGroups(): array
     {
@@ -58,7 +70,7 @@ class ServiceRecord extends Model
     }
 
     /**
-     * Return a flat array of all 20 valid event_type keys.
+     * Return a flat array of all 20 valid register_event_mode keys.
      */
     public static function allEventTypes(): array
     {
@@ -86,23 +98,99 @@ class ServiceRecord extends Model
         ];
     }
 
-    public function award()
+    public function distinction(): BelongsTo
     {
-        return $this->belongsTo(Award::class);
+        return $this->belongsTo(Distinction::class, 'distinction_id');
     }
 
-    public function user()
+    /**
+     * Legacy alias for distinction.
+     */
+    public function award(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->distinction();
     }
 
-    public function character()
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(Character::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function issuer()
+    public function persona(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'issued_by');
+        return $this->belongsTo(Persona::class, 'persona_id');
+    }
+
+    /**
+     * Legacy alias for persona.
+     */
+    public function character(): BelongsTo
+    {
+        return $this->persona();
+    }
+
+    public function authorisingUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'authorising_user_id');
+    }
+
+    /**
+     * Legacy alias for authorisingUser.
+     */
+    public function issuer(): BelongsTo
+    {
+        return $this->authorisingUser();
+    }
+
+    // -------------------------------------------------------------------------
+    // Legacy Column Accessors for Backwards Compatibility in Views
+    // -------------------------------------------------------------------------
+
+    protected function description(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->chronicle_text,
+            set: fn($value) => ['chronicle_text' => $value],
+        );
+    }
+
+    protected function eventType(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->register_event_mode,
+            set: fn($value) => ['register_event_mode' => $value],
+        );
+    }
+
+    protected function displayTarget(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->scope_target,
+            set: fn($value) => ['scope_target' => $value],
+        );
+    }
+
+    protected function awardId(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->distinction_id,
+            set: fn($value) => ['distinction_id' => $value],
+        );
+    }
+
+    protected function characterId(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->persona_id,
+            set: fn($value) => ['persona_id' => $value],
+        );
+    }
+
+    protected function issuedBy(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->authorising_user_id,
+            set: fn($value) => ['authorising_user_id' => $value],
+        );
     }
 }

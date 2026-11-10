@@ -3,22 +3,45 @@ import tippy from 'tippy.js';
 import 'tippy.js/dist/tippy.css';
 
 /**
- * Custom Alpine Directive: x-tooltip
- * Powers reactive tooltips using Tippy.js.
+ * Global Tippy.js Tooltip Helper Wrapper
  */
-document.addEventListener('alpine:init', () => {
-    window.Alpine.directive('tooltip', (el, { expression }, { evaluate }) => {
-        const content = evaluate(expression) || el.getAttribute('title') || '';
+window.TooltipHelper = {
+    instances: {},
 
-        // Initialise Tippy instance on the element
-        const instance = tippy(el, {
-            content: content,
-            placement: el.dataset.placement || 'top',
+    init(selectorOrEl, options = {}) {
+        const elements = typeof selectorOrEl === 'string'
+            ? document.querySelectorAll(selectorOrEl)
+            : (selectorOrEl instanceof HTMLElement ? [selectorOrEl] : []);
+
+        if (elements.length === 0) return null;
+
+        const defaultOptions = {
+            placement: 'top',
             animation: 'fade',
-            theme: 'dark'
-        });
+            arrow: true,
+            ...options
+        };
 
-        // Cleanup instance on element removal
-        el._tippy = instance;
-    });
-});
+        const tippyInstances = tippy(elements, defaultOptions);
+
+        return Array.isArray(tippyInstances) && tippyInstances.length === 1
+            ? tippyInstances[0]
+            : tippyInstances;
+    },
+
+    destroy(selectorOrEl) {
+        const elements = typeof selectorOrEl === 'string'
+            ? document.querySelectorAll(selectorOrEl)
+            : (selectorOrEl instanceof HTMLElement ? [selectorOrEl] : []);
+
+        elements.forEach(el => {
+            if (el._tippy) {
+                el._tippy.destroy();
+            }
+        });
+    }
+};
+
+window.tippy = tippy;
+
+export default tippy;

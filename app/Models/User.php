@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 
+
 #[Fillable([
     'name',
     'email',
@@ -128,9 +129,14 @@ class User extends Authenticatable
         });
     }
 
+    public function personae(): HasMany
+    {
+        return $this->hasMany(Persona::class, 'user_id');
+    }
+
     public function characters(): HasMany
     {
-        return $this->hasMany(Character::class);
+        return $this->personae();
     }
 
     public function folios(): HasMany
@@ -143,19 +149,29 @@ class User extends Authenticatable
         return $this->folios();
     }
 
+    public function chronologicalRegisters(): HasMany
+    {
+        return $this->hasMany(ChronologicalRegister::class, 'user_id');
+    }
+
     public function oocAwards(): HasMany
     {
-        return $this->hasMany(ServiceRecord::class);
+        return $this->chronologicalRegisters();
+    }
+
+    public function councilEvaluations(): HasMany
+    {
+        return $this->hasMany(CouncilEvaluation::class, 'subject_user_id');
     }
 
     public function applicationVotes(): HasMany
     {
-        return $this->hasMany(ApplicationVote::class, 'target_user_id');
+        return $this->councilEvaluations();
     }
 
     public function attributes(): HasMany
     {
-        return $this->hasMany(UserAttribute::class);
+        return $this->hasMany(UserAttribute::class, 'user_id');
     }
 
     /**
@@ -177,9 +193,9 @@ class User extends Authenticatable
             $relations = $this->getRelations();
         }
 
-        $found = $relations['attributes']->firstWhere('key', $key);
+        $found = $relations['attributes']->firstWhere('attribute_key', $key);
 
-        return $found !== null && $found->value !== null ? $found->value : $default;
+        return $found !== null && $found->attribute_value !== null ? $found->attribute_value : $default;
     }
 
     /**
@@ -203,13 +219,13 @@ class User extends Authenticatable
         }
 
         $record = $this->attributes()->updateOrCreate(
-            ['key' => $key],
-            ['value' => $storedValue]
+            ['attribute_key' => $key],
+            ['attribute_value' => $storedValue]
         );
 
         $relations = $this->getRelations();
         if (isset($relations['attributes'])) {
-            $collection = $relations['attributes']->reject(fn($item) => $item->key === $key);
+            $collection = $relations['attributes']->reject(fn($item) => $item->attribute_key === $key);
             $collection->push($record);
             $this->setRelation('attributes', $collection);
         }
@@ -360,7 +376,7 @@ class User extends Authenticatable
 
     /**
      * Synchronise user LOA status, automatically determine LOA vs ELOA by date (> 30 days),
-     * update living characters, and log entries in service_records.
+     * update living personae, and log entries in chronological_registers.
      */
     public function syncLoaStatus(bool $isOnLoa, ?string $returnDateString = null, ?string $reason = null, ?int $issuedById = null): string
     {
@@ -387,9 +403,9 @@ class User extends Authenticatable
             $statusLabel = 'Leave of Absence (LOA)';
         }
 
-        // Only auto-adjust living characters (exclude honoured_dead and memorial)
-        $livingCharacters = $this->characters()
-            ->whereIn('status', ['active', 'loa', 'eloa'])
+        // Only auto-adjust living personae (exclude honoured_dead and memorial)
+        $livingCharacters = $this->personae()
+            ->whereIn('persona_status', ['active', 'loa', 'eloa'])
             ->get();
 
         $issuer = $issuedById ?? auth()->id() ?? $this->id;
@@ -397,16 +413,16 @@ class User extends Authenticatable
         $reasonNote = $reason ? ' Reason: ' . $reason : '';
 
         foreach ($livingCharacters as $character) {
-            if ($character->status !== $targetCharacterStatus) {
-                $character->update(['status' => $targetCharacterStatus]);
+            if ($character->persona_status !== $targetCharacterStatus) {
+                $character->update(['persona_status' => $targetCharacterStatus]);
 
-                ServiceRecord::create([
-                    'user_id'        => $this->id,
-                    'character_id'   => $character->id,
-                    'event_type'     => 'status_change',
-                    'description'    => "Status automatically updated to {$statusLabel}{$dateNote}.{$reasonNote}",
-                    'issued_by'      => $issuer,
-                    'display_target' => 'BOTH',
+                ChronologicalRegister::create([
+                    'user_id'              => $this->id,
+                    'persona_id'           => $character->id,
+                    'register_event_mode'  => 'status_change',
+                    'chronicle_text'       => "Status automatically updated to {$statusLabel}{$dateNote}.{$reasonNote}",
+                    'authorising_user_id'  => $issuer,
+                    'scope_target'         => 'BOTH',
                 ]);
             }
         }

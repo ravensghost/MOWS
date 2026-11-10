@@ -68,7 +68,7 @@ Alpine.data('tableOfContentsManager', tableOfContentsManager);
 Alpine.data('thematicBindingManager', thematicBindingManager);
 
 // Register Third-Party Component Helpers
-Alpine.data('dropzoneComponent', dropzoneHelper);
+Alpine.data('dropzoneHelper', dropzoneHelper);
 Alpine.data('sortableHelper', sortableHelper);
 Alpine.data('sweetalert2Helper', sweetalert2Helper);
 Alpine.data('tiptapEditor', tiptapHelper);

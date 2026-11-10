@@ -1,20 +1,20 @@
 @props(['field', 'value' => null])
 
 @php
-    $fieldTermName = \Illuminate\Support\Str::studly($field->name);
-    $label = lexicon('label_FormsHub_' . $fieldTermName, $field->name);
+    $fieldTermName = \Illuminate\Support\Str::studly($field->metadata_title);
+    $label = lexicon('label_FormsHub_' . $fieldTermName, $field->metadata_title);
     $name = "field_{$field->id}";
 @endphp
 
 <div class="flex flex-col gap-xs w-full">
-    @if($field->type === 'text')
+    @if($field->metadata_mode === 'text')
         <x-form-input 
             :name="$name"
             :label="$label"
             :required="$field->is_required"
         />
         
-    @elseif($field->type === 'textarea')
+    @elseif($field->metadata_mode === 'textarea')
         <label for="{{ $name }}" class="text-xs font-bold text-input-muted">
             {{ $label }} @if($field->is_required)<span class="text-required">*</span>@endif
         </label>
@@ -25,30 +25,30 @@
                   x-init="window.autosize && window.autosize($el)"
                   {{ $field->is_required ? 'required' : '' }}></textarea>
                   
-                  @elseif($field->type === 'richtext')
-                  <label class="text-xs font-bold text-input-muted">
-                      {{ $label }} @if($field->is_required)<span class="text-required">*</span>@endif
-                  </label>
-                  <div class="bg-panel border-panel rounded-panel flex flex-col overflow-hidden"
-                       x-data="tiptapEditor(@js($value ?? ''))"
-                       @tiptap-update="$refs.hiddenInput.value = $event.detail">
-                      <x-tiptap-toolbar />
-                      <div x-ref="editorContainer" class="tiptap-content p-3 flex-grow"></div>
-                      <input type="hidden"
-                             x-ref="hiddenInput"
-                             name="{{ $name }}"
-                             value="{{ $value ?? '' }}"
-                             {{ $field->is_required ? 'required' : '' }}>
-                  </div>
+    @elseif($field->metadata_mode === 'richtext')
+        <label class="text-xs font-bold text-input-muted">
+            {{ $label }} @if($field->is_required)<span class="text-required">*</span>@endif
+        </label>
+        <div class="bg-panel border-panel rounded-panel flex flex-col overflow-hidden"
+             x-data="tiptapEditor(@js($value ?? ''))"
+             @tiptap-update="$refs.hiddenInput.value = $event.detail">
+            <x-tiptap-toolbar />
+            <div x-ref="editorContainer" class="tiptap-content p-3 flex-grow"></div>
+            <input type="hidden"
+                   x-ref="hiddenInput"
+                   name="{{ $name }}"
+                   value="{{ $value ?? '' }}"
+                   {{ $field->is_required ? 'required' : '' }}>
+        </div>
         
-    @elseif($field->type === 'dropdown')
+    @elseif($field->metadata_mode === 'dropdown')
         <label for="{{ $name }}" class="text-xs font-bold text-input-muted">
             {{ $label }} @if($field->is_required)<span class="text-required">*</span>@endif
         </label>
         @php
-            $rawOptions = is_array($field->options) ? $field->options : json_decode($field->options ?? '[]', true);
+            $rawOptions = is_array($field->metadata_payloads) ? $field->metadata_payloads : json_decode($field->metadata_payloads ?? '[]', true);
             if (!is_array($rawOptions)) {
-                $rawOptions = explode(',', trim((string) ($field->options ?? ''), '"'));
+                $rawOptions = explode(',', trim((string) ($field->metadata_payloads ?? ''), '"'));
             }
             if (count($rawOptions) === 1 && str_contains((string) $rawOptions[0], ',')) {
                 $rawOptions = explode(',', (string) $rawOptions[0]);
@@ -67,15 +67,14 @@
             @endforeach
         </select>
         
-        @elseif($field->type === 'service_record')
+    @elseif($field->metadata_mode === 'service_record')
         @php
             $allGroups = \App\Models\ServiceRecord::eventTypeGroups();
 
-            $configuredGroups = is_array($field->options)
-                ? $field->options
-                : (json_decode((string) ($field->options ?? '[]'), true) ?: []);
+            $configuredGroups = is_array($field->metadata_payloads)
+                ? $field->metadata_payloads
+                : (json_decode((string) ($field->metadata_payloads ?? '[]'), true) ?: []);
 
-            // Handle double-encoded JSON strings if present
             if (is_string($configuredGroups)) {
                 $configuredGroups = json_decode($configuredGroups, true) ?: [];
             }

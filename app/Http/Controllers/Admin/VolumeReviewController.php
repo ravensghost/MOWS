@@ -3,23 +3,23 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Book;
+use App\Models\Volume;
 use App\Models\ServiceRecord;
-use App\Models\Character;
+use App\Models\Persona;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class VolumeReviewController extends Controller
 {
-    public function showModal(Book $book)
+    public function showModal(Volume $volume)
     {
-        $chapters = $book->chapters()->with(['charactersPresent.user', 'authorUser'])->get();
+        $folios = $volume->folios()->with(['charactersPresent.user', 'authorUser'])->get();
 
         $recipients = collect();
 
-        foreach ($chapters as $chapter) {
-            foreach ($chapter->charactersPresent as $character) {
+        foreach ($folios as $folio) {
+            foreach ($folio->charactersPresent as $character) {
                 if ($character->user) {
                     $recipients->push([
                         'type' => 'character',
@@ -28,11 +28,11 @@ class VolumeReviewController extends Controller
                     ]);
                 }
             }
-            if ($chapter->authorUser) {
+            if ($folio->authorUser) {
                 $recipients->push([
                     'type' => 'user',
-                    'id' => $chapter->authorUser->id,
-                    'name' => $chapter->authorUser->name . ' (Co-Writer)',
+                    'id' => $folio->authorUser->id,
+                    'name' => $folio->authorUser->name . ' (Co-Writer)',
                 ]);
             }
         }
@@ -42,7 +42,7 @@ class VolumeReviewController extends Controller
         ]);
     }
 
-    public function store(Request $request, Book $book)
+    public function store(Request $request, Volume $volume)
     {
         $request->validate([
             'event_type' => 'required|in:milestone,assignment,commendation,award',
@@ -55,7 +55,7 @@ class VolumeReviewController extends Controller
         DB::transaction(function () use ($request) {
             foreach ($request->recipients as $recipient) {
                 if ($recipient['type'] === 'character') {
-                    $character = Character::find($recipient['id']);
+                    $character = Persona::find($recipient['id']);
                     if ($character) {
                         ServiceRecord::create([
                             'character_id' => $character->id,

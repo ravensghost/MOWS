@@ -7,8 +7,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\Models\Book;
 use App\Models\Grid;
-use App\Models\Widget;
-use App\Models\FormField;
+use App\Models\GridModule;
+use App\Models\Module;
+use App\Models\Metadata;
 use Spatie\Permission\Models\Permission;
 use Stevebauman\Purify\Facades\Purify;
 
@@ -27,10 +28,10 @@ class BookController extends Controller
             ->firstOrFail();
 
         $pages = Book::with(['widgets', 'layout'])->orderBy('books_title')->get();
-        $layouts = Grid::with('blocks')->orderBy('name')->get();
-        $widgets = Widget::orderBy('name')->get();
+        $layouts = GridModule::with('blocks')->orderBy('name')->get();
+        $widgets = Module::orderBy('name')->get();
         $availableWidgets = get_widget_manifest();
-        $forms = FormField::where('form_type', 'form')->orderBy('name')->get();
+        $forms = Metadata::where('meta_mode', 'form')->orderBy('metadata_title')->get();
         $permissions = Permission::orderBy('name')->get();
 
         return view('admin.pages', compact('systemPage', 'pages', 'widgets', 'layouts', 'availableWidgets', 'permissions', 'forms'));
@@ -48,11 +49,11 @@ class BookController extends Controller
             ->where('is_published', true)
             ->firstOrFail();
 
-        $layouts = Layout::with('blocks')->orderBy('name')->get();
-        $widgets = Widget::orderBy('name')->get();
+        $layouts = GridModule::with('blocks')->orderBy('name')->get();
+        $widgets = Module::orderBy('name')->get();
         $availableWidgets = get_widget_manifest();
         $permissions = Permission::orderBy('name')->get();
-        $forms = FormField::where('form_type', 'form')->orderBy('name')->get();
+        $forms = Metadata::where('meta_mode', 'form')->orderBy('metadata_title')->get();
 
         $page = new Book();
 
@@ -72,11 +73,11 @@ class BookController extends Controller
             ->firstOrFail();
 
         $page->load('widgets');
-        $layouts = Layout::with('blocks')->orderBy('name')->get();
-        $widgets = Widget::orderBy('name')->get();
+        $layouts = GridModule::with('blocks')->orderBy('name')->get();
+        $widgets = Module::orderBy('name')->get();
         $availableWidgets = get_widget_manifest();
         $permissions = Permission::orderBy('name')->get();
-        $forms = FormField::where('form_type', 'form')->orderBy('name')->get();
+        $forms = Metadata::where('meta_mode', 'form')->orderBy('metadata_title')->get();
 
         return view('admin.page-builder', compact('systemPage', 'page', 'layouts', 'widgets', 'availableWidgets', 'permissions', 'forms'));
     }

@@ -22,6 +22,7 @@ import './utility/debounce';
 import './utility/storage';
 import './utility/fetchHelper';
 import './utility/modalHelper';
+import './utility/themeColour';
 
 // 3. Alpine Component & Manager Registry (Initialises Alpine)
 import './components/registry';

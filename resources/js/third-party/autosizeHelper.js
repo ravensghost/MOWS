@@ -2,26 +2,39 @@
 import autosize from 'autosize';
 
 /**
- * Global Autosize Helper Utility
- * Automatically adjusts textarea height based on content.
+ * Global Autosize Wrapper for Dynamic Textareas
  */
 window.Autosize = {
-    init(el) {
-        if (el) autosize(el);
+    init(elOrSelector) {
+        if (typeof elOrSelector === 'string') {
+            const elements = document.querySelectorAll(elOrSelector);
+            if (elements.length > 0) {
+                autosize(elements);
+            }
+        } else if (elOrSelector instanceof HTMLElement) {
+            autosize(elOrSelector);
+        } else {
+            autosize(document.querySelectorAll('textarea'));
+        }
     },
-    update(el) {
-        if (el) autosize.update(el);
+
+    update(elOrSelector) {
+        if (typeof elOrSelector === 'string') {
+            const elements = document.querySelectorAll(elOrSelector);
+            elements.forEach(el => autosize.update(el));
+        } else if (elOrSelector instanceof HTMLElement) {
+            autosize.update(elOrSelector);
+        }
     },
-    destroy(el) {
-        if (el) autosize.destroy(el);
+
+    destroy(elOrSelector) {
+        if (typeof elOrSelector === 'string') {
+            const elements = document.querySelectorAll(elOrSelector);
+            elements.forEach(el => autosize.destroy(el));
+        } else if (elOrSelector instanceof HTMLElement) {
+            autosize.destroy(elOrSelector);
+        }
     }
 };
 
-/**
- * Custom Alpine Directive: x-autosize
- */
-document.addEventListener('alpine:init', () => {
-    window.Alpine.directive('autosize', (el) => {
-        autosize(el);
-    });
-});
+export default window.Autosize;

@@ -8,6 +8,7 @@ window.Fetch = {
     csrfToken() {
         return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     },
+
     async request(url, method = 'GET', payload = null, options = {}) {
         const {
             loading = false,
@@ -73,19 +74,26 @@ window.Fetch = {
             throw error;
         }
     },
+
     get(url, options = {}) {
         return this.request(url, 'GET', null, options);
     },
+
     post(url, payload = {}, options = {}) {
         return this.request(url, 'POST', payload, options);
     },
+
     put(url, payload = {}, options = {}) {
         return this.request(url, 'PUT', payload, options);
     },
+
     patch(url, payload = {}, options = {}) {
         return this.request(url, 'PATCH', payload, options);
     },
+
     delete(url, payload = {}, options = {}) {
         return this.request(url, 'DELETE', payload, options);
     }
 };
+
+export default window.Fetch;

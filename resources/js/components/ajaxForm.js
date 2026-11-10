@@ -12,8 +12,6 @@ export default () => ({
         const formData = new FormData(form);
 
         try {
-            // Leverage global window.Fetch helper which handles loading states, 
-            // CSRF headers, method spoofing, and network error alerts automatically.
             const { ok, data } = await window.Fetch.request(form.action, method, formData, {
                 loading: Boolean(loadingTitle),
                 loadingTitle: loadingTitle,
@@ -36,23 +34,15 @@ export default () => ({
                     if (data.redirect) {
                         window.location.href = data.redirect;
                     } else if (form.action.includes('/admin/settings')) {
-                        // Refresh settings page view content dynamically
-                        fetch(window.location.href, {
-                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                        })
-                            .then(res => res.text())
-                            .then(html => {
-                                const doc = new DOMParser().parseFromString(html, 'text/html');
-                                document.documentElement.setAttribute('lang', doc.documentElement.getAttribute('lang') || 'gb');
-                                document.body.innerHTML = doc.body.innerHTML;
-
+                        if (typeof window.refreshDOM === 'function') {
+                            window.refreshDOM('body', () => {
                                 if (window.Alpine) {
                                     window.Alpine.initTree(document.body);
                                 }
-                            })
-                            .catch(() => {
-                                window.location.reload();
-                            });
+                            }, false);
+                        } else {
+                            window.location.reload();
+                        }
                     }
                 });
             } else {
@@ -65,8 +55,7 @@ export default () => ({
                 window.Swal.error('Error', errorMsg);
             }
         } catch (error) {
-            // Network errors are already handled by window.Fetch, 
-            // but we ensure submitting state resets safely here.
+            // Network errors handled by window.Fetch
         } finally {
             this.submitting = false;
         }

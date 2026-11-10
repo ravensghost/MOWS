@@ -24,7 +24,7 @@ class Folio extends Model
 
     public function activePersona(): BelongsTo
     {
-        return $this->belongsTo(Character::class, 'active_persona_id');
+        return $this->belongsTo(Persona::class, 'active_persona_id');
     }
 
     public function turnUser(): BelongsTo
@@ -34,7 +34,7 @@ class Folio extends Model
 
     public function personae(): BelongsToMany
     {
-        return $this->belongsToMany(Character::class, 'folio_personae', 'folio_id', 'persona_id');
+        return $this->belongsToMany(Persona::class, 'folio_personae', 'folio_id', 'persona_id');
     }
 
     public function lockedBy(): BelongsTo

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Book extends Model
 {
+    protected $table = 'books';
     protected $guarded = [];
 
     protected $casts = [
@@ -15,33 +16,32 @@ class Book extends Model
     ];
 
     /**
-     * The grid layout assigned to this page.
+     * The grid layout assigned to this book.
      */
-    public function layout(): BelongsTo
+    public function grid(): BelongsTo
     {
-        return $this->belongsTo(Grid::class);
+        return $this->belongsTo(Grid::class, 'grid_id');
     }
 
     /**
-     * The form fields / widgets assigned to this page's layout blocks.
+     * The modules assigned to this book's layout blocks.
      */
-    public function widgets(): BelongsToMany
+    public function module(): BelongsToMany
     {
-        return $this->belongsToMany(Modules::class, 'page_widget')
-            ->withPivot(['id', 'layout_block_id', 'sort_order', 'instance_options', 'required_permission', 'is_visible'])
+        return $this->belongsToMany(Module::class, 'book_modules', 'book_id', 'module_id')
+            ->withPivot([
+                'id',
+                'grid_module_id',
+                'module_sort_order',
+                'book_config',
+                'access_clearance',
+                'is_visible'
+            ])
             ->withCasts([
-                'instance_options' => 'array',
+                'book_config' => 'array',
                 'is_visible' => 'boolean',
             ])
-            ->orderBy('page_widget.sort_order', 'asc')
+            ->orderByPivot('module_sort_order', 'asc')
             ->withTimestamps();
-    }
-
-    /**
-     * Only the visible widgets assigned to this page's layout blocks for public rendering.
-     */
-    public function visibleWidgets(): BelongsToMany
-    {
-        return $this->widgets()->wherePivot('is_visible', true);
     }
 }

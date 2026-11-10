@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use App\Models\Term;
-use App\Models\Page;
+use App\Models\LexiconCodex;
+use App\Models\Book;
 use App\Models\Configuration;
 
 class LexiconCodexController extends Controller
@@ -15,22 +15,28 @@ class LexiconCodexController extends Controller
     {
         abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
 
-        $systemPage = Page::where('slug', 'admin/lexicon')
+        $systemPage = Book::where('books_uri', 'admin/lexicon')
             ->where('is_published', true)
-            ->with(['layout.blocks', 'widgets' => function ($query) {
-                $query->orderBy('page_widget.sort_order');
-            }])
+            ->with([
+                'grid.gridModules',
+                'module' => function ($query) {
+                    $query->orderBy('module_sort_order');
+                }
+            ])
             ->firstOrFail();
 
         $locales = [];
-        $terms = Term::orderBy('master_group')->orderBy('subgroup')->orderBy('code_key')->get();
+        $terms = LexiconCodex::orderBy('prefix_group_title')
+            ->orderBy('group_title')
+            ->orderBy('semantic_token')
+            ->get();
 
         $activeSkin = Configuration::where('configuration_token', 'active_skin')->value('configuration_payload') ?? 'default';
         $customLabels = Configuration::where('configuration_token', 'like', 'lexicon_label_%')->pluck('configuration_payload', 'configuration_token')->toArray();
 
         foreach ($terms as $term) {
-            if (is_array($term->translations)) {
-                foreach (array_keys($term->translations) as $langCode) {
+            if (is_array($term->translation_payloads)) {
+                foreach (array_keys($term->translation_payloads) as $langCode) {
                     if ($langCode === 'gb') {
                         $locales[$langCode] = 'English';
                     } else {
@@ -45,8 +51,8 @@ class LexiconCodexController extends Controller
             $locales['gb'] = 'English';
         }
 
-        $groupedTerms = $terms->groupBy('master_group')->map(function ($groupTerms) {
-            return $groupTerms->groupBy('subgroup');
+        $groupedTerms = $terms->groupBy('prefix_group_title')->map(function ($groupTerms) {
+            return $groupTerms->groupBy('group_title');
         });
 
         return view('admin.lexicon', compact('groupedTerms', 'locales', 'activeSkin', 'systemPage'));
@@ -61,16 +67,16 @@ class LexiconCodexController extends Controller
         // 1. Bulk Table Update
         if (is_array($data)) {
             foreach ($data as $id => $localeData) {
-                $term = Term::find($id);
+                $term = LexiconCodex::find($id);
 
                 if ($term && is_array($localeData)) {
-                    $translations = $term->translations ?? [];
+                    $translations = $term->translation_payloads ?? [];
                     foreach ($localeData as $locale => $value) {
                         $translations[strtolower($locale)] = $value;
                     }
-                    $term->translations = $translations;
+                    $term->translation_payloads = $translations;
                     if (isset($translations['gb']) && $translations['gb'] !== '') {
-                        $term->display_value = $translations['gb'];
+                        $term->default_lexicon_string = $translations['gb'];
                     }
                     $term->save();
                 }
@@ -78,8 +84,8 @@ class LexiconCodexController extends Controller
             Cache::forget('mows_lexicon');
         }
         // 2. Single Term Create / Edit Modal Support
-        elseif ($request->filled('code_key')) {
-            $codeKey = trim($request->input('code_key'));
+        elseif ($request->filled('code_key') || $request->filled('semantic_token')) {
+            $codeKey = trim($request->input('code_key') ?? $request->input('semantic_token'));
             $incomingTranslations = $request->input('translations', []);
 
             if (str_starts_with($codeKey, 'public_label_')) {
@@ -95,10 +101,10 @@ class LexiconCodexController extends Controller
             }
 
             $term = $request->filled('id')
-                ? Term::find($request->input('id'))
-                : Term::where('code_key', $codeKey)->first();
+                ? LexiconCodex::find($request->input('id'))
+                : LexiconCodex::where('semantic_token', $codeKey)->first();
 
-            $translations = $term ? ($term->translations ?? []) : [];
+            $translations = $term ? ($term->translation_payloads ?? []) : [];
             if (is_array($incomingTranslations)) {
                 foreach ($incomingTranslations as $locale => $val) {
                     $translations[strtolower($locale)] = $val ?? '';
@@ -107,23 +113,23 @@ class LexiconCodexController extends Controller
 
             $displayValue = (!empty($translations['gb']))
                 ? $translations['gb']
-                : ($term->display_value ?? $codeKey);
+                : ($term->default_lexicon_string ?? $codeKey);
 
             if ($term) {
                 $term->update([
-                    'code_key'      => $codeKey,
-                    'master_group'  => $request->input('master_group') ?: $defaultMaster,
-                    'subgroup'      => $request->input('subgroup') ?: $defaultSub,
-                    'display_value' => $displayValue,
-                    'translations'  => $translations,
+                    'semantic_token'         => $codeKey,
+                    'prefix_group_title'     => $request->input('master_group') ?: $defaultMaster,
+                    'group_title'            => $request->input('subgroup') ?: $defaultSub,
+                    'default_lexicon_string' => $displayValue,
+                    'translation_payloads'   => $translations,
                 ]);
             } else {
-                Term::create([
-                    'code_key'      => $codeKey,
-                    'master_group'  => $request->input('master_group') ?: $defaultMaster,
-                    'subgroup'      => $request->input('subgroup') ?: $defaultSub,
-                    'display_value' => $displayValue,
-                    'translations'  => $translations,
+                LexiconCodex::create([
+                    'semantic_token'         => $codeKey,
+                    'prefix_group_title'     => $request->input('master_group') ?: $defaultMaster,
+                    'group_title'            => $request->input('subgroup') ?: $defaultSub,
+                    'default_lexicon_string' => $displayValue,
+                    'translation_payloads'   => $translations,
                 ]);
             }
 
@@ -144,7 +150,7 @@ class LexiconCodexController extends Controller
     {
         abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
 
-        Term::findOrFail($id)->delete();
+        LexiconCodex::findOrFail($id)->delete();
         Cache::forget('mows_lexicon');
 
         return response()->json(['success' => true]);
@@ -154,7 +160,7 @@ class LexiconCodexController extends Controller
     {
         abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
 
-        Term::where('master_group', $groupName)->delete();
+        LexiconCodex::where('prefix_group_title', $groupName)->delete();
         Cache::forget('mows_lexicon');
 
         return response()->json(['success' => true]);
@@ -164,8 +170,8 @@ class LexiconCodexController extends Controller
     {
         abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
 
-        Term::where('master_group', $master)
-            ->where('subgroup', $subgroup)
+        LexiconCodex::where('prefix_group_title', $master)
+            ->where('group_title', $subgroup)
             ->delete();
         Cache::forget('mows_lexicon');
 

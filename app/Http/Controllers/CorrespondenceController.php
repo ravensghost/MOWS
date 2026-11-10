@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Character;
+use App\Models\Persona;
 use App\Models\Message;
-use App\Models\Page;
+use App\Models\Book;
 use App\Models\Thread;
 use App\Models\ThreadParticipant;
 use App\Models\User;
@@ -27,10 +27,10 @@ class CorrespondenceController extends Controller
             : null;
 
         $users = User::where('id', '!=', $userId)->select('id', 'name')->get();
-        $characters = Character::where('status', 'active')->select('id', 'name', 'user_id')->get();
-        $myCharacters = Character::where('user_id', $userId)->where('status', 'active')->get();
+        $characters = Persona::where('persona_status', 'active')->select('id', 'persona_name as name', 'user_id')->get();
+        $myCharacters = Persona::where('user_id', $userId)->where('persona_status', 'active')->get();
 
-        $systemPage = Page::where('slug', 'messenger')
+        $systemPage = Book::where('slug', 'messenger')
             ->where('is_published', true)
             ->with(['layout.blocks', 'widgets' => function ($q) {
                 $q->orderBy('page_widget.sort_order');
@@ -47,7 +47,7 @@ class CorrespondenceController extends Controller
             'recipients'          => 'required|array|min:1',
             'subject'             => 'nullable|string|max:255',
             'body'                => 'required|string',
-            'sender_character_id' => 'nullable|required_if:type,IC|exists:characters,id',
+            'sender_character_id' => 'nullable|required_if:type,IC|exists:personae,id',
         ]);
 
         $thread = Thread::create([
@@ -63,7 +63,7 @@ class CorrespondenceController extends Controller
         ]);
 
         $characterUserMap = $validated['type'] === 'IC'
-            ? Character::whereIn('id', $validated['recipients'])->pluck('user_id', 'id')
+            ? Persona::whereIn('id', $validated['recipients'])->pluck('user_id', 'id')
             : collect();
 
         $notifiedUserIds = [];
@@ -108,7 +108,7 @@ class CorrespondenceController extends Controller
     {
         $validated = $request->validate([
             'body'                => 'required|string',
-            'sender_character_id' => 'nullable|exists:characters,id',
+            'sender_character_id' => 'nullable|exists:personae,id',
         ]);
 
         Message::create([
@@ -140,9 +140,6 @@ class CorrespondenceController extends Controller
         return back();
     }
 
-    /**
-     * Dispatch Email and Discord notifications to thread recipients when enabled.
-     */
     protected function dispatchExternalAlerts(Thread $thread, array $recipientUserIds, string $body): void
     {
         if (empty($recipientUserIds)) {
@@ -158,7 +155,6 @@ class CorrespondenceController extends Controller
                 continue;
             }
 
-            // 1. Email Alert
             if (!empty($recipient->email)) {
                 NotificationService::sendEmail(
                     $recipient->email,
@@ -173,7 +169,6 @@ class CorrespondenceController extends Controller
                 );
             }
 
-            // 2. Discord @mention Alert
             $discordId = UserAttribute::where('user_id', $recipient->id)
                 ->where('key', 'discord_id')
                 ->value('value');

@@ -56,7 +56,6 @@ export default (initialLayouts = [], availableWidgets = [], widgetRegistry = {})
         this.modals.layout.open = false;
         this.modals.widget.open = false;
 
-        // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
         if (typeof window.updateDOM === 'function') {
             await window.updateDOM(this.$refs, ['pagesTableContent', 'layoutsTableContent', 'widgetsTableContent'], (doc) => {
                 const freshDataEl = doc?.getElementById('pb-fresh-data');
@@ -66,10 +65,6 @@ export default (initialLayouts = [], availableWidgets = [], widgetRegistry = {})
                 }
             }, false);
         }
-    },
-
-    async refreshDOM_US() {
-        return this.refreshDOM();
     },
 
     // --- Page Logic ---

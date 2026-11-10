@@ -52,12 +52,12 @@
 
                         @forelse($forms ?? [] as $form)
                             @php
-                                $attachedFields = $fields->where('form_linked',$form->id);
+                                $attachedFields = $fields->where('linked_metadata', $form->id);
                             @endphp
                             <tr class="border-b-table-row hover-bg-table-row">
-                                <td class="p-4 font-bold text-main">{{ $form->name }}</td>
+                                <td class="p-4 font-bold text-main">{{ $form->metadata_title }}</td>
                                 <td class="p-4 text-sm text-muted">
-                                    @if($attachedFields->count() > 0) {{$attachedFields->pluck('name')->join(', ') }}
+                                    @if($attachedFields->count() > 0) {{ $attachedFields->pluck('metadata_title')->join(', ') }}
                                     @else
                                         <span class="italic opacity-50">{{ lexicon('msg_FormsHub_NoFieldsAssigned', 'No fields assigned') }}</span>
                                     @endif
@@ -74,7 +74,7 @@
                                         <x-button type="button" 
                                                   variant="text" 
                                                   class="text-warning hover-warning" 
-                                                  @click="openForm('edit', { id: {{ $form->id }}, name: '{{ addslashes($form->name) }}', is_visible: {{$form->is_visible ? 'true' : 'false' }} })"
+                                                  @click="openForm('edit', { id: {{ $form->id }}, metadata_title: '{{ addslashes($form->metadata_title) }}', is_visible: {{ $form->is_visible ? 'true' : 'false' }} })"
                                                   aria-label="{{ lexicon('tooltip_FormsHub_EditForm', 'Edit form details') }}"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_FormsHub_EditForm', 'Edit form details')) }}'">
                                             <i class="bi bi-pencil"></i> {{ lexicon('btn_common_Edit', 'Edit') }}
@@ -83,7 +83,7 @@
                                         <x-button type="button" 
                                                   variant="text" 
                                                   class="text-danger hover-danger" 
-                                                  x-data="deleteAction(`/admin/forms/{{ $form->id }}`, 'DELETE', '{{ addslashes($form->name) }}')" 
+                                                  x-data="deleteAction(`/admin/forms/{{ $form->id }}`, 'DELETE', '{{ addslashes($form->metadata_title) }}')" 
                                                   @click="confirmDelete"
                                                   aria-label="{{ lexicon('tooltip_FormsHub_DeleteForm', 'Delete this form') }}"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_FormsHub_DeleteForm', 'Delete this form')) }}'">
@@ -130,7 +130,7 @@
 
                         @forelse($fields ?? [] as $field)
                             @php
-                                $rawOpts =$field->options;
+                                $rawOpts = $field->metadata_payloads;
                                 if (is_string($rawOpts)) {
                                     $decodedOpts = json_decode($rawOpts, true);
                                     if (is_string($decodedOpts)) {
@@ -140,14 +140,15 @@
                                         ? $decodedOpts
                                         : array_filter(array_map('trim', explode(',', trim($rawOpts, '"'))));
                                 }
-                                $optsArray = is_array($rawOpts) ? array_values($rawOpts) : [];$dropdownString = $field->type === 'dropdown' ? implode(', ', $optsArray) : '';
-                                $srGroupsAlpine =$field->type === 'service_record'
+                                $optsArray = is_array($rawOpts) ? array_values($rawOpts) : [];
+                                $dropdownString = $field->metadata_mode === 'dropdown' ? implode(', ', $optsArray) : '';
+                                $srGroupsAlpine = $field->metadata_mode === 'service_record'
                                     ? '[' . implode(',', array_map(fn($g) => "'" . addslashes((string) $g) . "'", $optsArray)) . ']'
                                     : '[]';
                             @endphp
                             <tr class="border-b-table-row hover-bg-table-row">
-                                <td class="p-4 font-bold text-main">{{ $field->name }}</td>
-                                <td class="p-4 text-sm uppercase tracking-wider text-muted">{{ $field->type }}</td>
+                                <td class="p-4 font-bold text-main">{{ $field->metadata_title }}</td>
+                                <td class="p-4 text-sm uppercase tracking-wider text-muted">{{ $field->metadata_mode }}</td>
                                 <td class="p-4 text-sm uppercase tracking-wider text-muted">
                                     @if($field->is_required)
                                         <x-badge variant="success">{{ lexicon('label_common_Yes', 'Yes') }}</x-badge>
@@ -167,7 +168,7 @@
                                         <x-button type="button" 
                                                   variant="text" 
                                                   class="text-warning hover-warning" 
-                                                  @click="openField('edit', { id: {{ $field->id }}, name: '{{ addslashes($field->name) }}', type: '{{ $field->type }}', isRequired: {{$field->is_required ? 'true' : 'false' }}, options: '{{ addslashes($dropdownString) }}', serviceRecordGroups: {{$srGroupsAlpine }}, formLinked: '{{ $field->form_linked }}', is_visible: {{$field->is_visible ? 'true' : 'false' }} })"
+                                                  @click="openField('edit', { id: {{ $field->id }}, metadata_title: '{{ addslashes($field->metadata_title) }}', metadata_mode: '{{ $field->metadata_mode }}', isRequired: {{ $field->is_required ? 'true' : 'false' }}, metadata_payloads: '{{ addslashes($dropdownString) }}', serviceRecordGroups: {{ $srGroupsAlpine }}, linked_metadata: '{{ $field->linked_metadata }}', is_visible: {{ $field->is_visible ? 'true' : 'false' }} })"
                                                   aria-label="{{ lexicon('tooltip_FormsHub_EditField', 'Edit form field configuration') }}"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_FormsHub_EditField', 'Edit form field configuration')) }}'">
                                             <i class="bi bi-pencil"></i> {{ lexicon('btn_common_Edit', 'Edit') }}
@@ -176,7 +177,7 @@
                                         <x-button type="button" 
                                                   variant="text" 
                                                   class="text-danger hover-danger" 
-                                                  x-data="deleteAction(`/admin/forms/fields/{{ $field->id }}`, 'DELETE', '{{ addslashes($field->name) }}')" 
+                                                  x-data="deleteAction(`/admin/forms/fields/{{ $field->id }}`, 'DELETE', '{{ addslashes($field->metadata_title) }}')" 
                                                   @click="confirmDelete"
                                                   aria-label="{{ lexicon('tooltip_FormsHub_DeleteField', 'Delete this form field') }}"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_FormsHub_DeleteField', 'Delete this form field')) }}'">
@@ -207,13 +208,13 @@
                     @csrf
                     <input type="hidden" name="_method" :value="modals.form.method">
                     
-                    <x-form-input name="name"
-                                  id="form_name"
+                    <x-form-input name="metadata_title"
+                                  id="form_metadata_title"
                                   type="text"
                                   :label="lexicon('label_common_FormName', 'Form Name')"
                                   :placeholder="lexicon('label_FormsHub_FormNamePlaceholder', 'e.g. Character Application')"
                                   :tooltip="lexicon('tooltip_FormsHub_FormNameInput', 'Enter display name for the form')"
-                                  xModel="modals.form.name"
+                                  xModel="modals.form.metadata_title"
                                   :required="true" />
 
                     <div class="flex flex-row items-center gap-sm mt-3">
@@ -255,23 +256,23 @@
                     <input type="hidden" name="_method" :value="modals.field.method">
                     
                     <div class="grid grid-cols-1 md-grid-cols-2 gap-md bg-panel-sub border border-panel rounded-panel p-3">
-                        <x-form-input name="name"
-                                      id="field_name"
+                        <x-form-input name="metadata_title"
+                                      id="field_metadata_title"
                                       type="text"
                                       :label="lexicon('label_common_FieldName', 'Field Name')"
                                       :placeholder="lexicon('label_FormsHub_FieldNamePlaceholder', 'e.g. Age')"
                                       :tooltip="lexicon('tooltip_FormsHub_FieldNameInput', 'Enter display label for the field')"
-                                      xModel="modals.field.name"
+                                      xModel="modals.field.metadata_title"
                                       :required="true" />
 
                         <div class="flex flex-col gap-xs">
-                            <label for="field_type" class="text-xs font-bold text-input-muted">
+                            <label for="field_metadata_mode" class="text-xs font-bold text-input-muted">
                                 <span>{{ lexicon('label_common_InputType', 'Input Type') }}</span>
                                 <span class="text-required">*</span>
                             </label>
-                            <select id="field_type" 
-                                    name="type" 
-                                    x-model="modals.field.type" 
+                            <select id="field_metadata_mode" 
+                                    name="metadata_mode" 
+                                    x-model="modals.field.metadata_mode" 
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent p-2"
                                     aria-label="{{ lexicon('tooltip_FormsHub_InputTypeSelect', 'Select input component type') }}"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_FormsHub_InputTypeSelect', 'Select input component type')) }}'">
@@ -285,39 +286,39 @@
                     </div>
 
                     <div class="flex flex-col gap-xs mt-2">
-                        <label for="field_form_linked" class="text-xs font-bold text-input-muted">
+                        <label for="field_linked_metadata" class="text-xs font-bold text-input-muted">
                             <span>{{ lexicon('label_FormsHub_AssignToForm', 'Assign to Form') }}</span>
                             <span class="text-required">*</span>
                         </label>
-                        <select id="field_form_linked" 
-                                name="form_linked" 
-                                x-model="modals.field.formLinked" 
+                        <select id="field_linked_metadata" 
+                                name="linked_metadata" 
+                                x-model="modals.field.linked_metadata" 
                                 class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent p-2" 
                                 required
                                 aria-label="{{ lexicon('tooltip_FormsHub_AssignFormSelect', 'Assign field to a target form') }}"
                                 x-tooltip="'{{ addslashes(lexicon('tooltip_FormsHub_AssignFormSelect', 'Assign field to a target form')) }}'">
                             <option value="" disabled>{{ lexicon('label_common_SelectAForm', 'Select a Form...') }}</option>
                             @foreach($forms ?? [] as $f)
-                                <option value="{{ $f->id }}">{{ $f->name }}</option>
+                                <option value="{{ $f->id }}">{{ $f->metadata_title }}</option>
                             @endforeach
                         </select>
                     </div>
 
                     <!-- Dropdown Options Input -->
-                    <div class="flex flex-col gap-xs mt-2" x-cloak x-show="modals.field.type === 'dropdown'">
-                        <x-form-input name="options"
-                                      id="field_options"
+                    <div class="flex flex-col gap-xs mt-2" x-cloak x-show="modals.field.metadata_mode === 'dropdown'">
+                        <x-form-input name="metadata_payloads"
+                                      id="field_metadata_payloads"
                                       type="text"
                                       :label="lexicon('label_FormsHub_DropdownOptions', 'Dropdown Options')"
                                       :placeholder="lexicon('label_FormsHub_DropdownPlaceholder', 'Option 1, Option 2, Option 3')"
                                       :tooltip="lexicon('tooltip_FormsHub_OptionsInput', 'Comma-separated options for dropdown menus')"
-                                      xModel="modals.field.options"
-                                      x-bind:disabled="modals.field.type !== 'dropdown'" />
+                                      xModel="modals.field.metadata_payloads"
+                                      x-bind:disabled="modals.field.metadata_mode !== 'dropdown'" />
                         <span class="text-xs text-muted" x-show="modals.field.mode === 'create'">{{ lexicon('msg_FormsHub_DropdownHelp', 'Only required if using a Dropdown Menu. Separate items with a comma.') }}</span>
                     </div>
 
                     <!-- Service Record Optgroup Checkboxes -->
-                    <div class="flex flex-col gap-sm mt-2" x-cloak x-show="modals.field.type === 'service_record'">
+                    <div class="flex flex-col gap-sm mt-2" x-cloak x-show="modals.field.metadata_mode === 'service_record'">
                         <label class="text-xs font-bold text-input-muted">
                             {{ lexicon('label_FormsHub_ServiceRecordGroups', 'Allowed Event Optgroups') }}
                         </label>

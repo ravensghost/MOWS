@@ -66,7 +66,6 @@ export default () => ({
             };
         });
 
-        // Utilize the standardized global window.Search helper (powered by Fuse.js)
         if (window.Search) {
             this.searchHelperInstance = window.Search.create('[data-term-row]', ['key', 'master', 'sub', 'translations'], {
                 threshold: 0.3
@@ -88,7 +87,6 @@ export default () => ({
         const matchedIdsArray = this.searchHelperInstance.search(query) || [];
         this.matchedIds = new Set(matchedIdsArray);
 
-        // Map matching items back to master and subgroup sets
         const matchedItems = this.termsList.filter(t => this.matchedIds.has(t.id));
         this.matchedMasters = new Set(matchedItems.map(t => t.master));
         this.matchedSubgroups = new Set(matchedItems.map(t => `${t.master}::${t.sub}`));
@@ -127,7 +125,6 @@ export default () => ({
 
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-        // Leverage Dropzone library directly or via DropzoneHelper wrapper
         this.dropzoneInstance = new Dropzone(this.$refs.lexiconDropzone, {
             url: '/admin/lexicon/import',
             paramName: 'import_file',
@@ -217,7 +214,6 @@ export default () => ({
             await window.Fetch.get(window.location.href);
         }
 
-        // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
         if (typeof window.updateDOM === 'function') {
             await window.updateDOM(this.$refs, ['lexiconTabsHeader', 'lexiconActiveToolbar', 'lexiconTableContent'], () => {
                 this.modals.term.open = false;

@@ -14,7 +14,7 @@
     $title = $rawTitle !== '' ? $rawTitle : lexicon('label_Sidebar_DefaultTitle', 'Account & Status');
 
     $user = $character?->user;
-    $status = strtolower($character?->status ?? 'active');
+    $status = strtolower($character?->persona_status ?? 'active');
     
     $statusBadge = match($status) {
         'active'                    => 'success',
@@ -33,7 +33,6 @@
         default         => strtoupper(str_replace('_', ' ', $status))
     };
 
-    // Pull social handles from the users table schema (twitter_handle / facebook_handle)
     $twitter = $user?->twitter_handle ?? null;
     $facebook = $user?->facebook_handle ?? null;
     $facebookUrl = $facebook && \Illuminate\Support\Str::startsWith($facebook, ['http://', 'https://'])

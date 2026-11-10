@@ -89,10 +89,8 @@ export default () => ({
 
     matchesPermissionSearch(name) {
         if (!this.permissionSearch.trim()) return true;
-        // Leverage standardized window.Search helper or local instance
         const searchHelper = window.Search ? window.Search.create('[data-permission-row]', ['name'], { threshold: 0.35 }) : null;
         if (searchHelper) {
-            // Fallback lightweight check if selector isn't mapped, or evaluate directly:
             const fuse = new window.Fuse([{ name }], { keys: ['name'], threshold: 0.35 });
             return fuse.search(this.permissionSearch.trim()).length > 0;
         }
@@ -118,7 +116,6 @@ export default () => ({
             if (createSelectEl) window.Select.clear(createSelectEl, true);
         }
 
-        // Updated to use refreshDOM with sanitize = false (replacing old _US helper)
         if (typeof window.refreshDOM === 'function') {
             await window.refreshDOM('.table-wrapper', () => {
                 this.syncTomSelectOptions();

@@ -56,14 +56,14 @@ function syncGlobalNavigation(doc) {
 window.syncGlobalNavigation = syncGlobalNavigation;
 
 /**
- * Unified DOM Update Utility
+ * Unified DOM Update Utility (sanitize = false by default to preserve Alpine bindings)
  * 
  * @param {Object} componentRefs - Component $refs object
  * @param {Array<string>} refNames - Array of ref names to update
- * @param {Function} [onSuccess] - Optional callback function (doc) => {}
- * @param {boolean} [sanitize=true] - Whether to apply window.Purify.clean() sanitisation
+ * @param {Function} [onSuccess] - Optional callback function (doc, onSuccess) => {}
+ * @param {boolean} [sanitize=false] - Whether to apply window.DOMPurify.clean() sanitisation
  */
-window.updateDOM = async function (componentRefs, refNames = [], onSuccess = null, sanitize = true) {
+window.updateDOM = async function (componentRefs, refNames = [], onSuccess = null, sanitize = false) {
     try {
         const response = await fetch(window.location.href, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -77,7 +77,7 @@ window.updateDOM = async function (componentRefs, refNames = [], onSuccess = nul
 
             if (currentEl && newEl) {
                 const content = newEl.innerHTML;
-                currentEl.innerHTML = (sanitize && window.Purify) ? window.Purify.clean(content) : content;
+                currentEl.innerHTML = (sanitize && window.DOMPurify) ? window.DOMPurify.clean(content) : content;
 
                 if (window.Alpine) {
                     window.Alpine.initTree(currentEl);
@@ -98,13 +98,13 @@ window.updateDOM = async function (componentRefs, refNames = [], onSuccess = nul
 };
 
 /**
- * Unified DOM Refresh Utility
+ * Unified DOM Refresh Utility (sanitize = false by default to preserve Alpine bindings)
  * 
  * @param {string} [targetSelector='.table-wrapper'] - CSS selector for target element
- * @param {Function} [onSuccess] - Optional callback function (doc) => {}
- * @param {boolean} [sanitize=true] - Whether to apply window.Purify.clean() sanitisation
+ * @param {Function} [onSuccess] - Optional callback function (doc, onSuccess) => {}
+ * @param {boolean} [sanitize=false] - Whether to apply window.DOMPurify.clean() sanitisation
  */
-window.refreshDOM = async function (targetSelector = '.table-wrapper', onSuccess = null, sanitize = true) {
+window.refreshDOM = async function (targetSelector = '.table-wrapper', onSuccess = null, sanitize = false) {
     try {
         const response = await fetch(window.location.href, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -116,7 +116,7 @@ window.refreshDOM = async function (targetSelector = '.table-wrapper', onSuccess
 
         if (newContent && currentContent) {
             const content = newContent.innerHTML;
-            currentContent.innerHTML = (sanitize && window.Purify) ? window.Purify.clean(content) : content;
+            currentContent.innerHTML = (sanitize && window.DOMPurify) ? window.DOMPurify.clean(content) : content;
 
             if (window.Alpine) {
                 window.Alpine.initTree(currentContent);
@@ -133,3 +133,5 @@ window.refreshDOM = async function (targetSelector = '.table-wrapper', onSuccess
         window.Swal.error('Error', 'Failed to refresh view content.');
     }
 };
+
+export default window.updateDOM;

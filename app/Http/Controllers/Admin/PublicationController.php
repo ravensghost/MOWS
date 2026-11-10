@@ -4,14 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use App\Models\Shelf;
 use App\Models\Volume;
 use App\Models\Book;
-use App\Models\Folio;
-use App\Models\FolioRevision;
 use App\Models\PublicationState;
-use App\Models\AuthorLedger;
 
 class PublicationController extends Controller
 {
@@ -58,20 +55,20 @@ class PublicationController extends Controller
 
         $statuses = PublicationState::select('id', 'state_title', 'book_url')->orderBy('state_sort_order')->get();
 
-        return view('admin.story', compact('systemPage', 'shelves', 'looseVolumes', 'statuses'));
+        return view('admin.publication', compact('systemPage', 'shelves', 'looseVolumes', 'statuses'));
     }
 
     public function storeStatus(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'state_title' => 'required|string|max:255',
         ]);
 
         $maxOrder = PublicationState::max('state_sort_order') ?? 0;
 
         $status = PublicationState::create([
-            'state_title'      => $validated['name'],
-            'book_url'         => \Illuminate\Support\Str::slug($validated['name']),
+            'state_title'      => $validated['state_title'],
+            'book_url'         => Str::slug($validated['state_title']),
             'state_sort_order' => $maxOrder + 1,
         ]);
 
@@ -85,13 +82,13 @@ class PublicationController extends Controller
     public function updateStatus(Request $request, $id)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'state_title' => 'required|string|max:255',
         ]);
 
         $status = PublicationState::findOrFail($id);
         $status->update([
-            'state_title' => $validated['name'],
-            'book_url'    => \Illuminate\Support\Str::slug($validated['name']),
+            'state_title' => $validated['state_title'],
+            'book_url'    => Str::slug($validated['state_title']),
         ]);
 
         return response()->json([
@@ -103,8 +100,7 @@ class PublicationController extends Controller
 
     public function destroyStatus($id)
     {
-        $status = PublicationState::findOrFail($id);
-        $status->delete();
+        PublicationState::findOrFail($id)->delete();
 
         return response()->json([
             'status'  => 'success',

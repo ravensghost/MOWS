@@ -1,71 +1,39 @@
 // resources/js/third-party/chartHelper.js
-import Chart from 'chart.js/auto';
+import { Chart, registerables } from 'chart.js';
+
+// Register all Chart.js components
+Chart.register(...registerables);
 
 /**
- * Alpine component for Chart.js integration with dynamic theme variable support.
+ * Global Chart.js Helper Wrapper
  */
-export default function chartHelper(config = {}) {
-    return {
-        chartInstance: null,
-        init() {
-            const ctx = this.$el.getContext('2d');
-            if (!ctx) return;
+window.ChartHelper = {
+    instances: {},
 
-            // Dynamically resolve theme colours from CSS variables for canvas rendering
-            const textColor = window.getThemeColour ? window.getThemeColour('--theme-text-p') : '#f3f4f6';
-            const borderColor = window.getThemeColour ? window.getThemeColour('--theme-border-colour') : '#374151';
-            const accentColor = window.getThemeColour ? window.getThemeColour('--theme-bg-accent-colour') : '#3b82f6';
+    create(canvasId, config) {
+        const ctx = typeof canvasId === 'string' ? document.getElementById(canvasId) : canvasId;
+        if (!ctx) return null;
 
-            // Merge theme-aware defaults into Chart.js config options
-            const themeAwareOptions = {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: textColor
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: textColor },
-                        grid: { color: borderColor }
-                    },
-                    y: {
-                        ticks: { color: textColor },
-                        grid: { color: borderColor }
-                    }
-                },
-                ...(config.options || {})
-            };
-
-            // Ensure dataset colors fallback to theme accent if not explicitly provided
-            const datasets = (config.data?.datasets || []).map(dataset => ({
-                backgroundColor: accentColor,
-                borderColor: accentColor,
-                ...dataset
-            }));
-
-            this.chartInstance = new Chart(ctx, {
-                ...config,
-                data: {
-                    ...(config.data || {}),
-                    datasets
-                },
-                options: themeAwareOptions
-            });
-        },
-        updateData(newData, datasetIndex = 0) {
-            if (this.chartInstance) {
-                this.chartInstance.data.datasets[datasetIndex].data = newData;
-                this.chartInstance.update();
-            }
-        },
-        destroy() {
-            if (this.chartInstance) {
-                this.chartInstance.destroy();
-            }
+        // Destroy existing instance on this canvas if it exists
+        if (this.instances[canvasId]) {
+            this.instances[canvasId].destroy();
         }
-    };
-}
+
+        const chartInstance = new Chart(ctx, config);
+        if (typeof canvasId === 'string') {
+            this.instances[canvasId] = chartInstance;
+        }
+        return chartInstance;
+    },
+
+    destroy(canvasId) {
+        if (this.instances[canvasId]) {
+            this.instances[canvasId].destroy();
+            delete this.instances[canvasId];
+        }
+    }
+};
+
+window.Chart = Chart;
+
+export default Chart;

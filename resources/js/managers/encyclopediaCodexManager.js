@@ -24,13 +24,11 @@ export default () => ({
                 return;
             }
             const results = this.searchHelperInstance.search(value.trim());
-            // Extract matching titles or IDs depending on dataset mapping
             this.filteredIds = results ? results.map(res => res.item.title || res.item.id) : [];
         });
     },
 
     initFuse() {
-        // Leverage the standardized global window.Search helper (powered by Fuse.js)
         if (window.Search) {
             try {
                 this.searchHelperInstance = window.Search.create('[data-wiki-search-item]', ['title', 'category', 'content'], {
@@ -51,7 +49,6 @@ export default () => ({
     },
 
     async refreshDOM() {
-        // Updated to use window.updateDOM with sanitize = false (replacing old _US helper)
         if (typeof window.updateDOM === 'function') {
             await window.updateDOM(this.$refs, ['wikiTableContent', 'wikiModalContent'], () => {
                 this.wikiModal.open = false;
@@ -83,7 +80,6 @@ export default () => ({
         }
         this.wikiModal.open = true;
 
-        // Standardised to 'set-chapter-editor-content' for consistent TipTap synchronization across managers
         this.$nextTick(() => {
             window.dispatchEvent(new CustomEvent('set-chapter-editor-content', {
                 detail: { content: this.wikiModal.content || '' }

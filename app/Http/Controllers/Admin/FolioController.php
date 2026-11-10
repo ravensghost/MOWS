@@ -4,47 +4,47 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Chapter;
+use App\Models\Folio;
 
 class FolioController extends Controller
 {
     public function move(Request $request, $id)
     {
         $validated = $request->validate([
-            'book_id' => 'required|exists:books,id'
+            'volume_id' => 'required|exists:volumes,id'
         ]);
 
-        $chapter = Chapter::findOrFail($id);
-        $chapter->update($validated);
+        $folio = Folio::findOrFail($id);
+        $folio->update($validated);
 
         return response()->json([
             'status' => 'success',
-            'data' => $chapter,
-            'message' => 'Chapter relocated successfully.'
+            'data'   => $folio,
+            'message' => 'Folio relocated successfully.'
         ]);
     }
 
     public function destroy($id)
     {
-        $chapter = Chapter::findOrFail($id);
-        $chapter->delete();
+        $folio = Folio::findOrFail($id);
+        $folio->delete();
 
         return response()->json([
             'status' => 'success',
-            'data' => null,
-            'message' => 'Chapter deleted successfully.'
+            'data'   => null,
+            'message' => 'Folio deleted successfully.'
         ]);
     }
 
     public function reorder(Request $request)
     {
         foreach ($request->input('items', []) as $item) {
-            Chapter::where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
+            Folio::where('id', $item['id'])->update(['folio_sort_order' => $item['folio_sort_order']]);
         }
         return response()->json([
             'status' => 'success',
-            'data' => null,
-            'message' => 'Chapters reordered successfully.'
+            'data'   => null,
+            'message' => 'Folios reordered successfully.'
         ]);
     }
 }

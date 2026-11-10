@@ -28,7 +28,6 @@ export default () => ({
         const el = document.getElementById('news-fresh-data');
         if (el) {
             this.newsList = JSON.parse(el.getAttribute('data-news') || '[]');
-            // Leverage the standardized global window.Search helper (powered by Fuse.js)
             if (window.Search) {
                 this.searchHelperInstance = window.Search.create('#news-fresh-data [data-news-item], [data-news-search-item]', ['title', 'date'], {
                     threshold: 0.35
@@ -75,7 +74,6 @@ export default () => ({
         }
         this.modalOpen = true;
 
-        // Dispatch event to populate TipTap reliably just like the chapter modal
         this.$nextTick(() => {
             window.dispatchEvent(new CustomEvent('set-chapter-editor-content', {
                 detail: { content: this.content || '' }

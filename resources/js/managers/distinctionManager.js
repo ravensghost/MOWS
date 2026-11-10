@@ -2,17 +2,16 @@
 export default function distinctionManager() {
     return {
         modalOpen: false,
-        categoryModalOpen: false, // State for Subgroup Manager
+        categoryModalOpen: false,
         isEdit: false,
         awardId: null,
         name: '',
         description: '',
 
-        // PROPERTIES
         master_group: 'BOTH',
         award_category_id: '',
 
-        base_color: window.getThemeColour ? window.getThemeColour('--theme-bg-rank') : '#1a1a1a',
+        base_color: '#1a1a1a',
         mid_type: 'css',
         mid_image: '',
         mid_css: 'original',
@@ -35,7 +34,6 @@ export default function distinctionManager() {
 
         async loadImages() {
             try {
-                // Leverage standardized window.Fetch helper
                 const { ok, data } = await window.Fetch.get('/admin/awards/images', {
                     loading: false,
                     showError: false

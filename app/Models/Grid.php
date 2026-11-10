@@ -9,12 +9,12 @@ class Grid extends Model
 {
 protected $fillable = ['grid_title', 'grid_synopsis'];
 
-public function blocks(): HasMany
+public function gridModules(): HasMany
 {
-return $this->hasMany(GridModule::class)->orderBy('grid_modules_sort_order');
+return $this->hasMany(GridModule::class)->orderBy('grid_module_sort_order');
 }
 
-public function pages(): HasMany
+public function books(): HasMany
 {
 return $this->hasMany(Book::class);
 }

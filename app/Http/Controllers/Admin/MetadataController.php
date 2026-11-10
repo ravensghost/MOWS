@@ -4,14 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Page;
-use App\Models\FormField;
+use App\Models\Book;
+use App\Models\Metadata;
 
 class MetadataController extends Controller
 {
     public function index()
     {
-        $systemPage = Page::with([
+        $systemPage = Book::with([
             'layout.blocks',
             'widgets' => function ($query) {
                 $query->orderBy('page_widget.sort_order');
@@ -21,8 +21,8 @@ class MetadataController extends Controller
             ->where('is_published', true)
             ->firstOrFail();
 
-        $forms = FormField::where('form_type', 'form')->orderBy('name')->get();
-        $fields = FormField::where('form_type', 'application')->orderBy('order')->get();
+        $forms = Metadata::where('meta_mode', 'form')->orderBy('metadata_title')->get();
+        $fields = Metadata::where('meta_mode', 'application')->orderBy('metadata_sort_order')->get();
 
         return view('admin.forms', compact('systemPage', 'forms', 'fields'));
     }
@@ -30,15 +30,15 @@ class MetadataController extends Controller
     public function storeForm(Request $request)
     {
         $request->validate([
-            'name'       => 'required|string|max:255',
-            'is_visible' => 'nullable|boolean',
+            'metadata_title' => 'required|string|max:255',
+            'is_visible'     => 'nullable|boolean',
         ]);
 
-        FormField::create([
-            'name'       => $request->name,
-            'type'       => 'custom_form',
-            'form_type'  => 'form',
-            'is_visible' => $request->boolean('is_visible', false),
+        Metadata::create([
+            'metadata_title' => $request->metadata_title,
+            'metadata_mode'  => 'custom_form',
+            'meta_mode'      => 'form',
+            'is_visible'     => $request->boolean('is_visible', false),
         ]);
 
         return response()->json(['success' => true]);
@@ -47,13 +47,13 @@ class MetadataController extends Controller
     public function updateForm(Request $request, $id)
     {
         $request->validate([
-            'name'       => 'required|string|max:255',
-            'is_visible' => 'nullable|boolean',
+            'metadata_title' => 'required|string|max:255',
+            'is_visible'     => 'nullable|boolean',
         ]);
 
-        FormField::where('id', $id)->update([
-            'name'       => $request->name,
-            'is_visible' => $request->boolean('is_visible', false),
+        Metadata::where('id', $id)->update([
+            'metadata_title' => $request->metadata_title,
+            'is_visible'     => $request->boolean('is_visible', false),
         ]);
 
         return response()->json(['success' => true]);
@@ -61,29 +61,29 @@ class MetadataController extends Controller
 
     public function destroyForm($id)
     {
-        FormField::where('id', $id)->delete();
+        Metadata::where('id', $id)->delete();
         return response()->json(['success' => true]);
     }
 
     public function storeField(Request $request)
     {
-        $field = new FormField();
-        $hasArrayCast = $field->hasCast('options', ['array', 'json', 'collection']);
+        $field = new Metadata();
+        $hasArrayCast = $field->hasCast('metadata_payloads', ['array', 'json', 'collection']);
 
         $groups = array_values((array) $request->input('service_record_groups', []));
-        $options = $request->type === 'service_record'
+        $metadataPayloads = $request->metadata_mode === 'service_record'
             ? ($hasArrayCast ? $groups : json_encode($groups))
-            : $request->options;
+            : $request->metadata_payloads;
 
-        FormField::create([
-            'name'        => $request->name,
-            'type'        => $request->type,
-            'form_type'   => 'application',
-            'form_linked' => $request->form_linked,
-            'is_required' => $request->boolean('is_required', false),
-            'is_visible'  => $request->boolean('is_visible', false),
-            'options'     => $options,
-            'order'       => $request->input('order', 0),
+        Metadata::create([
+            'metadata_title'      => $request->metadata_title,
+            'metadata_mode'       => $request->metadata_mode,
+            'meta_mode'           => 'application',
+            'linked_metadata'     => $request->linked_metadata,
+            'is_required'         => $request->boolean('is_required', false),
+            'is_visible'          => $request->boolean('is_visible', false),
+            'metadata_payloads'   => $metadataPayloads,
+            'metadata_sort_order' => $request->input('metadata_sort_order', 0),
         ]);
 
         return response()->json(['success' => true]);
@@ -91,23 +91,23 @@ class MetadataController extends Controller
 
     public function updateField(Request $request, $id)
     {
-        $field = FormField::findOrFail($id);
-        $hasArrayCast = $field->hasCast('options', ['array', 'json', 'collection']);
+        $field = Metadata::findOrFail($id);
+        $hasArrayCast = $field->hasCast('metadata_payloads', ['array', 'json', 'collection']);
 
         $groups = array_values((array) $request->input('service_record_groups', []));
-        $options = $request->type === 'service_record'
+        $metadataPayloads = $request->metadata_mode === 'service_record'
             ? ($hasArrayCast ? $groups : json_encode($groups))
-            : $request->options;
+            : $request->metadata_payloads;
 
         $field->update([
-            'name'        => $request->name,
-            'type'        => $request->type,
-            'form_type'   => 'application',
-            'form_linked' => $request->form_linked,
-            'is_required' => $request->boolean('is_required', false),
-            'is_visible'  => $request->boolean('is_visible', false),
-            'options'     => $options,
-            'order'       => $request->input('order', $field->order),
+            'metadata_title'      => $request->metadata_title,
+            'metadata_mode'       => $request->metadata_mode,
+            'meta_mode'           => 'application',
+            'linked_metadata'     => $request->linked_metadata,
+            'is_required'         => $request->boolean('is_required', false),
+            'is_visible'          => $request->boolean('is_visible', false),
+            'metadata_payloads'   => $metadataPayloads,
+            'metadata_sort_order' => $request->input('metadata_sort_order', $field->metadata_sort_order),
         ]);
 
         return response()->json(['success' => true]);
@@ -115,7 +115,7 @@ class MetadataController extends Controller
 
     public function destroyField($id)
     {
-        FormField::where('id', $id)->delete();
+        Metadata::where('id', $id)->delete();
         return response()->json(['success' => true]);
     }
 }

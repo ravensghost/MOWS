@@ -1,6 +1,6 @@
 @php
-    $topLevelNav = isset($primaryNav) ? $primaryNav->filter(fn($l) => !isset($l->parent_id) || empty($l->parent_id)) : collect();
-    $childNav = isset($primaryNav) ? $primaryNav->filter(fn($l) => isset($l->parent_id) && !empty($l->parent_id))->groupBy('parent_id') : collect();
+    $topLevelNav = isset($primaryNav) ? $primaryNav->filter(fn($l) => !isset($l->parent_entry_id) || empty($l->parent_entry_id)) : collect();
+    $childNav = isset($primaryNav) ? $primaryNav->filter(fn($l) => isset($l->parent_entry_id) && !empty($l->parent_entry_id))->groupBy('parent_entry_id') : collect();
 @endphp
 
 <div data-global-sync="navigation" x-data="{ drawerOpen: false, activeDropdown: null }">
@@ -13,9 +13,9 @@
                              @mouseenter="activeDropdown = {{ $link->id }}"
                              @mouseleave="activeDropdown = null"
                              @click.outside="if (activeDropdown === {{ $link->id }}) activeDropdown = null">
-                            
-                            <a href="{{ $link->url }}" target="{{ $link->target }}" class="font-bold text-sm text-input-muted hover-text-accent no-underline">
-                                {{ lexicon($link->lexicon_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $link->lexicon_key))) }}
+                        
+                            <a href="{{ $link->destination_url }}" target="{{ $link->window_target }}" class="font-bold text-sm text-input-muted hover-text-accent no-underline">
+                                {{ lexicon($link->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $link->translation_code_key))) }}
                             </a>
 
                             <button type="button"
@@ -32,17 +32,17 @@
                             <div x-show="activeDropdown === {{ $link->id }}" 
                                  x-transition.opacity.duration.200ms
                                  x-cloak
-                                 class="bg-panel border-panel rounded-panel shadow-panel flex flex-col absolute top-4 z-100 mt-4 w-48 overflow-hidden">
+                                 class="bg-panel-body border-panel border-rounded shadow-panel flex flex-col absolute top-4 z-100 mt-4 w-48 overflow-hidden">
                                 @foreach($childNav->get($link->id) as $child)
-                                    <a href="{{ $child->url }}" target="{{ $child->target }}" class="inline-block p-nav-link text-sm text-p border-b border-panel hover-text-h transition-colors no-underline">
-                                        {{ lexicon($child->lexicon_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $child->lexicon_key))) }}
+                                    <a href="{{ $child->destination_url }}" target="{{ $child->window_target }}" class="inline-block p-nav-link text-sm text-p border-b border-panel hover-text-h transition-colors no-underline">
+                                        {{ lexicon($child->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $child->translation_code_key))) }}
                                     </a>
                                 @endforeach
                             </div>
                         </div>
                     @else
-                        <a href="{{ $link->url }}" target="{{ $link->target }}" class="font-bold text-sm text-input-muted hover-text-accent no-underline">
-                            {{ lexicon($link->lexicon_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $link->lexicon_key))) }}
+                        <a href="{{ $link->destination_url }}" target="{{ $link->window_target }}" class="font-bold text-sm text-input-muted hover-text-accent no-underline">
+                            {{ lexicon($link->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $link->translation_code_key))) }}
                         </a>
                     @endif
                 @endforeach
@@ -120,24 +120,24 @@
         </div>
     </nav>
 
-    <!-- Context Drawer -->
+    <!-- Context Drawer Modal Backdrop & Panel Container -->
     <div class="fixed inset-0 z-100 flex flex-row justify-end"
          x-show="drawerOpen"
          x-transition.opacity.duration.200ms
          x-cloak>
          
         <button type="button" 
-                class="bg-backdrop backdrop-blur fixed inset-0 cursor-pointer border-none" 
+                class="backdrop-bg backdrop-blur fixed inset-0 cursor-pointer border-none" 
                 @click="drawerOpen = false"
                 aria-label="{{ lexicon('tooltip_nav_CloseMenu', 'Close Navigation Menu') }}"
                 tabindex="-1">
         </button>
 
-        <div class="bg-body border-l-panel shadow-drawer relative z-10 w-64 max-w-75 h-full flex flex-col p-panel overflow-y-auto">
+        <div class="bg-body border-l-panel shadow-drawer relative z-10 w-64 max-w-75 h-full flex flex-col p-panel-body overflow-y-auto">
             
             <button type="button"
                     @click="drawerOpen = false"
-                    class="text-muted bg-transparent hover-text-h hover-bg-close absolute top-4 right-4 border-none cursor-pointer p-1 rounded"
+                    class="text-muted bg-transparent hover-text-h hover-bg-close absolute top-4 right-4 border-none cursor-pointer p-1 border-rounded-sm"
                     x-tooltip="'{{ addslashes(lexicon('tooltip_nav_CloseMenu', 'Close Navigation Menu')) }}'"
                     aria-label="{{ lexicon('tooltip_nav_CloseMenu', 'Close Navigation Menu') }}">
                 <svg class="w-icon h-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -148,8 +148,8 @@
             <div data-global-nav="drawer" class="flex flex-col gap-md mt-lg">
                 @guest
                     <x-button variant="success"
-                              @click="drawerOpen = false; $dispatch('open-auth')"
-                              x-tooltip="'{{ addslashes(lexicon('tooltip_auth_OpenLoginModal', 'Log in or register an account')) }}'">
+                            @click="drawerOpen = false; $dispatch('open-auth')"
+                            x-tooltip="'{{ addslashes(lexicon('tooltip_auth_OpenLoginModal', 'Log in or register an account')) }}'">
                         {{ lexicon('btn_common_LoginRegister', 'Login / Register') }}
                     </x-button>
                 @endguest
@@ -165,12 +165,12 @@
                 @endauth
                 
                 @if(isset($drawerNav))
-                    @foreach($drawerNav->groupBy('group_name') as $group => $links)
+                    @foreach($drawerNav->groupBy('group_title') as $group => $links)
                         @if($group)
                             <div class="flex flex-col gap-md mb-6" x-data="{ expanded: false }">
                                 <button type="button"
                                         @click="expanded = !expanded"
-                                        class="text-xs font-bold text-muted uppercase tracking-wider border-b border-panel bg-transparent border-none hover-text-h flex flex-row flex-wrap items-center justify-between w-full p-2 cursor-pointer rounded"
+                                        class="text-xs font-bold text-muted uppercase text-wider border-b border-panel bg-transparent border-none hover-text-h flex flex-row flex-wrap items-center justify-between w-full p-2 cursor-pointer border-rounded-sm"
                                         x-tooltip="'{{ addslashes(lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel')) }}'">
                                     <span>{{ lexicon('label_nav_group_' . \Illuminate\Support\Str::slug($group, '_'), $group) }}</span>
                                     <svg class="w-icon h-icon transition-transform flex-shrink-0" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -180,21 +180,21 @@
                                 
                                 <div class="flex flex-col gap-sm" x-show="expanded" x-collapse x-cloak>
                                     @foreach($links as $link)
-                                        @if($link->url === '/chapters/create')
+                                        @if($link->destination_url === '/chapters/create')
                                             <button type="button"
                                                     @click="drawerOpen = false; $dispatch('open-chapter-modal')"
                                                     class="font-bold text-lg text-input-muted border-none border-b border-b-table-row hover-text-accent p-2 block w-full text-left bg-transparent cursor-pointer">
-                                                {{ lexicon($link->lexicon_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $link->lexicon_key))) }}
+                                                {{ lexicon($link->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $link->translation_code_key))) }}
                                             </button>
-                                        @elseif($link->url === '/messenger')
+                                        @elseif($link->destination_url === '/messenger')
                                             <button type="button"
                                                     @click="drawerOpen = false; $dispatch('open-messenger')"
                                                     class="font-bold text-lg text-input-muted border-none border-b border-b-table-row hover-text-accent p-2 block w-full text-left bg-transparent cursor-pointer">
-                                                {{ lexicon($link->lexicon_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $link->lexicon_key))) }}
+                                                {{ lexicon($link->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $link->translation_code_key))) }}
                                             </button>
                                         @else
-                                            <a href="{{ $link->url }}" target="{{ $link->target }}" class="font-bold text-lg text-input-muted border-b border-b-table-row hover-text-accent p-2 block no-underline">
-                                                {{ lexicon($link->lexicon_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $link->lexicon_key))) }}
+                                            <a href="{{ $link->destination_url }}" target="{{ $link->window_target }}" class="font-bold text-lg text-input-muted border-b border-b-table-row hover-text-accent p-2 block no-underline">
+                                                {{ lexicon($link->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $link->translation_code_key))) }}
                                             </a>
                                         @endif
                                     @endforeach
@@ -203,21 +203,21 @@
                         @else
                             <div class="flex flex-col gap-sm mb-6">
                                 @foreach($links as $link)
-                                    @if($link->url === '/chapters/create')
+                                    @if($link->destination_url === '/chapters/create')
                                         <button type="button"
                                                 @click="drawerOpen = false; $dispatch('open-chapter-modal')"
                                                 class="font-bold text-lg text-input-muted border-none border-b border-b-table-row hover-text-accent p-2 block w-full text-left bg-transparent cursor-pointer">
-                                            {{ lexicon($link->lexicon_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $link->lexicon_key))) }}
+                                            {{ lexicon($link->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $link->translation_code_key))) }}
                                         </button>
-                                    @elseif($link->url === '/messenger')
+                                    @elseif($link->destination_url === '/messenger')
                                         <button type="button"
                                                 @click="drawerOpen = false; $dispatch('open-messenger')"
                                                 class="font-bold text-lg text-input-muted border-none border-b border-b-table-row hover-text-accent p-2 block w-full text-left bg-transparent cursor-pointer">
-                                            {{ lexicon($link->lexicon_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $link->lexicon_key))) }}
+                                            {{ lexicon($link->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $link->translation_code_key))) }}
                                         </button>
                                     @else
-                                        <a href="{{ $link->url }}" target="{{ $link->target }}" class="font-bold text-lg text-input-muted border-b border-b-table-row hover-text-accent p-2 block no-underline">
-                                            {{ lexicon($link->lexicon_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $link->lexicon_key))) }}
+                                        <a href="{{ $link->destination_url }}" target="{{ $link->window_target }}" class="font-bold text-lg text-input-muted border-b border-b-table-row hover-text-accent p-2 block no-underline">
+                                            {{ lexicon($link->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $link->translation_code_key))) }}
                                         </a>
                                     @endif
                                 @endforeach

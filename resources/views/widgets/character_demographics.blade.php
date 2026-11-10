@@ -13,25 +13,45 @@
     $rawTitle = trim($options['title'] ?? '');
     $title = $rawTitle !== '' ? $rawTitle : lexicon('label_Demographics_DefaultTitle', 'Demographics & Vitals');
 
-    // Retrieve eager-loaded application answers linked to this character without N+1 queries
-    $application = ($character && $character->relationLoaded('application'))
-        ? $character->application
-        : ($character?->application ?? \App\Models\Application::with('answers.formField')->where('character_id', $character?->id)->first());
+    // Retrieve eager-loaded candidate petition answers linked to this persona without N+1 queries
+    $petition = null;
+    if ($character) {
+        if ($character->relationLoaded('petition')) {
+            $petition = $character->petition;
+        } elseif ($character->relationLoaded('application')) {
+            $petition = $character->application;
+        } else {
+            $petition = \App\Models\CandidatePetition::with('answers')
+                ->where('persona_id', $character->id)
+                ->first();
+        }
+    }
 
-    $answersCollection = ($application && $application->relationLoaded('answers'))
-        ? $application->answers
-        : ($application ? $application->answers()->with('formField')->get() : collect());
+    $answersCollection = ($petition && $petition->relationLoaded('answers'))
+        ? $petition->answers
+        : ($petition ? $petition->answers()->get() : collect());
 
-    $answers = $answersCollection->keyBy(function ($item) {
-        return strtolower(trim($item->formField->name ?? ''));
+    $metadataMap = \App\Models\Metadata::all()->keyBy('id');
+
+    $answers = $answersCollection->keyBy(function ($item) use ($metadataMap) {
+        $meta = ($item->relationLoaded('metadata') ? $item->metadata : null)
+            ?? ($item->relationLoaded('formField') ? $item->formField : null)
+            ?? $metadataMap->get($item->metadata_id);
+
+        $fieldName = $meta->metadata_label ?? $meta->metadata_key ?? $meta->name ?? '';
+        return strtolower(trim($fieldName));
     });
 
-    // Helper to pull answer by field name or fallback
+    // Helper to pull petition_answer (or legacy answer) by field name or fallback
     $getAnswer = function ($names) use ($answers) {
         foreach ((array) $names as $name) {
             $key = strtolower(trim($name));
-            if ($answers->has($key) && filled($answers[$key]->answer)) {
-                return $answers[$key]->answer;
+            if ($answers->has($key)) {
+                $entry = $answers[$key];
+                $val = $entry->petition_answer ?? $entry->answer ?? null;
+                if (filled($val)) {
+                    return $val;
+                }
             }
         }
         return null;
@@ -39,7 +59,7 @@
 
     $notSpecified = lexicon('label_common_NotSpecified', 'Not Specified');
 
-    $charName = $character?->name ?? $getAnswer(['Character Name', 'Name']) ?? $notSpecified;
+    $charName = $character?->name ?? $petition?->proposed_persona_name ?? $getAnswer(['Character Name', 'Name']) ?? $notSpecified;
     $rankName = $character?->rank?->name ?? lexicon('label_Demographics_Unranked', 'Unranked');
     $positionName = $character?->position?->name ?? lexicon('label_Demographics_Unassigned', 'Unassigned');
 

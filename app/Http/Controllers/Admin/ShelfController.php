@@ -14,6 +14,8 @@ class ShelfController extends Controller
             'shelf_title' => 'required|string|max:255'
         ]);
 
+        $validated['shelf_sort_order'] = (Shelf::max('shelf_sort_order') ?? 0) + 1;
+
         $shelf = Shelf::create($validated);
 
         return response()->json([
@@ -41,8 +43,7 @@ class ShelfController extends Controller
 
     public function destroy($id)
     {
-        $shelf = Shelf::findOrFail($id);
-        $shelf->delete();
+        Shelf::findOrFail($id)->delete();
 
         return response()->json([
             'status' => 'success',
@@ -54,8 +55,9 @@ class ShelfController extends Controller
     public function reorder(Request $request)
     {
         foreach ($request->input('items', []) as $item) {
-            Shelf::where('id', $item['id'])->update(['shelf_sort_order' => $item['sort_order']]);
+            Shelf::where('id', $item['id'])->update(['shelf_sort_order' => $item['shelf_sort_order']]);
         }
+
         return response()->json([
             'status' => 'success',
             'data' => null,

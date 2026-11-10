@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Mail\LockPingMail;
-use App\Models\Book;
-use App\Models\Chapter;
-use App\Models\ChapterUserContribution;
-use App\Models\ChapterVersion;
-use App\Models\Character;
+use App\Models\Volume;
+use App\Models\Folio;
+use App\Models\AuthorLedger;
+use App\Models\FolioRevision;
+use App\Models\Persona;
 use App\Models\ContentRating;
-use App\Models\Page;
+use App\Models\Book;
 use App\Models\UserAttribute;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
@@ -21,16 +21,18 @@ class FolioAuthoringController extends Controller
 {
     public function createChapter()
     {
-        $activeBooks = Book::whereHas('status', function ($q) {
+        $activeBooks = Volume::whereHas('status', function ($q) {
             $q->where('slug', 'active');
-        })->with('bookcase')->orderBy('sort_order')->get();
+        })->with('shelf')->orderBy('volume_sort_order')->get();
 
-        $allCharacters = Character::where('status', 'active')->orderBy('name')->get();
-        $languageRatings = ContentRating::where('name', 'Language')->orderBy('sort_rating')->get();
-        $sexRatings = ContentRating::where('name', 'Sex')->orderBy('sort_rating')->get();
-        $violenceRatings = ContentRating::where('name', 'Violence')->orderBy('sort_rating')->get();
+        $allCharacters = Persona::where('persona_status', 'active')->orderBy('persona_name')->get();
 
-        $systemPage = Page::where('slug', 'chapters/create')
+        // Updated to use content_tiers columns
+        $languageRatings = \App\Models\ContentTier::where('tier_category', 'Language')->orderBy('tier_sort_order')->get();
+        $sexRatings = \App\Models\ContentTier::where('tier_category', 'Sex')->orderBy('tier_sort_order')->get();
+        $violenceRatings = \App\Models\ContentTier::where('tier_category', 'Violence')->orderBy('tier_sort_order')->get();
+
+        $systemPage = Book::where('slug', 'chapters/create')
             ->where('is_published', true)
             ->with(['layout.blocks', 'widgets' => function ($q) {
                 $q->orderBy('page_widget.sort_order');
@@ -47,98 +49,94 @@ class FolioAuthoringController extends Controller
         ));
     }
 
-    /**
-     * Fetch chapter data as JSON for the chapter edit modal.
-     */
-    public function editChapter(Chapter $chapter)
+    public function editChapter(Folio $folio)
     {
-        if (!$chapter->isAccessibleBy(auth()->user())) {
-            abort(403, 'Unauthorised access to this draft chapter.');
+        if (!$folio->isAccessibleBy(auth()->user())) {
+            abort(403, 'Unauthorised access to this draft folio.');
         }
 
-        $chapter->load('characters:id,name');
+        $folio->load('personae:id,persona_name');
 
         return response()->json([
-            'id'                  => $chapter->id,
-            'book_id'             => $chapter->book_id,
-            'active_character_id' => $chapter->active_character_id,
-            'chapter_type'        => $chapter->chapter_type,
-            'ic_day'              => $chapter->ic_day,
-            'ic_time'             => $chapter->ic_time,
-            'location'            => $chapter->location,
-            'rating_l'            => $chapter->rating_l,
-            'rating_s'            => $chapter->rating_s,
-            'rating_v'            => $chapter->rating_v,
-            'content'             => $chapter->content,
-            'status'              => $chapter->status,
-            'character_ids'       => $chapter->characters->pluck('id')->map(fn($id) => (string) $id)->values(),
+            'id'                => $folio->id,
+            'volume_id'         => $folio->volume_id,
+            'active_persona_id' => $folio->active_persona_id,
+            'folio_mode'        => $folio->folio_mode,
+            'ic_day'            => $folio->ic_day,
+            'ic_time'           => $folio->ic_time,
+            'scene_location'    => $folio->scene_location,
+            'content_tier_l'    => $folio->content_tier_l,
+            'content_tier_s'    => $folio->content_tier_s,
+            'content_tier_v'    => $folio->content_tier_v,
+            'folio_text'        => $folio->folio_text,
+            'folio_status'      => $folio->folio_status,
+            'character_ids'     => $folio->personae->pluck('id')->map(fn($id) => (string) $id)->values(),
         ]);
     }
 
     public function storeChapter(Request $request)
     {
         $validated = $request->validate([
-            'chapter_id'          => 'nullable|exists:chapters,id',
-            'book_id'             => 'required|exists:books,id',
-            'active_character_id' => 'required|exists:characters,id',
-            'character_ids'       => 'nullable|array',
-            'character_ids.*'     => 'string',
-            'chapter_type'        => 'required|in:mission,personal_log',
-            'ic_day'              => 'required|string',
-            'ic_time'             => 'required|string',
-            'location'            => 'required|string',
-            'rating_l'            => 'required|integer',
-            'rating_s'            => 'required|integer',
-            'rating_v'            => 'required|integer',
-            'content'             => 'required|string',
-            'status'              => 'required|in:draft,published',
+            'folio_id'          => 'nullable|exists:folios,id',
+            'volume_id'         => 'required|exists:volumes,id',
+            'active_persona_id' => 'required|exists:personae,id',
+            'character_ids'     => 'nullable|array',
+            'character_ids.*'   => 'string',
+            'folio_mode'        => 'required|in:mission,personal_log',
+            'ic_day'            => 'required|integer',
+            'ic_time'           => 'required|string',
+            'scene_location'    => 'required|string',
+            'content_tier_l'    => 'required|integer',
+            'content_tier_s'    => 'required|integer',
+            'content_tier_v'    => 'required|integer',
+            'folio_text'        => 'required|string',
+            'folio_status'      => 'required|in:draft,published',
         ]);
 
-        $validated['content'] = Purify::clean($validated['content']);
+        $validated['folio_text'] = Purify::clean($validated['folio_text']);
         $rawCharacterIds = $validated['character_ids'] ?? [];
-        $chapterId = $validated['chapter_id'] ?? null;
-        unset($validated['character_ids'], $validated['chapter_id']);
+        $folioId = $validated['folio_id'] ?? null;
+        unset($validated['character_ids'], $validated['folio_id']);
 
         $userId = auth()->id();
-        $currentWordCount = str_word_count(strip_tags($validated['content']));
+        $currentWordCount = str_word_count(strip_tags($validated['folio_text']));
 
-        if ($chapterId) {
-            $chapter = Chapter::findOrFail($chapterId);
+        if ($folioId) {
+            $folio = Folio::findOrFail($folioId);
 
-            $previousWordCount = str_word_count(strip_tags($chapter->content));
+            $previousWordCount = str_word_count(strip_tags($folio->folio_text));
             $wordDelta = max(0, $currentWordCount - $previousWordCount);
 
-            if ($chapter->content !== $validated['content']) {
-                ChapterVersion::create([
-                    'chapter_id' => $chapter->id,
-                    'user_id'    => $userId,
-                    'content'    => $chapter->content,
+            if ($folio->folio_text !== $validated['folio_text']) {
+                FolioRevision::create([
+                    'folio_id' => $folio->id,
+                    'user_id'  => $userId,
+                    'revision_text' => $folio->folio_text,
                 ]);
             }
 
             $validated['locked_by_user_id'] = null;
             $validated['locked_at'] = null;
-            $chapter->update($validated);
+            $folio->update($validated);
         } else {
-            $validated['author_user_id'] = $userId;
-            $chapter = Chapter::create($validated);
+            $validated['user_id'] = $userId;
+            $folio = Folio::create($validated);
             $wordDelta = $currentWordCount;
         }
 
         if ($userId && $wordDelta > 0) {
-            ChapterUserContribution::updateOrCreate(
-                ['chapter_id' => $chapter->id, 'user_id' => $userId],
-                ['word_count' => DB::raw("word_count + {$wordDelta}")]
+            AuthorLedger::updateOrCreate(
+                ['folio_id' => $folio->id, 'user_id' => $userId],
+                ['contribution_word_count' => DB::raw("contribution_word_count + {$wordDelta}")]
             );
         }
 
         $resolvedCharacterIds = $this->resolveCharacterIds($rawCharacterIds);
-        $syncResults = $chapter->characters()->sync($resolvedCharacterIds);
+        $syncResults = $folio->personae()->sync($resolvedCharacterIds);
         $attachedCharacterIds = $syncResults['attached'] ?? [];
 
-        // --- MULTI-CHANNEL ALERTS FOR NEWLY TAGGED CHARACTERS PRESENT ---
         if (!empty($attachedCharacterIds)) {
-            $taggedCharacters = Character::whereIn('id', $attachedCharacterIds)->with('user')->get();
+            $taggedCharacters = Persona::whereIn('id', $attachedCharacterIds)->with('user')->get();
 
             foreach ($taggedCharacters as $char) {
                 if ($char->user_id && $char->user_id !== auth()->id() && $char->user) {
@@ -147,264 +145,128 @@ class FolioAuthoringController extends Controller
                         ->value('value');
 
                     $userMention = !empty($discordId) ? "<@{$discordId}>" : $char->user->name;
-                    $chapterUrl = url('/dashboard');
-                    $chapterLink = "[Chapter #{$chapter->id}]({$chapterUrl})";
+                    $folioUrl = url('/dashboard');
+                    $folioLink = "[Folio #{$folio->id}]({$folioUrl})";
 
-                    // 1. Discord Alert
                     NotificationService::sendDiscord(
                         'alerts',
-                        "🏷️ **Writer Tagged:** Character **{$char->name}** ({$userMention}) was added as present in {$chapterLink} (*{$chapter->location}*) by " . auth()->user()->name . "."
+                        "🏷️ **Writer Tagged:** Persona **{$char->persona_name}** ({$userMention}) was added as present in {$folioLink} (*{$folio->scene_location}*) by " . auth()->user()->name . "."
                     );
-
-                    // 2. On-Site PM Alert
-                    NotificationService::sendPm(
-                        auth()->user(),
-                        [$char->user],
-                        "Your character {$char->name} was tagged as present in Chapter #{$chapter->id} ({$chapter->location}).",
-                        "Character Tagged: {$char->name}"
-                    );
-
-                    // 3. Email Alert
-                    if (!empty($char->user->email)) {
-                        NotificationService::sendEmail(
-                            $char->user->email,
-                            "Character Tagged in Chapter #{$chapter->id}",
-                            'emails.notification',
-                            [
-                                'heading'     => 'Character Tagged in Chapter',
-                                'messageText' => "Your character {$char->name} was added as present in Chapter #{$chapter->id} ({$chapter->location}) by " . auth()->user()->name . ".",
-                                'actionUrl'   => $chapterUrl,
-                                'actionLabel' => 'View Chapter on Dashboard',
-                            ]
-                        );
-                    }
                 }
             }
         }
-
-        // --- PHASE 5: PUBLISHED CHAPTER NOTIFICATION PIPELINE ---
-        if ($chapter->status === 'published') {
-            // 1. Discord Webhook
+        if ($folio->folio_status === 'published') {
             NotificationService::sendDiscord(
                 'chapters',
-                "Chapter #{$chapter->id} ({$chapter->chapter_type}) located at *{$chapter->location}* is now live."
+                "Folio #{$folio->id} ({$folio->folio_mode}) located at *{$folio->scene_location}* is now live."
             );
-
-            $subscribers = $chapter->book?->subscribers ?? collect();
-
-            // 2. On-Site PM Notification
-            if ($subscribers->isNotEmpty()) {
-                NotificationService::sendPm(
-                    auth()->user(),
-                    $subscribers,
-                    'A new chapter has been published in ' . ($chapter->book->title ?? 'your book') . ' at ' . $chapter->location . '.',
-                    'New Chapter Published: #' . $chapter->id
-                );
-            }
-
-            // 3. Email Notification
-            foreach ($subscribers as $subscriber) {
-                if (!empty($subscriber->email)) {
-                    NotificationService::sendEmail(
-                        $subscriber->email,
-                        'New Chapter Published: Chapter #' . $chapter->id,
-                        'emails.chapter_published',
-                        ['chapter' => $chapter]
-                    );
-                }
-            }
         }
 
         return response()->json([
-            'status'     => 'success',
-            'success'    => true,
-            'chapter_id' => $chapter->id,
-            'message'    => lexicon('msg_WriteChapter_SavedSuccess', 'Chapter successfully saved!'),
-            'redirect'   => '/dashboard',
+            'status'   => 'success',
+            'success'  => true,
+            'folio_id' => $folio->id,
+            'message'  => lexicon('msg_WriteChapter_SavedSuccess', 'Folio successfully saved!'),
+            'redirect' => '/dashboard',
         ]);
     }
 
-    /**
-     * Handle silent background draft auto-saves for both new and existing chapters.
-     */
-    public function autoSave(Request $request, Chapter $chapter = null)
+    public function autoSave(Request $request, Folio $folio = null)
     {
         $validated = $request->validate([
-            'chapter_id'          => 'nullable|exists:chapters,id',
-            'book_id'             => 'nullable|exists:books,id',
-            'active_character_id' => 'nullable|exists:characters,id',
-            'character_ids'       => 'nullable|array',
-            'character_ids.*'     => 'string',
-            'chapter_type'        => 'nullable|in:mission,personal_log',
-            'ic_day'              => 'nullable|string',
-            'ic_time'             => 'nullable|string',
-            'location'            => 'nullable|string',
-            'rating_l'            => 'nullable|integer',
-            'rating_s'            => 'nullable|integer',
-            'rating_v'            => 'nullable|integer',
-            'content'             => 'required|string',
-            'status'              => 'nullable|in:draft,published',
+            'folio_id'          => 'nullable|exists:folios,id',
+            'volume_id'         => 'nullable|exists:volumes,id',
+            'active_persona_id' => 'nullable|exists:personae,id',
+            'character_ids'     => 'nullable|array',
+            'character_ids.*'   => 'string',
+            'folio_mode'        => 'nullable|in:mission,personal_log',
+            'ic_day'            => 'nullable|integer',
+            'ic_time'           => 'nullable|string',
+            'scene_location'    => 'nullable|string',
+            'content_tier_l'    => 'nullable|integer',
+            'content_tier_s'    => 'nullable|integer',
+            'content_tier_v'    => 'nullable|integer',
+            'folio_text'        => 'required|string',
+            'folio_status'      => 'nullable|in:draft,published',
         ]);
 
-        if (empty($validated['book_id'])) {
-            return response()->json(['status' => 'waiting_for_book'], 200);
+        if (empty($validated['volume_id'])) {
+            return response()->json(['status' => 'waiting_for_volume'], 200);
         }
 
         $rawCharacterIds = $validated['character_ids'] ?? [];
-        $chapterId = $chapter?->id ?? ($validated['chapter_id'] ?? null);
-        unset($validated['character_ids'], $validated['chapter_id']);
+        $folioId = $folio?->id ?? ($validated['folio_id'] ?? null);
+        unset($validated['character_ids'], $validated['folio_id']);
 
-        $validated['content'] = Purify::clean($validated['content']);
+        $validated['folio_text'] = Purify::clean($validated['folio_text']);
         $validated['ic_day'] = $validated['ic_day'] ?? 1;
         $validated['ic_time'] = $validated['ic_time'] ?? '0800';
-        $validated['rating_l'] = $validated['rating_l'] ?? 1;
-        $validated['rating_s'] = $validated['rating_s'] ?? 1;
-        $validated['rating_v'] = $validated['rating_v'] ?? 1;
+        $validated['content_tier_l'] = $validated['content_tier_l'] ?? 1;
+        $validated['content_tier_s'] = $validated['content_tier_s'] ?? 1;
+        $validated['content_tier_v'] = $validated['content_tier_v'] ?? 1;
 
-        if ($chapterId) {
-            $existingChapter = Chapter::find($chapterId);
-            if ($existingChapter && !$existingChapter->isAccessibleBy(auth()->user())) {
+        if ($folioId) {
+            $existingFolio = Folio::find($folioId);
+            if ($existingFolio && !$existingFolio->isAccessibleBy(auth()->user())) {
                 return response()->json(['status' => 'unauthorised'], 403);
             }
-            $chapter = $existingChapter;
-            $chapter->update($validated);
+            $folio = $existingFolio;
+            $folio->update($validated);
         } else {
-            $validated['author_user_id'] = auth()->id();
-            $validated['status'] = 'draft';
-            $chapter = Chapter::create($validated);
+            $validated['user_id'] = auth()->id();
+            $validated['folio_status'] = 'draft';
+            $folio = Folio::create($validated);
         }
 
         if (!empty($rawCharacterIds)) {
             $resolvedCharacterIds = $this->resolveCharacterIds($rawCharacterIds);
-            $chapter->characters()->sync($resolvedCharacterIds);
+            $folio->personae()->sync($resolvedCharacterIds);
         }
 
         return response()->json([
-            'status'     => 'success',
-            'success'    => true,
-            'chapter_id' => $chapter->id,
-            'timestamp'  => now()->toTimeString(),
-            'message'    => 'Draft auto-saved successfully.'
+            'status'    => 'success',
+            'success'   => true,
+            'folio_id'  => $folio->id,
+            'timestamp' => now()->toTimeString(),
+            'message'   => 'Draft auto-saved successfully.'
         ]);
     }
 
-    /**
-     * Resolve numeric character IDs or auto-create lightweight NPC records.
-     */
     protected function resolveCharacterIds(array $rawCharacterIds): array
     {
-        $resolvedCharacterIds = [];
-
+        $resolved = [];
         foreach ($rawCharacterIds as $item) {
             if (is_numeric($item)) {
-                $resolvedCharacterIds[] = (int) $item;
+                $resolved[] = (int) $item;
             } elseif (trim($item) !== '') {
-                $npc = Character::firstOrCreate(
-                    ['name' => trim($item)],
-                    [
-                        'character_type' => 'NPC',
-                        'status'         => 'active',
-                        'user_id'        => null,
-                    ]
+                $npc = Persona::firstOrCreate(
+                    ['persona_name' => trim($item)],
+                    ['persona_mode' => 'NPC', 'persona_status' => 'active', 'user_id' => null]
                 );
-                $resolvedCharacterIds[] = $npc->id;
+                $resolved[] = $npc->id;
             }
         }
-
-        return $resolvedCharacterIds;
+        return $resolved;
     }
 
-    /**
-     * Acquire or verify exclusive editor write-lock.
-     */
-    public function acquireLock(Chapter $chapter)
+    public function acquireLock(Folio $folio)
     {
         $userId = auth()->id();
-
-        $coAuthorUserIds = $chapter->characters()->whereNotNull('user_id')->pluck('user_id')->toArray();
+        $coAuthorUserIds = $folio->personae()->whereNotNull('user_id')->pluck('user_id')->toArray();
         $isCoAuthor = in_array($userId, $coAuthorUserIds);
 
-        if ($chapter->locked_by_user_id && $chapter->locked_by_user_id !== $userId && !$isCoAuthor) {
-            if ($chapter->locked_at && $chapter->locked_at->diffInMinutes(now()) < 10) {
-                $lockedUser = $chapter->lockedBy;
+        if ($folio->locked_by_user_id && $folio->locked_by_user_id !== $userId && !$isCoAuthor) {
+            if ($folio->locked_at && $folio->locked_at->diffInMinutes(now()) < 10) {
+                $lockedUser = $folio->lockedBy;
                 return response()->json([
                     'status'    => 'locked',
                     'locked_by' => $lockedUser->name ?? 'Another writer',
-                    'user_id'   => $lockedUser->id ?? null,
-                    'email'     => $lockedUser->email ?? null,
-                    'message'   => 'This chapter is currently locked by another writer.'
+                    'message'   => 'This folio is currently locked.'
                 ], 423);
             }
         }
 
-        $chapter->update([
-            'locked_by_user_id' => $userId,
-            'locked_at'         => now(),
-        ]);
-
+        $folio->update(['locked_by_user_id' => $userId, 'locked_at' => now()]);
         return response()->json(['status' => 'success']);
-    }
-
-    /**
-     * Send an "Are You Finished?" ping to the user holding the lock.
-     */
-    public function pingLockWriter(Request $request, Chapter $chapter)
-    {
-        $validated = $request->validate([
-            'channel' => 'required|in:pm,email,discord',
-        ]);
-
-        $locker = $chapter->lockedBy;
-        if (!$locker) {
-            return response()->json(['status' => 'error', 'message' => 'No active locker found.'], 404);
-        }
-
-        $sender = auth()->user();
-        $channel = $validated['channel'];
-
-        if ($channel === 'pm') {
-            NotificationService::sendPm(
-                $sender,
-                [$locker],
-                'Are you finished with Chapter #' . $chapter->id . '?',
-                'Editor Lock Ping: Chapter #' . $chapter->id
-            );
-        } elseif ($channel === 'email' && !empty($locker->email)) {
-            if (NotificationService::isChannelEnabled('email')) {
-                Mail::to($locker->email)->send(new LockPingMail($chapter, $sender));
-            }
-        } elseif ($channel === 'discord') {
-            $discordId = UserAttribute::where('user_id', $locker->id)
-                ->where('key', 'discord_id')
-                ->value('value');
-            $mention = !empty($discordId) ? "<@{$discordId}>" : $locker->name;
-
-            NotificationService::sendDiscord(
-                'alerts',
-                "🔔 **Chapter Editor Ping:** {$sender->name} is asking {$mention} if they're finished with Chapter #{$chapter->id} (*{$chapter->location}*)."
-            );
-        }
-
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Ping successfully sent to ' . $locker->name . '.'
-        ]);
-    }
-    public function aiChapterGenerate(Request $request, \App\Services\AiContentService $contentService)
-    {
-        $validated = $request->validate([
-            'prompt'   => 'required|string',
-            'npc_name' => 'nullable|string',
-        ]);
-
-        $content = $contentService->generateNpcDialogue(
-            $validated['prompt'],
-            $validated['npc_name'] ?? 'Security Chief'
-        );
-
-        return response()->json([
-            'status'  => 'success',
-            'content' => $content,
-        ]);
     }
 }

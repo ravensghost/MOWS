@@ -2,44 +2,49 @@
 import TomSelect from 'tom-select';
 
 /**
- * Global Tom Select Helper Utility
- * Standardises Tom Select initialisation, value syncing, dynamic option reloading, and cleanup.
+ * Global Select Helper Wrapper using Tom Select
  */
 window.Select = {
-    init(el, config = {}) {
+    instances: {},
+
+    init(selectorOrEl, options = {}) {
+        const el = typeof selectorOrEl === 'string' ? document.querySelector(selectorOrEl) : selectorOrEl;
         if (!el) return null;
+
+        // Clean up pre-existing instance on the element
         if (el.tomselect) {
             el.tomselect.destroy();
         }
-        return new TomSelect(el, {
-            plugins: config.multiple ? ['remove_button'] : [],
+
+        const defaultOptions = {
             create: false,
-            ...config
-        });
-    },
-    setValue(el, value, silent = true) {
-        if (el && el.tomselect) {
-            el.tomselect.setValue(value, silent);
+            sortField: {
+                field: 'text',
+                direction: 'asc'
+            },
+            ...options
+        };
+
+        const instance = new TomSelect(el, defaultOptions);
+
+        if (el.id) {
+            this.instances[el.id] = instance;
         }
+
+        return instance;
     },
-    clear(el, silent = true) {
-        if (el && el.tomselect) {
-            el.tomselect.clear(silent);
-        }
-    },
-    syncOptions(el, optionsArray = [], selectedValue = null) {
-        if (!el || !el.tomselect) return;
-        const ts = el.tomselect;
-        ts.clearOptions();
-        ts.addOptions(optionsArray);
-        ts.refreshOptions(false);
-        if (selectedValue !== null) {
-            ts.setValue(selectedValue, true);
-        }
-    },
-    destroy(el) {
+
+    destroy(selectorOrEl) {
+        const el = typeof selectorOrEl === 'string' ? document.querySelector(selectorOrEl) : selectorOrEl;
         if (el && el.tomselect) {
             el.tomselect.destroy();
+            if (el.id && this.instances[el.id]) {
+                delete this.instances[el.id];
+            }
         }
     }
 };
+
+window.TomSelect = TomSelect;
+
+export default TomSelect;

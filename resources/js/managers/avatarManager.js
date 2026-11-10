@@ -38,12 +38,11 @@ export default (primaryUrlInit, galleryInit, characterNameInit, galleryGroupInit
     },
 
     initLightbox() {
-        if (window.GLightbox) {
-            if (this.lightboxInstance) {
+        if (window.Lightbox) {
+            if (this.lightboxInstance && typeof this.lightboxInstance.destroy === 'function') {
                 this.lightboxInstance.destroy();
             }
-            this.lightboxInstance = window.GLightbox({
-                selector: '.glightbox',
+            this.lightboxInstance = window.Lightbox.init('.glightbox', {
                 touchNavigation: true,
                 loop: true
             });

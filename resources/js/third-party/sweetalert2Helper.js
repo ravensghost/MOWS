@@ -2,86 +2,80 @@
 import Swal from 'sweetalert2';
 
 /**
- * Global SweetAlert2 Helper Utility
- * Standardises theme colours, dark styling, toasts, and confirmation prompts.
+ * Global SweetAlert2 Helper Wrapper & Theme Configuration
  */
 window.Swal = {
+    ...Swal,
+
     themeConfig() {
         return {
-            background: window.getThemeColour ? window.getThemeColour('--theme-bg-panel-body') : '#111827',
-            color: window.getThemeColour ? window.getThemeColour('--theme-text-p') : '#ffffff'
+            background: '#1a1a1a',
+            color: '#f3f4f6',
+            confirmButtonColor: '#3b82f6',
+            cancelButtonColor: '#4b5563',
+            customClass: {
+                popup: 'mows-swal-popup',
+                title: 'mows-swal-title',
+                htmlContainer: 'mows-swal-text',
+                confirmButton: 'mows-swal-confirm-btn',
+                cancelButton: 'mows-swal-cancel-btn'
+            }
         };
     },
-    toast(icon, title, timer = 1500) {
-        if (!Swal) return;
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
+
+    toast(icon, title, timer = 3000) {
+        return Swal.fire({
             icon: icon,
             title: title,
+            toast: true,
+            position: 'top-end',
             showConfirmButton: false,
             timer: timer,
-            ...this.themeConfig()
+            timerProgressBar: true,
+            background: '#1a1a1a',
+            color: '#f3f4f6',
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer);
+                toast.addEventListener('mouseleave', Swal.resumeTimer);
+            }
         });
     },
-    loading(title = 'Please wait...', html = 'Processing request...') {
-        if (!Swal) return;
-        Swal.fire({
-            title: title,
-            html: html,
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            didOpen: () => Swal.showLoading(),
-            ...this.themeConfig()
-        });
-    },
-    confirm(title, text, confirmText = 'Yes, proceed!') {
-        if (!Swal) return Promise.resolve({ isConfirmed: false });
+
+    confirm(title, text = 'This action cannot be undone.', confirmButtonText = 'Yes, proceed') {
         return Swal.fire({
             title: title,
             text: text,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: window.getThemeColour ? window.getThemeColour('--theme-bg-danger-colour') : '#ef4444',
-            cancelButtonColor: window.getThemeColour ? window.getThemeColour('--theme-bg-primary-colour') : '#3b82f6',
-            confirmButtonText: confirmText,
+            confirmButtonText: confirmButtonText,
             cancelButtonText: 'Cancel',
             ...this.themeConfig()
         });
     },
+
     error(title = 'Error', text = 'An unexpected error occurred.') {
-        if (!Swal) return;
-        Swal.fire({
+        return Swal.fire({
             icon: 'error',
             title: title,
             text: text,
             ...this.themeConfig()
         });
     },
-    close() {
-        if (Swal) Swal.close();
-    },
-    fire(...args) {
-        if (Swal) return Swal.fire(...args);
+
+    loading(title = 'Processing...', html = 'Please wait while we complete your request.') {
+        return Swal.fire({
+            title: title,
+            html: html,
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            },
+            ...this.themeConfig()
+        });
     }
 };
 
-/**
- * Alpine component for handling session flash alerts from backend
- */
-export default function sweetalert2Helper() {
-    return {
-        init() {
-            if (window.sessionFlash) {
-                const { type, message } = window.sessionFlash;
-                if (type && message) {
-                    if (type === 'success' || type === 'info' || type === 'warning') {
-                        window.Swal.toast(type, message);
-                    } else if (type === 'error') {
-                        window.Swal.error('Error', message);
-                    }
-                }
-            }
-        }
-    };
-}
+window.swal = window.Swal;
+
+export default Swal;

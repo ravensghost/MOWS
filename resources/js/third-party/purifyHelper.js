@@ -2,11 +2,8 @@
 import DOMPurify from 'dompurify';
 
 /**
- * Global Purify Helper Utility
- * Sanitises HTML strings to prevent XSS attacks.
+ * Global DOMPurify Helper Wrapper
  */
-window.Purify = {
-    clean(html, config = {}) {
-        return DOMPurify.sanitize(html, config);
-    }
-};
+window.DOMPurify = DOMPurify;
+
+export default DOMPurify;

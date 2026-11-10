@@ -17,10 +17,8 @@ export default (awardsList = []) => ({
     },
 
     initFuse() {
-        // Leverage the standardized global window.Search helper (powered by Fuse.js)
         if (this.$refs.serviceRecordsSearchData && window.Search) {
             try {
-                // If serviceRecordsSearchData holds a catalog array, we can use Search or initialise via Fuse directly
                 this.searchHelperInstance = window.Search.create('[data-service-record-item]', ['recipient', 'event_type', 'award_name', 'description'], {
                     threshold: 0.35
                 });

@@ -3,23 +3,30 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\FormField;
-use App\Models\Application;
-use App\Models\Page;
+use App\Models\Metadata;
+use App\Models\CandidatePetition;
+use App\Models\Persona;
+use App\Models\Configuration;
+use App\Models\Book;
 use Stevebauman\Purify\Facades\Purify;
 
 class CandidatePetitionSubmissionController extends Controller
 {
+    /**
+     * Display the public petition/application submission form.
+     */
     public function show($type)
     {
-        $fields = FormField::where('form_type', $type)->orderBy('order')->get();
+        $fields = Metadata::where('meta_mode', $type)
+            ->orderBy('metadata_sort_order')
+            ->get();
 
         if ($fields->isEmpty()) {
             abort(404, lexicon('msg_FormsHub_FormNotFound', 'Form not found or has no active fields.'));
         }
 
         $slug = $type === 'application' ? 'apply' : $type;
-        $systemPage = Page::with('layout.blocks')
+        $systemPage = Book::with('layout.blocks')
             ->where('slug', $slug)
             ->where('is_published', 1)
             ->first();
@@ -27,31 +34,72 @@ class CandidatePetitionSubmissionController extends Controller
         return view('form', compact('fields', 'type', 'systemPage'));
     }
 
+    /**
+     * Handle AJAX submission of a candidate petition.
+     */
     public function submit(Request $request, $identifier)
     {
-        if ($identifier === 'application' || $identifier == 25) {
+        if ($identifier === 'application' || (int) $identifier === 25) {
             if (!auth()->check()) {
+                $authMessage = lexicon('msg_auth_RequiredForApp', 'Please log in or register an account before submitting an application.');
                 if ($request->wantsJson()) {
                     return response()->json([
                         'status'  => 'error',
-                        'message' => lexicon('msg_auth_RequiredForApp', 'Please log in or register an account before submitting an application.')
+                        'success' => false,
+                        'message' => $authMessage,
                     ], 401);
                 }
-                return back()->with('error', lexicon('msg_auth_RequiredForApp', 'Please log in or register an account before submitting an application.'));
+                return back()->with('error', $authMessage);
+            }
+
+            // Check configuration token: character_limit_enforced
+            $limitEnforcedRaw = Configuration::where('configuration_token', 'character_limit_enforced')
+                ->value('configuration_payload');
+
+            $isLimitEnforced = filter_var($limitEnforcedRaw ?? false, FILTER_VALIDATE_BOOLEAN)
+                || in_array((string) $limitEnforcedRaw, ['1', 'true', 'yes', 'enabled'], true);
+
+            if ($isLimitEnforced) {
+                $maxCharacters = max(1, (int) (Configuration::where('configuration_token', 'max_active_characters')
+                    ->value('configuration_payload') ?? 3));
+
+                $activePersonaCount = Persona::where('user_id', auth()->id())
+                    ->whereIn('status', ['active', 'loa', 'eloa'])
+                    ->count();
+
+                $pendingPetitionCount = CandidatePetition::where('user_id', auth()->id())
+                    ->where('petition_status', 'Pending')
+                    ->count();
+
+                if (($activePersonaCount + $pendingPetitionCount) >= $maxCharacters) {
+                    $limitMsg = lexicon(
+                        'msg_FormsHub_CharacterLimitReached',
+                        'You have reached the maximum allowed number of active characters and pending petitions.'
+                    );
+
+                    if ($request->wantsJson()) {
+                        return response()->json([
+                            'status'  => 'error',
+                            'success' => false,
+                            'message' => $limitMsg,
+                        ], 422);
+                    }
+                    return back()->with('error', $limitMsg);
+                }
             }
 
             $formData = $request->except(['_token']);
-            $charName = trim($request->input('field_1') ?? '') ?: 'Unknown Character';
+            $charName = trim($request->input('field_1') ?? '') ?: 'Unknown Persona';
 
-            $application = Application::create([
-                'user_id'        => auth()->id(),
-                'character_name' => $charName,
-                'status'         => 'Pending',
-                'submitted_at'   => now(),
+            $petition = CandidatePetition::create([
+                'user_id'               => auth()->id(),
+                'proposed_persona_name' => $charName,
+                'petition_status'       => 'Pending',
+                'lodged_at'             => now(),
             ]);
 
-            $fieldsById = FormField::where('form_linked', '25')
-                ->orWhere('form_type', 'application')
+            $fieldsById = Metadata::where('linked_metadata', '25')
+                ->orWhere('meta_mode', 'application')
                 ->get()
                 ->keyBy('id');
 
@@ -69,9 +117,10 @@ class CandidatePetitionSubmissionController extends Controller
                     continue;
                 }
 
+                $fieldMode = $fieldModel->metadata_mode ?? $fieldModel->type ?? 'text';
                 $formattedAnswer = '';
 
-                if ($fieldModel->type === 'service_record' && is_array($value)) {
+                if ($fieldMode === 'service_record' && is_array($value)) {
                     $cleanRecords = [];
                     foreach ($value as $entry) {
                         $desc = trim(strip_tags($entry['description'] ?? ''));
@@ -90,7 +139,7 @@ class CandidatePetitionSubmissionController extends Controller
                         ];
                     }
                     $formattedAnswer = json_encode($cleanRecords);
-                } elseif ($fieldModel->type === 'richtext') {
+                } elseif ($fieldMode === 'richtext') {
                     $formattedAnswer = Purify::clean((string) $value);
                 } else {
                     $formattedAnswer = is_array($value)
@@ -98,9 +147,9 @@ class CandidatePetitionSubmissionController extends Controller
                         : trim(strip_tags((string) $value));
                 }
 
-                $application->answers()->create([
-                    'form_field_id' => $fieldId,
-                    'answer'        => $formattedAnswer,
+                $petition->answers()->create([
+                    'metadata_id'     => $fieldId,
+                    'petition_answer' => $formattedAnswer,
                 ]);
             }
 

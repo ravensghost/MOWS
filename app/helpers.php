@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\lexicon_codex;
+use App\Models\LexiconEntry;
 use App\Models\ChronologicalEngine;
 use App\Models\Configuration;
 use Illuminate\Support\Facades\Cache;
@@ -21,10 +21,10 @@ if (! function_exists('lexicon')) {
         $locale = strtolower(App::getLocale() ?: 'gb');
         $default = $default ?? '';
 
-        // 1. Fetch raw array dictionary from Cache (No Eloquent collections to break unserialize)
+        // 1. Fetch raw array dictionary from Cache
         if ($memoryCache === null) {
             $memoryCache = Cache::rememberForever('mows_lexicon', function () {
-                return DB::table('lexicon_codex')->pluck('translations', 'code_key')->toArray();
+                return DB::table('lexicon_codex')->pluck('translation_payloads', 'semantic_token')->toArray();
             });
             $lowerKeyMap = [];
             foreach (array_keys($memoryCache) as $k) {
@@ -32,7 +32,7 @@ if (! function_exists('lexicon')) {
             }
         }
 
-        // Case-insensitive key resolution to match MySQL utf8mb4_unicode_ci behaviour
+        // Case-insensitive key resolution
         $actualKey = $key;
         if (! array_key_exists($actualKey, $memoryCache)) {
             $lowerLookup = strtolower($key);
@@ -41,7 +41,7 @@ if (! function_exists('lexicon')) {
             }
         }
 
-        // 2. Auto-Discovery for missing terms (Safely cached in memory for the rest of this request)
+        // 2. Auto-Discovery for missing terms
         if (! array_key_exists($actualKey, $memoryCache)) {
             if (str_starts_with($key, 'public_label_')) {
                 $masterGroup = 'public_label';
@@ -58,21 +58,19 @@ if (! function_exists('lexicon')) {
             $defaultTranslations = ['gb' => $default];
 
             try {
-                // Includes display_value to satisfy strict MySQL table definitions
                 DB::table('lexicon_codex')->insertOrIgnore([
-                    'semantic_token'      => $key,
-                    'prefix_group_title'  => $masterGroup,
-                    'group_title'      => $subGroup,
+                    'semantic_token'         => $key,
+                    'prefix_group_title'     => $masterGroup,
+                    'group_title'            => $subGroup,
                     'default_lexicon_string' => $default,
-                    'translation_payloads'  => json_encode($defaultTranslations),
-                    'created_at'    => now(),
-                    'updated_at'    => now(),
+                    'translation_payloads'   => json_encode($defaultTranslations),
+                    'created_at'             => now(),
+                    'updated_at'             => now(),
                 ]);
             } catch (\Throwable $e) {
                 // Silently avoid breaking the view render if DB insert fails
             }
 
-            // Update in-memory copy so subsequent calls on this page don't re-query
             $memoryCache[$key] = $defaultTranslations;
             $lowerKeyMap[strtolower($key)] = $key;
             Cache::put('mows_lexicon', $memoryCache, 86400);
@@ -114,14 +112,13 @@ if (! function_exists('lexicon')) {
                         ->where('semantic_token', $actualKey)
                         ->update([
                             'default_lexicon_string' => $default,
-                            'translation_payloads'  => json_encode($translations),
-                            'updated_at'    => now(),
+                            'translation_payloads'   => json_encode($translations),
+                            'updated_at'             => now(),
                         ]);
                 } catch (\Throwable $e) {
                     // Silently avoid breaking the view render
                 }
 
-                // Push upgraded term back into the cache
                 $memoryCache[$actualKey] = $translations;
                 Cache::put('mows_lexicon', $memoryCache, 86400);
             }
@@ -228,7 +225,7 @@ if (! function_exists('get_widget_manifest')) {
                             }
                         }
 
-                        \App\Models\Widget::updateOrCreate(
+                        \App\Models\Module::updateOrCreate(
                             ['widget_key' => $widgetKey],
                             [
                                 'name' => $manifest['name'] ?? \Illuminate\Support\Str::title(str_replace('_', ' ', $widgetKey)),
@@ -242,7 +239,9 @@ if (! function_exists('get_widget_manifest')) {
             return $discoveredWidgets;
         });
     }
-    if (! function_exists('world_date')) {
+}
+
+if (! function_exists('world_date')) {
     function world_date($date, $fallbackFormat = 'M d, Y H:i')
     {
         if (!$date) return '';
@@ -280,7 +279,7 @@ if (! function_exists('get_widget_manifest')) {
         }
 
         if ($engineType === 'offset') {
-            $year = $carbonDate->year - ($baseEarthYear - $baseValue);
+            $year = $carbonDate->year - $baseEarthYear + $baseValue;
             $output = $prefix . $year . $suffix;
             return str_replace('{day}', $carbonDate->dayOfYear, $output);
         }
@@ -289,60 +288,59 @@ if (! function_exists('get_widget_manifest')) {
     }
 }
 
-    if (! function_exists('real_date')) {
-        /**
-         * Convert an in-game stardate into its corresponding future in-game calendar date 
-         * by applying the base_earth_modifier offset.
-         */
-        function real_date($stardate, string $fallbackFormat = 'M d, Y')
-        {
-            if ($stardate === '' || $stardate === null) return '';
+if (! function_exists('real_date')) {
+    /**
+     * Convert an in-game stardate into its corresponding future in-game calendar date 
+     * by applying the base_earth_modifier offset.
+     */
+    function real_date($stardate, string $fallbackFormat = 'M d, Y')
+    {
+        if ($stardate === '' || $stardate === null) return '';
 
-            // Extract numeric value from strings (e.g. "Stardate 43309.5" -> 43309.5)
-            $numericValue = floatval(preg_replace('/[^0-9.]/', '', (string) $stardate));
+        // Extract numeric value from strings (e.g. "Stardate 43309.5" -> 43309.5)
+        $numericValue = floatval(preg_replace('/[^0-9.]/', '', (string) $stardate));
 
-            $system = Cache::remember('active_time_system', 3600, function () {
-                $activeId = DB::table('configurations')
-                    ->where('configuration_token', 'universe_time_system')
-                    ->value('configuration_payload');
-                if (!$activeId) return null;
-                $ts = ChronologicalEngine::find($activeId);
-                return $ts ? $ts->toArray() : null;
-            });
+        $system = Cache::remember('active_time_system', 3600, function () {
+            $activeId = DB::table('configurations')
+                ->where('configuration_token', 'universe_time_system')
+                ->value('configuration_payload');
+            if (!$activeId) return null;
+            $ts = ChronologicalEngine::find($activeId);
+            return $ts ? $ts->toArray() : null;
+        });
 
-            if (!$system || $system['calculation_algorithm'] === 'real_world') {
-                return Carbon::parse($stardate)->format($fallbackFormat);
-            }
-
-            // Base Earth Year PLUS the modifier to land in the correct future era (e.g., TNG 2364+)
-            $baseEarthYear = intval($system['base_earth_year'] ?? 1983) + intval($system['base_earth_modifier'] ?? 0);
-            $baseValue = floatval($system['base_system_value'] ?? 0);
-            $multiplier = floatval($system['temporal_multiplier'] ?? 1);
-            $engineType = $system['calculation_algorithm'] ?? 'real_world';
-
-            if ($engineType === 'fractional') {
-                $netValue = $numericValue - $baseValue;
-                $safeMultiplier = ($multiplier != 0) ? $multiplier : 1;
-                $totalYears = $netValue / $safeMultiplier;
-                
-                $yearOffset = floor($totalYears);
-                $fraction = $totalYears - $yearOffset;
-                
-                $targetYear = $baseEarthYear + intval($yearOffset);
-                
-                $dummyDate = Carbon::createFromDate($targetYear, 1, 1);
-                $daysInYear = $dummyDate->daysInYear;
-                $dayOfYear = max(1, min($daysInYear, (int) round($fraction * $daysInYear)));
-
-                return $dummyDate->addDays($dayOfYear - 1)->format($fallbackFormat);
-            }
-
-            if ($engineType === 'offset') {
-                $targetYear = $baseEarthYear - $baseValue + $numericValue;
-                return Carbon::createFromDate((int) $targetYear, 1, 1)->format($fallbackFormat);
-            }
-
+        if (!$system || $system['calculation_algorithm'] === 'real_world') {
             return Carbon::parse($stardate)->format($fallbackFormat);
         }
+
+        // Base Earth Year PLUS the modifier to land in the correct future era (e.g., TNG 2364+)
+        $baseEarthYear = intval($system['base_earth_year'] ?? 1983) + intval($system['base_earth_modifier'] ?? 0);
+        $baseValue = floatval($system['base_system_value'] ?? 0);
+        $multiplier = floatval($system['temporal_multiplier'] ?? 1);
+        $engineType = $system['calculation_algorithm'] ?? 'real_world';
+
+        if ($engineType === 'fractional') {
+            $netValue = $numericValue - $baseValue;
+            $safeMultiplier = ($multiplier != 0) ? $multiplier : 1;
+            $totalYears = $netValue / $safeMultiplier;
+
+            $yearOffset = floor($totalYears);
+            $fraction = $totalYears - $yearOffset;
+
+            $targetYear = $baseEarthYear + intval($yearOffset);
+
+            $dummyDate = Carbon::createFromDate($targetYear, 1, 1);
+            $daysInYear = $dummyDate->daysInYear;
+            $dayOfYear = max(1, min($daysInYear, (int) round($fraction * $daysInYear)));
+
+            return $dummyDate->addDays($dayOfYear - 1)->format($fallbackFormat);
+        }
+
+        if ($engineType === 'offset') {
+            $targetYear = $baseEarthYear - $baseValue + $numericValue;
+            return Carbon::createFromDate((int) $targetYear, 1, 1)->format($fallbackFormat);
+        }
+
+        return Carbon::parse($stardate)->format($fallbackFormat);
     }
 }

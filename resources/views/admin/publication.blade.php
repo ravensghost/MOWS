@@ -3,23 +3,23 @@
 @section('title', lexicon('admin_label_story', 'Story Library Manager'))
 
 @section('content')
-<div x-data="storyManager" 
+<div x-data="publicationManager" 
      @ajax-success.window="refreshDOM($event.detail)"
      @open-status-modal.window="openStatusModal($event.detail)"
-     @open-bookcase-modal.window="openBookcaseModal($event.detail)"
-     @open-book-modal.window="openBookModal($event.detail)"
-     @open-move-chapter-modal.window="openMoveChapterModal($event.detail)">
+     @open-shelf-modal.window="openShelfModal($event.detail)"
+     @open-volume-modal.window="openVolumeModal($event.detail)"
+     @open-move-folio-modal.window="openMoveFolioModal($event.detail)">
 
     <x-admin-grid-wrapper :page="$systemPage">
         
         <x-slot:top>
-            <script type="application/json" x-ref="storySearchData">
+            <script type="application/json" x-ref="publicationSearchData">
                 {!! json_encode($shelves->map(fn($sh) => [
                     'id' => $sh->id,
-                    'name' => $sh->shelf_title,
-                    'books' => $sh->volumes->map(fn($v) => [
-                        'title' => $v->volume_title,
-                        'description' => $v->volume_synopsis ?? ''
+                    'shelf_title' => $sh->shelf_title,
+                    'volumes' => $sh->volumes->map(fn($v) => [
+                        'volume_title' => $v->volume_title,
+                        'volume_synopsis' => $v->volume_synopsis ?? ''
                     ])->values()
                 ])->values()) !!}
             </script>
@@ -29,7 +29,7 @@
                     <x-button type="button" 
                               variant="success" 
                               class="p-btn-sm text-sm flex flex-row items-center gap-xs" 
-                              @click="$dispatch('open-bookcase-modal', { mode: 'create' })"
+                              @click="openShelfModal({ mode: 'create' })"
                               x-tooltip="'{{ addslashes(lexicon('tooltip_Story_AddShelf', 'Create a new shelf to organise volumes')) }}'"
                               aria-label="{{ lexicon('tooltip_Story_AddShelf', 'Create a new shelf to organise volumes') }}">
                         <i class="bi bi-plus-lg"></i>
@@ -54,13 +54,13 @@
                 </div>
 
                 {{-- Shelves & Nested Volumes --}}
-                <div id="bookcases-wrapper" x-ref="bookcasesWrapper">
-                    <div class="flex flex-col gap-lg" id="sortable-bookcases" x-data="sortableManager('/admin/bookcases/reorder')">
+                <div id="shelves-wrapper" x-ref="shelvesWrapper">
+                    <div class="flex flex-col gap-lg" id="sortable-shelves" x-data="sortableHelper('/admin/bookcases/reorder', 'shelf_sort_order')">
                         @forelse($shelves as $shelf)
                             <div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col overflow-hidden w-full" 
                                  data-id="{{ $shelf->id }}" 
                                  x-data="{ expanded: false }"
-                                 x-show="matchesBookcase({{ $shelf->id }}, {{ json_encode($shelf->shelf_title) }})">
+                                 x-show="matchesShelf({{ $shelf->id }}, {{ json_encode($shelf->shelf_title) }})">
                                 
                                 <div @click="if (!$event.target.closest('button')) expanded = !expanded" 
                                      class="bg-panel-header text-h border-b border-panel p-panel-header font-bold w-full flex flex-row flex-wrap items-center justify-between gap-md text-left cursor-pointer select-none"
@@ -78,7 +78,7 @@
                                         <x-button type="button" 
                                                   variant="success" 
                                                   class="p-btn-sm text-xs flex flex-row items-center gap-xs" 
-                                                  @click.stop="$dispatch('open-book-modal', { mode: 'create', bookcaseId: '{{ $shelf->id }}' })"
+                                                  @click.stop="openVolumeModal({ mode: 'create', shelf_id: '{{ $shelf->id }}' })"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Story_AddVolume', 'Add a new volume to this shelf')) }}'"
                                                   aria-label="{{ lexicon('tooltip_Story_AddVolume', 'Add a new volume to this shelf') }}">
                                             <i class="bi bi-plus-lg"></i>
@@ -90,7 +90,7 @@
                                         <x-button type="button" 
                                                   variant="text" 
                                                   class="text-warning hover-text-h text-sm flex flex-row items-center gap-xs" 
-                                                  @click="$dispatch('open-bookcase-modal', {{ json_encode(['mode' => 'edit', 'id' => $shelf->id, 'name' => $shelf->shelf_title]) }})"
+                                                  @click="openShelfModal({{ json_encode(['mode' => 'edit', 'id' => $shelf->id, 'shelf_title' => $shelf->shelf_title]) }})"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Story_EditShelf', 'Rename this shelf')) }}'"
                                                   aria-label="{{ lexicon('tooltip_Story_EditShelf', 'Rename this shelf') }}">
                                             <i class="bi bi-pencil"></i>
@@ -110,10 +110,10 @@
                                 </div>
                                 
                                 <div x-show="expanded || searchQuery.trim().length > 0" x-collapse x-cloak 
-                                     class="bg-panel-sub flex flex-col gap-md p-panel w-full box-border sortable-books" 
-                                     id="sortable-books-{{ $shelf->id }}" 
-                                     data-bookcase-id="{{ $shelf->id }}"
-                                     x-data="sortableManager('/admin/books/reorder')">
+                                     class="bg-panel-sub flex flex-col gap-md p-panel w-full box-border sortable-volumes" 
+                                     id="sortable-volumes-{{ $shelf->id }}" 
+                                     data-shelf-id="{{ $shelf->id }}"
+                                     x-data="sortableHelper('/admin/books/reorder', 'volume_sort_order')">
                                     @forelse($shelf->volumes as $volume)
                                         <x-story-book-panel :book="$volume" :isLoose="false" />
                                     @empty
@@ -132,10 +132,10 @@
                 </div>
 
                 {{-- Loose / Unassigned Volumes --}}
-                <div id="loose-books-wrapper" x-ref="looseBooksWrapper">
+                <div id="loose-volumes-wrapper" x-ref="looseVolumesWrapper">
                     @if(count($looseVolumes) > 0)
                         <x-accordion-panel :title="lexicon('label_Story_LooseVolumes', 'Loose Volumes (Unassigned)')" :expanded="false">
-                            <div class="flex flex-col gap-md" id="sortable-loose-books" x-data="sortableManager('/admin/books/reorder')">
+                            <div class="flex flex-col gap-md" id="sortable-loose-volumes" x-data="sortableHelper('/admin/books/reorder', 'volume_sort_order')">
                                 @foreach($looseVolumes as $volume)
                                     <x-story-book-panel :book="$volume" :isLoose="true" />
                                 @endforeach
@@ -144,14 +144,14 @@
                     @endif
                 </div>
 
-                {{-- Book Statuses Management --}}
+                {{-- Publication States Management --}}
                 <div id="statuses-wrapper" x-ref="statusesWrapper">
                     <x-accordion-panel :title="lexicon('admin_label_PublicationStates', 'Publication States')" :expanded="false">
                         <x-slot:top>
                             <x-button type="button" 
                                       variant="success" 
                                       class="p-btn-sm text-sm flex flex-row items-center gap-xs" 
-                                      @click="$dispatch('open-status-modal', { mode: 'create' })"
+                                      @click="openStatusModal({ mode: 'create' })"
                                       x-tooltip="'{{ addslashes(lexicon('tooltip_Story_AddStatus', 'Create a new publication state')) }}'"
                                       aria-label="{{ lexicon('tooltip_Story_AddStatus', 'Create a new publication state') }}">
                                 <i class="bi bi-plus-lg"></i>
@@ -179,7 +179,7 @@
                                             <x-button type="button" 
                                                       variant="text" 
                                                       class="text-warning hover-text-h text-xs flex flex-row items-center gap-xs" 
-                                                      @click="$dispatch('open-status-modal', {{ json_encode(['mode' => 'edit', 'id' => $status->id, 'name' => $status->state_title]) }})"
+                                                      @click="openStatusModal({{ json_encode(['mode' => 'edit', 'id' => $status->id, 'state_title' => $status->state_title]) }})"
                                                       x-tooltip="'{{ addslashes(lexicon('tooltip_Story_EditStatus', 'Edit publication state')) }}'"
                                                       aria-label="{{ lexicon('tooltip_Story_EditStatus', 'Edit publication state') }}">
                                                 <i class="bi bi-pencil"></i>
@@ -212,24 +212,24 @@
 
         <x-slot:bottom>
             {{-- MODAL 1: Shelf Modal --}}
-            <x-modal show="bookcaseModalOpen" maxWidth="max-w-lg">
+            <x-modal show="shelfModal.open" maxWidth="max-w-lg">
                 <x-slot:top>
-                    <span x-text="bookcaseMode === 'create' ? '{{ addslashes(lexicon('label_Story_CreateShelf', 'Build Shelf')) }}' : '{{ addslashes(lexicon('label_Story_EditShelf', 'Edit Shelf')) }}'"></span>
+                    <span x-text="shelfModal.mode === 'create' ? '{{ addslashes(lexicon('label_Story_CreateShelf', 'Build Shelf')) }}' : '{{ addslashes(lexicon('label_Story_EditShelf', 'Edit Shelf')) }}'"></span>
                 </x-slot:top>
 
-                <form :action="bookcaseFormAction" 
+                <form :action="shelfModal.action" 
                       method="POST" 
                       class="flex flex-col gap-md" 
                       x-data="ajaxForm" 
                       @submit.prevent="submit($event)">
                     @csrf
-                    <input type="hidden" name="_method" :value="bookcaseMethod">
+                    <input type="hidden" name="_method" :value="shelfModal.method">
                     
                     <x-form-input name="shelf_title"
                                   id="shelf-title-input"
                                   :label="lexicon('label_Story_ShelfName', 'Shelf Title')"
                                   :tooltip="lexicon('tooltip_Story_ShelfNameInput', 'Enter the display title for this shelf')"
-                                  xModel="bookcaseName"
+                                  xModel="shelfModal.shelf_title"
                                   :required="true" />
 
                     <div class="border-t-actions pt-6 text-right flex flex-row flex-wrap items-center justify-end gap-md">
@@ -247,25 +247,25 @@
             </x-modal>
 
             {{-- MODAL 2: Volume Modal --}}
-            <x-modal show="bookModalOpen" maxWidth="max-w-4xl">
+            <x-modal show="volumeModal.open" maxWidth="max-w-4xl">
                 <x-slot:top>
-                    <span x-text="bookMode === 'create' ? '{{ addslashes(lexicon('label_Story_CreateVolume', 'Write Volume Details')) }}' : '{{ addslashes(lexicon('label_Story_EditVolume', 'Edit Volume Details')) }}'"></span>
+                    <span x-text="volumeModal.mode === 'create' ? '{{ addslashes(lexicon('label_Story_CreateVolume', 'Write Volume Details')) }}' : '{{ addslashes(lexicon('label_Story_EditVolume', 'Edit Volume Details')) }}'"></span>
                 </x-slot:top>
 
-                <form :action="bookFormAction" 
+                <form :action="volumeModal.action" 
                       method="POST" 
                       class="flex flex-col gap-md" 
                       x-data="ajaxForm" 
                       @submit.prevent="submit($event)">
                     @csrf
-                    <input type="hidden" name="_method" :value="bookMethod">
+                    <input type="hidden" name="_method" :value="volumeModal.method">
                     
                     <div class="grid grid-cols-1 md-grid-cols-2 gap-sm w-full">
                         <x-form-input name="volume_title"
                                       id="volume-title-input"
                                       :label="lexicon('label_Story_VolumeTitle', 'Volume Title')"
                                       :tooltip="lexicon('tooltip_Story_VolumeTitleInput', 'Enter the title of this story volume')"
-                                      xModel="bookTitle"
+                                      xModel="volumeModal.volume_title"
                                       :required="true" />
 
                         <div class="flex flex-col gap-xs">
@@ -274,7 +274,7 @@
                             </label>
                             <select id="volume-shelf-select"
                                     name="shelf_id" 
-                                    x-model="bookBookcaseId" 
+                                    x-model="volumeModal.shelf_id" 
                                     aria-label="{{ lexicon('label_Story_ShelfLocation', 'Location (Shelf)') }}"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_Story_ShelfLocationSelect', 'Assign this volume to a shelf or leave unassigned')) }}'"
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent">
@@ -292,12 +292,12 @@
                         </label>
                         <textarea id="volume-synopsis-textarea"
                                   name="volume_synopsis" 
-                                  x-model="bookDesc" 
-                                  x-ref="bookDescTextarea"
+                                  x-model="volumeModal.volume_synopsis" 
+                                  x-ref="volumeSynopsisTextarea"
                                   rows="3" 
                                   aria-label="{{ lexicon('label_Story_VolumeSynopsis', 'Description / Synopsis') }}"
                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Story_VolumeSynopsisInput', 'Provide a brief synopsis or overview for this volume')) }}'"
-                                  x-init="window.autosize && window.autosize($el)"
+                                  x-init="window.Autosize && window.Autosize.init($el)"
                                   class="bg-input text-input border-input rounded-input p-input outline-none w-full box-border focus-border-accent focus-shadow-accent"></textarea>
                     </div>
 
@@ -309,7 +309,7 @@
                             </label>
                             <select id="volume-status-select"
                                     name="publication_state_id" 
-                                    x-model="bookStatusId" 
+                                    x-model="volumeModal.publication_state_id" 
                                     aria-label="{{ lexicon('label_common_Status', 'Publication State') }}"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_Story_PublicationStateSelect', 'Select the current publication state of this volume')) }}'"
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
@@ -326,14 +326,14 @@
                                       :label="lexicon('label_Story_CurrentIcDay', 'Current IC Day')"
                                       :placeholder="lexicon('label_WriteChapter_PlaceholderDay', 'e.g. 14')"
                                       :tooltip="lexicon('tooltip_Story_CurrentIcDayInput', 'Enter the current in-character day for this volume')"
-                                      xModel="bookDay" />
+                                      xModel="volumeModal.ic_day" />
 
                         <x-form-input name="ic_time"
                                       id="volume-ic-time-input"
                                       :label="lexicon('label_Story_CurrentIcTime', 'Current IC Time')"
                                       :placeholder="lexicon('label_WriteChapter_PlaceholderTime', 'e.g. 14:00')"
                                       :tooltip="lexicon('tooltip_Story_CurrentIcTimeInput', 'Enter the current in-character time for this volume')"
-                                      xModel="bookTime" />
+                                      xModel="volumeModal.ic_time" />
                     </div>
 
                     <div class="border-t-actions pt-6 text-right flex flex-row flex-wrap items-center justify-end gap-md">
@@ -351,12 +351,12 @@
             </x-modal>
 
             {{-- MODAL 3: Move Folio Modal --}}
-            <x-modal show="moveModalOpen" maxWidth="max-w-lg">
+            <x-modal show="moveModal.open" maxWidth="max-w-lg">
                 <x-slot:top>
                     <span>{{ lexicon('label_Story_RelocateFolio', 'Relocate Folio') }}</span>
                 </x-slot:top>
 
-                <form :action="moveFormAction" 
+                <form :action="moveModal.action" 
                       method="POST" 
                       class="flex flex-col gap-md" 
                       x-data="ajaxForm" 
@@ -370,7 +370,7 @@
                         </label>
                         <select id="move-folio-volume-select"
                                 name="volume_id" 
-                                x-model="moveBookId" 
+                                x-model="moveModal.volume_id" 
                                 aria-label="{{ lexicon('label_WriteChapter_TargetVolume', 'Target Volume') }}"
                                 x-tooltip="'{{ addslashes(lexicon('tooltip_Story_MoveTargetVolumeSelect', 'Choose the destination volume for this folio')) }}'"
                                 class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
@@ -406,24 +406,24 @@
             </x-modal>
 
             {{-- MODAL 4: Status Modal --}}
-            <x-modal show="statusModalOpen" maxWidth="max-w-lg">
+            <x-modal show="statusModal.open" maxWidth="max-w-lg">
                 <x-slot:top>
-                    <span x-text="statusMode === 'create' ? '{{ addslashes(lexicon('label_Story_CreateStatus', 'Create Publication State')) }}' : '{{ addslashes(lexicon('label_Story_EditStatus', 'Edit Publication State')) }}'"></span>
+                    <span x-text="statusModal.mode === 'create' ? '{{ addslashes(lexicon('label_Story_CreateStatus', 'Create Publication State')) }}' : '{{ addslashes(lexicon('label_Story_EditStatus', 'Edit Publication State')) }}'"></span>
                 </x-slot:top>
 
-                <form :action="statusFormAction" 
+                <form :action="statusModal.action" 
                       method="POST" 
                       class="flex flex-col gap-md" 
                       x-data="ajaxForm" 
                       @submit.prevent="submit($event)">
                     @csrf
-                    <input type="hidden" name="_method" :value="statusMethod">
+                    <input type="hidden" name="_method" :value="statusModal.method">
                     
-                    <x-form-input name="name"
+                    <x-form-input name="state_title"
                                   id="status-name-input"
                                   :label="lexicon('label_Story_StatusName', 'State Title')"
                                   :tooltip="lexicon('tooltip_Story_StatusNameInput', 'Enter the display title for this publication state')"
-                                  xModel="statusName"
+                                  xModel="statusModal.state_title"
                                   :required="true" />
 
                     <div class="border-t-actions pt-6 text-right flex flex-row flex-wrap items-center justify-end gap-md">
@@ -439,6 +439,7 @@
                     </div>
                 </form>
             </x-modal>
+
             {{-- MODAL 5: End-of-Book Service Record Review Modal --}}
             @include('admin.bookreview')
         </x-slot:bottom>

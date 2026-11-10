@@ -4,25 +4,25 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\News;
-use App\Models\Page;
+use App\Models\Bulletin;
+use App\Models\Book;
 use Stevebauman\Purify\Facades\Purify;
 
 class BulletinController extends Controller
 {
     public function index()
     {
-        $systemPage = Page::with([
-            'layout.blocks',
-            'widgets' => function ($query) {
-                $query->orderBy('page_widget.sort_order');
+        $systemPage = Book::with([
+            'grid.gridModules',
+            'module' => function ($query) {
+                $query->orderBy('module_sort_order');
             }
         ])
             ->where('slug', 'admin/news')
             ->where('is_published', true)
             ->firstOrFail();
 
-        $news = News::orderBy('created_at', 'desc')->get();
+        $news = Bulletin::orderBy('created_at', 'desc')->get();
 
         return view('admin.news', compact('systemPage', 'news'));
     }
@@ -36,7 +36,7 @@ class BulletinController extends Controller
         ]);
 
         // 2. Create SECOND (only runs if validation passes)
-        $news = News::create([
+        $news = Bulletin::create([
             'title' => $validated['title'],
             'content' => Purify::clean($validated['content']),
             'author_id' => $request->user()->id,
@@ -60,14 +60,14 @@ class BulletinController extends Controller
         ]);
 
         $validated['content'] = Purify::clean($validated['content']);
-        News::where('id', $id)->update($validated);
+        Bulletin::where('id', $id)->update($validated);
 
         return response()->json(['success' => true]);
     }
 
     public function destroy($id)
     {
-        News::where('id', $id)->delete();
+        Bulletin::where('id', $id)->delete();
         return response()->json(['success' => true]);
     }
 }

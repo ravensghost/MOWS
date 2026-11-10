@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Ranks extends Model
+class Insignia extends Model
 {
     protected $fillable = [
         'rank_set_id',

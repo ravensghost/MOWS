@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Application;
-use App\Models\Character;
-use App\Models\Page;
+use App\Models\CandidatePetition;
+use App\Models\Persona;
+use App\Models\Book;
 use App\Models\Position;
 use App\Models\Configuration;
 use App\Models\User;
@@ -22,7 +22,7 @@ class CommandCentreController extends Controller
             lexicon('msg_AdminDashboard_Unauthorised', 'Unauthorised access to the Command Centre.')
         );
 
-        $systemPage = Page::where('slug', 'admin')
+        $systemPage = Book::where('slug', 'admin')
             ->where('is_published', true)
             ->with([
                 'layout.blocks',
@@ -120,27 +120,27 @@ class CommandCentreController extends Controller
             return ($p->is_inactive ? 100000 : 0) + $p->days_since_login;
         })->values();
 
-        // Aggregated monthly writing metrics scoreboard query
-        $currentMonthMetrics = DB::table('chapter_user_contributions')
-            ->join('chapters', 'chapters.id', '=', 'chapter_user_contributions.chapter_id')
-            ->join('users', 'users.id', '=', 'chapter_user_contributions.user_id')
-            ->leftJoin('characters', 'characters.id', '=', 'chapters.active_character_id')
-            ->whereBetween('chapters.created_at', [now()->startOfMonth(), now()->endOfMonth()])
+        // Aggregated monthly writing metrics scoreboard query (Migrated to author_ledgers & folios)
+        $currentMonthMetrics = DB::table('author_ledgers')
+            ->join('folios', 'folios.id', '=', 'author_ledgers.folio_id')
+            ->join('users', 'users.id', '=', 'author_ledgers.user_id')
+            ->leftJoin('personae', 'personae.id', '=', 'folios.active_persona_id')
+            ->whereBetween('folios.created_at', [now()->startOfMonth(), now()->endOfMonth()])
             ->select(
                 'users.name as user_name',
-                'characters.name as character_name',
-                DB::raw('COUNT(DISTINCT chapters.id) as post_count'),
-                DB::raw('SUM(chapter_user_contributions.word_count) as total_words')
+                'personae.name as character_name',
+                DB::raw('COUNT(DISTINCT folios.id) as post_count'),
+                DB::raw('SUM(author_ledgers.contribution_word_count) as total_words')
             )
-            ->groupBy('users.id', 'users.name', 'characters.id', 'characters.name')
+            ->groupBy('users.id', 'users.name', 'personae.id', 'personae.name')
             ->orderByDesc('total_words')
             ->get();
 
         return view('admin.dashboard', [
             'systemPage'              => $systemPage,
-            'pendingApps'             => Application::where('status', 'Pending')->count(),
+            'pendingApps'             => CandidatePetition::where('petition_status', 'Pending')->count(),
             'activeUsers'             => $allUsers->count(),
-            'totalCharacters'         => Character::where('status', 'active')->count(),
+            'totalCharacters'         => Persona::where('status', 'active')->count(),
             'openPositions'           => $trueOpenSlots,
             'loaPlayers'              => $loaPlayers,
             'loaCount'                => $loaPlayers->count(),

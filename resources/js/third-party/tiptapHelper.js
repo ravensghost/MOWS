@@ -1,38 +1,65 @@
 // resources/js/third-party/tiptapHelper.js
 import { Editor } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
+import Placeholder from '@tiptap/extension-placeholder';
+import Underline from '@tiptap/extension-underline';
+import TextAlign from '@tiptap/extension-text-align';
 
 /**
- * Alpine component for TipTap Rich Text Editor integration
+ * Global TipTap Helper Wrapper for Rich Text Editors
  */
-export default function tiptapHelper(initialContent = '', onChange = null) {
-    return {
-        editor: null,
-        content: initialContent,
-        init() {
-            this.editor = new Editor({
-                element: this.$refs.editorContainer,
-                extensions: [StarterKit],
-                content: this.content,
-                onUpdate: ({ editor }) => {
-                    const html = editor.getHTML();
-                    this.content = html;
-                    if (typeof onChange === 'function') {
-                        onChange(html);
-                    } else if (this.$el.dataset.model) {
-                        // Support wire/model binding if attribute exists
-                        this.dispatchModel(html);
-                    }
-                }
-            });
-        },
-        dispatchModel(html) {
-            this.$dispatch('input', html);
-        },
-        destroy() {
-            if (this.editor) {
-                this.editor.destroy();
-            }
+window.TiptapHelper = {
+    instances: {},
+
+    create(elementOrSelector, options = {}) {
+        const el = typeof elementOrSelector === 'string' ? document.querySelector(elementOrSelector) : elementOrSelector;
+        if (!el) return null;
+
+        const key = el.id || elementOrSelector;
+        if (typeof key === 'string' && this.instances[key]) {
+            this.instances[key].destroy();
         }
-    };
-}
+
+        const defaultOptions = {
+            element: el,
+            extensions: [
+                StarterKit,
+                Underline,
+                TextAlign.configure({ types: ['heading', 'paragraph'] }),
+                Placeholder.configure({
+                    placeholder: options.placeholder || 'Write your content here...'
+                }),
+                ...(options.extensions || [])
+            ],
+            content: options.content || '',
+            onUpdate: ({ editor }) => {
+                if (typeof options.onUpdate === 'function') {
+                    options.onUpdate(editor.getHTML());
+                }
+            },
+            ...options
+        };
+
+        const editorInstance = new Editor(defaultOptions);
+
+        if (typeof key === 'string') {
+            this.instances[key] = editorInstance;
+        }
+
+        return editorInstance;
+    },
+
+    destroy(elementOrSelector) {
+        const el = typeof elementOrSelector === 'string' ? document.querySelector(elementOrSelector) : elementOrSelector;
+        const key = el && el.id ? el.id : elementOrSelector;
+
+        if (typeof key === 'string' && this.instances[key]) {
+            this.instances[key].destroy();
+            delete this.instances[key];
+        }
+    }
+};
+
+window.Editor = Editor;
+
+export default Editor;

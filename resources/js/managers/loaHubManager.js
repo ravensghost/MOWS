@@ -49,7 +49,6 @@ export default () => ({
                     });
                 }
 
-                // Updated to use refreshDOM with sanitize = false (replacing old _US helper)
                 if (typeof window.refreshDOM === 'function') {
                     await window.refreshDOM('.table-wrapper', null, false);
                 } else {
