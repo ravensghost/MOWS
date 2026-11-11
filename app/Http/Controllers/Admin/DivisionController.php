@@ -58,11 +58,11 @@ class DivisionController extends Controller
         ]);
 
         $section = Section::create([
-            'name'        => $validated['name'],
-            'description' => $validated['description'] ?? null,
-            'color'       => $validated['color'] ?? '#374151',
-            'order'       => $validated['order'] ?? 0,
-            'is_visible'  => $request->boolean('is_visible', false),
+            'name'                  => $validated['name'],
+            'description'           => $validated['description'] ?? null,
+            'color'                 => $validated['color'] ?? '#374151',
+            'order'                 => $validated['order'] ?? 0,
+            'is_visible'            => $request->boolean('is_visible', false),
             'division_catalogue_id' => $validated['division_catalogue_id'] ?? null,
         ]);
 
@@ -81,20 +81,20 @@ class DivisionController extends Controller
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
 
         $validated = $request->validate([
-            'name'        => 'required|string|max:255',
-            'color'       => 'required|string|max:9',
-            'description' => 'nullable|string',
-            'order'       => 'required|integer',
-            'is_visible'  => 'nullable|boolean',
+            'name'                  => 'required|string|max:255',
+            'color'                 => 'required|string|max:9',
+            'description'           => 'nullable|string',
+            'order'                 => 'required|integer',
+            'is_visible'            => 'nullable|boolean',
             'division_catalogue_id' => 'nullable|exists:division_catalogues,id',
         ]);
 
         $section->update([
-            'name'        => $validated['name'],
-            'description' => $validated['description'] ?? null,
-            'color'       => $validated['color'],
-            'order'       => $validated['order'],
-            'is_visible'  => $request->boolean('is_visible', false),
+            'name'                  => $validated['name'],
+            'description'           => $validated['description'] ?? null,
+            'color'                 => $validated['color'],
+            'order'                 => $validated['order'],
+            'is_visible'            => $request->boolean('is_visible', false),
             'division_catalogue_id' => $validated['division_catalogue_id'] ?? null,
         ]);
 
@@ -123,11 +123,12 @@ class DivisionController extends Controller
         ]);
     }
 
-    public function generateDescription(Request $request)
+    public function generateDescription(Request $request, \App\Services\AILoreService $aiLoreService)
     {
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
 
         $name = trim((string) $request->input('name'));
+        $hint = trim((string) $request->input('prompt_hint', ''));
 
         if (empty($name)) {
             return response()->json([
@@ -135,26 +136,31 @@ class DivisionController extends Controller
             ], 422);
         }
 
-        $mockAiResponse = "The {$name} division is responsible for maintaining the operational integrity and strategic objectives of their assigned sector, ensuring all protocols are strictly adhered to under changing conditions.";
+        try {
+            $description = $aiLoreService->generateSectionDescription($name, $hint);
+        } catch (\Exception $e) {
+            $description = "The {$name} division is responsible for maintaining operational integrity and strategic objectives.";
+        }
 
         return response()->json([
             'status'      => 'success',
-            'description' => $mockAiResponse,
+            'description' => $description,
         ]);
     }
+
     public function export()
     {
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
 
         $sections = Section::with(['rankSet', 'positions'])->orderBy('order')->get()->map(function ($section) {
             return [
-                'name'         => $section->name,
-                'description'  => $section->description,
-                'color'        => $section->color,
-                'order'        => $section->order,
-                'is_visible'   => (bool) $section->is_visible,
+                'name'          => $section->name,
+                'description'   => $section->description,
+                'color'         => $section->color,
+                'order'         => $section->order,
+                'is_visible'    => (bool) $section->is_visible,
                 'rank_set_name' => $section->rankSet?->name,
-                'positions'    => $section->positions->map(function ($pos) {
+                'positions'     => $section->positions->map(function ($pos) {
                     return [
                         'name'        => $pos->name,
                         'description' => $pos->description,
@@ -196,13 +202,13 @@ class DivisionController extends Controller
             ],
             'sections' => [
                 [
-                    'name'         => 'Command',
-                    'description'  => 'Station command and executive management.',
-                    'color'        => '#dc2626',
-                    'order'        => 1,
-                    'is_visible'   => true,
+                    'name'          => 'Command',
+                    'description'   => 'Station command and executive management.',
+                    'color'         => '#dc2626',
+                    'order'         => 1,
+                    'is_visible'    => true,
                     'rank_set_name' => 'writers',
-                    'positions'    => [
+                    'positions'     => [
                         [
                             'name'        => 'Commanding Officer',
                             'description' => 'Overall station command.',
@@ -244,7 +250,7 @@ class DivisionController extends Controller
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($data, $request) {
             if ($request->input('mode') === 'replace') {
-                Section::query()->delete(); // Cascades or clears positions cleanly
+                Section::query()->delete();
             }
 
             foreach ($data['sections'] as $secData) {
@@ -267,7 +273,7 @@ class DivisionController extends Controller
 
                 if (!empty($secData['positions']) && is_array($secData['positions'])) {
                     foreach ($secData['positions'] as $posData) {
-                        Position::updateOrCreate(
+                        \App\Models\Position::updateOrCreate(
                             [
                                 'section_id' => $section->id,
                                 'name'       => $posData['name']
@@ -290,30 +296,6 @@ class DivisionController extends Controller
             'status'  => 'success',
             'success' => true,
             'message' => lexicon('msg_SectionsPositions_ImportSuccess', 'Sections and positions imported successfully.'),
-        ]);
-    }
-    public function generateDescription(Request $request, \App\Services\AILoreService $aiLoreService)
-    {
-        abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
-
-        $name = trim((string) $request->input('name'));
-        $hint = trim((string) $request->input('prompt_hint', ''));
-
-        if (empty($name)) {
-            return response()->json([
-                'error' => lexicon('msg_SectionsPositions_EnterNameFirst', 'Please enter a Section Name first.')
-            ], 422);
-        }
-
-        try {
-            $description = $aiLoreService->generateSectionDescription($name, $hint);
-        } catch (\Exception $e) {
-            $description = "The {$name} division is responsible for maintaining operational integrity and strategic objectives.";
-        }
-
-        return response()->json([
-            'status'      => 'success',
-            'description' => $description,
         ]);
     }
 }

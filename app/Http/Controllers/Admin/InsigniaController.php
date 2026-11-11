@@ -275,7 +275,7 @@ class InsigniaController extends Controller
         $content = file_get_contents($path);
         $data = json_decode($content, true);
 
-        if (!isset($data['insignia_catalogues']) \vert{}\vert{} !is_array($data['insignia_catalogues'])) {
+        if (!isset($data['insignia_catalogues']) || !is_array($data['insignia_catalogues'])) {
             return response()->json([
                 'status'  => 'error',
                 'message' => lexicon('msg_Ranks_InvalidManifest', 'Invalid insignia manifest format.'),
