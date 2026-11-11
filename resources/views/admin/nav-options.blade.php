@@ -44,24 +44,25 @@
                     <form @submit.prevent="submitOption()" class="flex flex-col gap-md">
                         <div class="grid grid-cols-1 gap-sm w-full lg-grid-cols-4">
                             <div class="flex flex-col gap-xs">
-                                <label for="opt_type" class="text-xs font-bold text-input-muted">
+                                <label for="parameter_mode" class="text-xs font-bold text-input-muted">
                                     <span>{{ lexicon('label_Navigation_OptionType', 'Type') }}</span>
                                     <span class="text-required">*</span>
                                 </label>
-                                <select id="opt_type"
+                                <select id="parameter_mode"
+                                        name="parameter_mode"
                                         x-model="optType"
                                         class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent"
                                         aria-label="{{ lexicon('label_Navigation_OptionType', 'Type') }}"
                                         x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_OptionTypeSelect', 'Select the category of dropdown option')) }}'"
                                         required>
                                     <option value="group">{{ lexicon('label_common_group', 'Group') }}</option>
-                                    <option value="location">{{ lexicon('label_nav_location', 'Location') }}</option>
-                                    <option value="visibility">{{ lexicon('label_vis_title', 'Visibility') }}</option>
+                                    <option value="display_location">{{ lexicon('label_nav_location', 'Location') }}</option>
+                                    <option value="access_clearance">{{ lexicon('label_vis_title', 'Visibility') }}</option>
                                 </select>
                             </div>
 
-                            <x-form-input name="opt_value"
-                                          id="opt_value"
+                            <x-form-input name="parameter_value"
+                                          id="parameter_value"
                                           type="text"
                                           :label="lexicon('label_Navigation_OptionValue', 'Value (Database Key)')"
                                           :placeholder="lexicon('label_Navigation_OptionValuePlaceholder', 'e.g. primary, Lore')"
@@ -69,16 +70,16 @@
                                           xModel="optValue"
                                           :required="true" />
 
-                            <x-form-input name="opt_label"
-                                          id="opt_label"
+                            <x-form-input name="parameter_label"
+                                          id="parameter_label"
                                           type="text"
                                           :label="lexicon('label_Navigation_OptionLabelKey', 'Label (Lexicon Key)')"
                                           :placeholder="lexicon('label_Navigation_OptionLabelPlaceholder', 'e.g. label_nav_group_lore')"
                                           :tooltip="lexicon('tooltip_Navigation_OptionLabelInput', 'Lexicon code key used to translate this option')"
                                           xModel="optLabel" />
 
-                            <x-form-input name="opt_sort_order"
-                                          id="opt_sort_order"
+                            <x-form-input name="parameter_sort_order"
+                                          id="parameter_sort_order"
                                           type="number"
                                           :label="lexicon('label_common_SortOrder', 'Sort Order')"
                                           :tooltip="lexicon('tooltip_Navigation_OptionSortOrder', 'Numeric display order in dropdown menus')"
@@ -122,26 +123,26 @@
                     @forelse($options as $option)
                         <tr data-opt-search-item
                             data-id="{{ $option->id }}"
-                            data-type="{{ $option->option_type }}"
-                            data-value="{{ $option->value }}"
-                            data-label="{{ $option->label ?? '' }}"
+                            data-type="{{ $option->parameter_mode }}"
+                            data-value="{{ $option->parameter_value }}"
+                            data-label="{{ $option->parameter_label ?? '' }}"
                             x-show="isOptionVisible({{ $option->id }})"
                             class="border-b-table-row hover-bg-table-row">
                             <td class="p-3">
-                                <x-badge variant="{{ $option->option_type === 'group' ? 'primary' : ($option->option_type === 'location' ? 'success' : 'warning') }}"
+                                <x-badge variant="{{ $option->parameter_mode === 'group' ? 'primary' : ($option->parameter_mode === 'display_location' ? 'success' : 'warning') }}"
                                          x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_OptionCategoryBadge', 'Option category type')) }}'">
-                                    {{ ucfirst($option->option_type) }}
+                                    {{ ucfirst(str_replace('_', ' ', $option->parameter_mode)) }}
                                 </x-badge>
                             </td>
-                            <td class="p-3 font-bold">{{ $option->value }}</td>
+                            <td class="p-3 font-bold">{{ $option->parameter_value }}</td>
                             <td class="p-3 text-muted text-xs font-mono">
-                                @if($option->label)
+                                @if($option->parameter_label)
                                     <div class="flex flex-row items-center gap-xs">
-                                        <span>{{ $option->label }}</span>
+                                        <span>{{ $option->parameter_label }}</span>
                                         <x-button type="button"
                                                   variant="text"
                                                   class="text-xs text-muted hover-text-accent"
-                                                  x-clipboard="'{{ addslashes($option->label) }}'"
+                                                  x-clipboard="'{{ addslashes($option->parameter_label) }}'"
                                                   aria-label="{{ lexicon('tooltip_common_CopyToken', 'Copy token name to clipboard') }}"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_common_CopyToken', 'Copy token name to clipboard')) }}'">
                                             <i class="bi bi-clipboard"></i>
@@ -151,7 +152,7 @@
                                     <span>—</span>
                                 @endif
                             </td>
-                            <td class="p-3">{{ $option->sort_order }}</td>
+                            <td class="p-3">{{ $option->parameter_sort_order }}</td>
                             <td class="p-3 text-right">
                                 @can('manage_navigation')
                                     <div class="flex flex-row flex-wrap gap-sm items-center justify-end">
@@ -169,7 +170,7 @@
                                                   x-data="deleteAction(
                                                       '/admin/navigation/options/{{ $option->id }}',
                                                       'DELETE',
-                                                      '{{ addslashes($option->value) }}',
+                                                      '{{ addslashes($option->parameter_value) }}',
                                                       '{{ addslashes(lexicon('msg_Navigation_ConfirmDeleteOption', 'Are you sure you want to delete this dropdown option?')) }}'
                                                   )"
                                                   @click="confirmDelete()"

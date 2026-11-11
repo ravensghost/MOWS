@@ -5,8 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use App\Models\Page;
-use App\Models\NavigationLink;
+use App\Models\Book;
+use App\Models\TableOfContent;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 
@@ -16,20 +16,23 @@ class AccessClearanceRoleController extends Controller
     {
         abort_unless(auth()->user()->can('manage_roles'), 403, lexicon('msg_Roles_Unauthorised', 'Unauthorised access to Role Management.'));
 
-        $systemPage = Page::where('slug', 'admin/roles')
+        $systemPage = Book::where('book_url', 'admin/roles')
             ->where('is_published', true)
-            ->with(['layout.blocks', 'widgets' => function ($query) {
-                $query->orderBy('page_widget.sort_order');
-            }])
+            ->with([
+                'grid.gridModules',
+                'module' => function ($query) {
+                    $query->orderBy('module_sort_order');
+                }
+            ])
             ->firstOrFail();
 
         $roles = Role::with('permissions')->orderBy('name')->get();
         $allPermissions = Permission::orderBy('name')->get();
 
-        // Fetch all navigation links for the permission audit view panel
-        $navigationLinks = NavigationLink::orderBy('location')
-            ->orderBy('group_order')
-            ->orderBy('order')
+        // Fetch all table of contents entries for the permission audit view panel
+        $navigationLinks = TableOfContent::orderBy('display_location')
+            ->orderBy('group_sort_order')
+            ->orderBy('entry_sort_order')
             ->get();
 
         return view('admin.roles', compact('systemPage', 'roles', 'allPermissions', 'navigationLinks'));

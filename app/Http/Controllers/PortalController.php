@@ -37,7 +37,7 @@ class PortalController extends Controller
 
         $user = auth()->user();
         $systemPage->setRelation('module', ($systemPage->module ?? collect())->filter(function ($widget) use ($user) {
-            if (!($widget->pivot->is_visible ?? true)) {
+            if (! ($widget->pivot->is_visible ?? true)) {
                 return false;
             }
             $required = $widget->pivot->access_clearance;
@@ -52,7 +52,8 @@ class PortalController extends Controller
         $navKey = Cache::remember('nav_lexicon_' . md5($lookupUrl), 3600, function () use ($lookupUrl) {
             return DB::table('table_of_contents')
                 ->where('destination_url', $lookupUrl)
-                ->value('translation_code_key');
+                ->pluck('translation_code_key')
+                ->first();
         });
 
         $pageKey = $navKey ?: ('public_label_' . ($systemPage->book_url === '/' ? 'Landing' : Str::studly(basename($systemPage->book_url))));
@@ -91,17 +92,17 @@ class PortalController extends Controller
         $systemPage = Book::where('book_url', 'bio')
             ->where('is_published', true)
             ->with([
-                'Grid.gridModules',
-                'gridModules' => function ($query) {
+                'grid.gridModules',
+                'module' => function ($query) {
                     $query->wherePivot('is_visible', true)
-                        ->orderBy('grid_module_sort_order');
+                        ->orderBy('module_sort_order');
                 }
             ])
             ->firstOrFail();
 
         $user = auth()->user();
-        $systemPage->setRelation('GridModule', $systemPage->GridModule->filter(function ($module) use ($user) {
-            if (!($module->pivot->is_visible ?? true)) {
+        $systemPage->setRelation('module', ($systemPage->module ?? collect())->filter(function ($module) use ($user) {
+            if (! ($module->pivot->is_visible ?? true)) {
                 return false;
             }
             $required = $module->pivot->access_clearance;
@@ -113,9 +114,23 @@ class PortalController extends Controller
 
         $persona->load([
             'user',
+            'insignia' => function ($query) {
+                $query->where('is_visible', true)->with([
+                    'rankSet' => function ($q) {
+                        $q->where('is_visible', true);
+                    }
+                ]);
+            },
             'rank' => function ($query) {
                 $query->where('is_visible', true)->with([
                     'rankSet' => function ($q) {
+                        $q->where('is_visible', true);
+                    }
+                ]);
+            },
+            'assignment' => function ($query) {
+                $query->where('is_visible', true)->with([
+                    'section' => function ($q) {
                         $q->where('is_visible', true);
                     }
                 ]);
@@ -139,7 +154,8 @@ class PortalController extends Controller
         $navKey = Cache::remember('nav_lexicon_' . md5($lookupUrl), 3600, function () use ($lookupUrl) {
             return DB::table('table_of_contents')
                 ->where('destination_url', $lookupUrl)
-                ->value('translation_code_key');
+                ->pluck('translation_code_key')
+                ->first();
         });
 
         $pageKey = $navKey ?: 'public_label_Bio';
@@ -208,7 +224,7 @@ class PortalController extends Controller
         ]);
 
         $destinationPath = public_path('images/characters');
-        if (!File::exists($destinationPath)) {
+        if (! File::exists($destinationPath)) {
             File::makeDirectory($destinationPath, 0755, true);
         }
 
@@ -222,7 +238,7 @@ class PortalController extends Controller
             $persona->update(['primary_portrait_url' => $filename]);
         } else {
             PersonaMetadata::create([
-                'persona_id'    => $persona->id,
+                'persona_id'      => $persona->id,
                 'attribute_key'   => 'gallery_image',
                 'attribute_value' => $filename,
             ]);
@@ -252,7 +268,7 @@ class PortalController extends Controller
 
         $persona->update(['primary_portrait_url' => $newPrimary]);
 
-        if (!empty($oldPrimary)) {
+        if (! empty($oldPrimary)) {
             $attribute->update(['attribute_value' => $oldPrimary]);
         } else {
             $attribute->delete();
@@ -276,7 +292,7 @@ class PortalController extends Controller
         if ($validated['type'] === 'primary') {
             $filename = $persona->primary_portrait_url;
 
-            if ($filename && !Str::startsWith($filename, ['http://', 'https://'])) {
+            if ($filename && ! Str::startsWith($filename, ['http://', 'https://'])) {
                 $filePath = public_path('images/characters/' . ltrim($filename, '/'));
                 if (File::exists($filePath)) {
                     File::delete($filePath);
@@ -302,7 +318,7 @@ class PortalController extends Controller
 
             $filename = $attribute->attribute_value;
 
-            if ($filename && !Str::startsWith($filename, ['http://', 'https://'])) {
+            if ($filename && ! Str::startsWith($filename, ['http://', 'https://'])) {
                 $filePath = public_path('images/characters/' . ltrim($filename, '/'));
                 if (File::exists($filePath)) {
                     File::delete($filePath);
@@ -318,12 +334,18 @@ class PortalController extends Controller
         ]);
     }
 
-    protected function evaluateContentShield(Folio $chapter): array
+    protected function evaluateContentShield(Folio $folio): array
     {
-        $isMature = ($chapter->rating_l >= 3 || $chapter->rating_s >= 3 || $chapter->rating_v >= 3);
+        $isMature = (
+            $folio->content_tier_l >= 3 ||
+            $folio->content_tier_s >= 3 ||
+            $folio->content_tier_v >= 3
+        );
 
         $user = auth()->user();
-        $bypassMode = Configuration::where('configuration_token', 'content_shield_bypass')->value('configuration_payload') ?? 'locked';
+        $bypassMode = Configuration::where('configuration_token', 'content_shield_bypass')
+            ->pluck('configuration_payload')
+            ->first() ?? 'locked';
 
         $userBypassed = false;
         if ($isMature && $user && $bypassMode === 'user_bypass') {
@@ -332,7 +354,7 @@ class PortalController extends Controller
 
         return [
             'is_mature'     => $isMature,
-            'requires_gate' => $isMature && !$userBypassed,
+            'requires_gate' => $isMature && ! $userBypassed,
         ];
     }
 }

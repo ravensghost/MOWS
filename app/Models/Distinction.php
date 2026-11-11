@@ -36,26 +36,10 @@ class Distinction extends Model
     }
 
     /**
-     * Legacy alias for chronologicalRegisters.
-     */
-    public function serviceRecords(): HasMany
-    {
-        return $this->chronologicalRegisters();
-    }
-
-    /**
      * The catalogue category this distinction belongs to.
      */
     public function catalogue(): BelongsTo
     {
         return $this->belongsTo(DistinctionCatalogue::class, 'distinction_catalogue_id');
-    }
-
-    /**
-     * Legacy alias for catalogue.
-     */
-    public function category(): BelongsTo
-    {
-        return $this->catalogue();
     }
 }

@@ -4,18 +4,23 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Thread extends Model
+class CorrespondenceThread extends Model
 {
-    protected $fillable = ['type', 'title'];
+    protected $table = 'correspondence_threads';
+
+    protected $fillable = [
+        'thread_mode',
+        'thread_title',
+    ];
 
     public function participants()
     {
-        return $this->hasMany(ThreadParticipant::class);
+        return $this->hasMany(ThreadParticipant::class, 'thread_id');
     }
 
     public function messages()
     {
-        return $this->hasMany(Message::class);
+        return $this->hasMany(Message::class, 'thread_id');
     }
 
     /**
@@ -39,8 +44,8 @@ class Thread extends Model
         }
 
         $thread = self::create([
-            'type'  => 'OOC',
-            'title' => $subject,
+            'thread_mode'  => 'OOC',
+            'thread_title' => $subject,
         ]);
 
         // Add sender participant (marked as read immediately)

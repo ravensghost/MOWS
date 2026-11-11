@@ -20,11 +20,11 @@ class TableOfContent extends Model
     protected static function booted(): void
     {
         static::saved(function () {
-            Cache::forget('navigation_links_all_array');
+            Cache::forget('table_of_contents_all_array');
         });
 
         static::deleted(function () {
-            Cache::forget('navigation_links_all_array');
+            Cache::forget('table_of_contents_all_array');
         });
     }
 

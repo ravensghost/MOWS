@@ -1,66 +1,45 @@
 @props([
-    'distinctionTitle' => null,
-    'awardName' => 'Distinction',
+    'distinctionTitle' => 'Distinction',
     'distinctionDescription' => null,
-    'description' => null,
-    'distinctionBaseColour' => null,
-    'baseLayer' => '#1a1a1a',
-    'midLayerMode' => null,
-    'midMode' => null,
-    'midType' => 'css',
+    'distinctionBaseColour' => '#1a1a1a',
+    'midLayerMode' => 'css',
     'midLayerAsset' => null,
-    'midImage' => null,
     'midLayerModifier' => null,
-    'midCss' => null,
-    'topLayerMode' => null,
-    'topMode' => null,
-    'topType' => null,
+    'topLayerMode' => 'image',
     'topLayerAsset' => null,
-    'topImage' => null,
     'topLayerModifier' => null,
-    'topCss' => null,
-    'skin' => 'default'
+    'skin' => 'default',
 ])
 
 @php
-    $resolvedTitle = $distinctionTitle ?? $awardName;
-    $resolvedDescription = $distinctionDescription ?? $description;
-    $resolvedBaseColour = $distinctionBaseColour ?? $baseLayer;
-
-    $resolvedMidMode = $midLayerMode ?? $midMode ?? $midType ?? 'css';
-    $resolvedMidAsset = $midLayerAsset ?? $midImage;
-    $resolvedMidModifier = $midLayerModifier ?? $midCss;
-
-    $resolvedTopMode = $topLayerMode ?? $topMode ?? $topType;
-    $resolvedTopAsset = $topLayerAsset ?? $topImage;
-    $resolvedTopModifier = $topLayerModifier ?? $topCss;
-
-    $resolvedMidClass = $resolvedMidModifier ? 'award-ml-' . $resolvedMidModifier : '';
-    $resolvedTopClass = $resolvedTopModifier ? 'award-tl-' . $resolvedTopModifier : '';
-    $tooltipText = $resolvedDescription ? $resolvedDescription . ' (' . $resolvedTitle . ')' : $resolvedTitle;
+    $resolvedMidClass = $midLayerModifier ? 'award-ml-' . $midLayerModifier : '';
+    $resolvedTopClass = $topLayerModifier ? 'award-tl-' . $topLayerModifier : '';
+    $tooltipText = $distinctionDescription
+        ? $distinctionDescription . ' (' . $distinctionTitle . ')'
+        : $distinctionTitle;
 @endphp
 
 <div class="ui-award-badge" 
      x-data="{ imgError: false }"
      x-tooltip="'{{ addslashes($tooltipText) }}'"
      aria-label="{{ $tooltipText }}"
-     style="--badge-base: {{ $resolvedBaseColour }};">
+     style="--badge-base: {{ $distinctionBaseColour }};">
   
-    @if($resolvedMidMode === 'image' && $resolvedMidAsset)
-        <img src="/skins/{{ $skin }}/images/awards/{{ rawurlencode($resolvedMidAsset) }}" 
+    @if($midLayerMode === 'image' && $midLayerAsset)
+        <img src="/skins/{{ $skin }}/images/awards/{{ rawurlencode($midLayerAsset) }}" 
              class="ui-award-layer ui-award-layer-mid" 
-             alt="{{ $resolvedTitle }}">
-    @elseif($resolvedMidMode === 'css')
+             alt="{{ $distinctionTitle }}">
+    @elseif($midLayerMode === 'css')
         <div class="ui-award-layer ui-award-layer-mid {{ $resolvedMidClass }}"></div>
     @endif
   
-    @if($resolvedTopMode === 'image' && $resolvedTopAsset)
-        <img src="/skins/{{ $skin }}/images/awards/{{ rawurlencode($resolvedTopAsset) }}" 
+    @if($topLayerMode === 'image' && $topLayerAsset)
+        <img src="/skins/{{ $skin }}/images/awards/{{ rawurlencode($topLayerAsset) }}" 
              x-show="!imgError"
              x-on:error="imgError = true" 
              class="ui-award-layer ui-award-layer-top" 
-             alt="{{ $resolvedTopAsset }}">
-    @elseif($resolvedTopMode === 'css' && $resolvedTopModifier)
+             alt="{{ $topLayerAsset }}">
+    @elseif($topLayerMode === 'css' && $topLayerModifier)
         <div class="ui-award-layer ui-award-layer-top {{ $resolvedTopClass }}"></div>
     @endif
 </div>

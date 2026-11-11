@@ -11,7 +11,7 @@
 
     $tsOptions = ['' => lexicon('label_setting_OptRealWorldDefault', 'Real World (Default)')];
     foreach($timeSystems ?? [] as $system) {
-        $tsOptions[$system->id] = $system->name;
+        $tsOptions[$system->id] = $system->engine_title;
     }
 
     $notConfiguredText = lexicon('msg_setting_NotConfigured', 'Not Configured');
@@ -183,14 +183,14 @@
                             </x-configuration-item>
 
                             <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('universe_time_system')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_UniverseTimeSystem', 'Universe Time System')"
-                                                  editClick="openModal('universe_time_system', '{{ addslashes(lexicon('label_setting_UniverseTimeSystem', 'Universe Time System')) }}', '{{ $globalSettings['universe_time_system'] ?? '' }}', 'select', {{ json_encode($tsOptions) }})">
+                                x-cloak
+                                :label="lexicon('label_setting_UniverseTimeSystem', 'Universe Time System')"
+                                editClick="openModal('universe_time_system', '{{ addslashes(lexicon('label_setting_UniverseTimeSystem', 'Universe Time System')) }}', '{{ $globalSettings['universe_time_system'] ?? '' }}', 'select', {{ json_encode($tsOptions) }})">
                                 @php
                                     $activeId = $globalSettings['universe_time_system'] ?? '';
                                     $activeTs = collect($timeSystems ?? [])->firstWhere('id', $activeId);
                                 @endphp
-                                {{ $activeTs ? $activeTs->name : lexicon('label_setting_OptRealWorldDefault', 'Real World (Default)') }}
+                                {{ $activeTs ? $activeTs->engine_title : lexicon('label_setting_OptRealWorldDefault', 'Real World (Default)') }}
                             </x-configuration-item>
                             
                             <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('content_shield_bypass')"

@@ -3,34 +3,26 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Book;
 use App\Models\Distinction;
-use Illuminate\Http\Request;
-use App\Models\Page;
 use App\Models\DistinctionCatalogue;
-use Illuminate\Support\Facades\File;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
 
 class DistinctionController extends Controller
 {
     public function index()
     {
-        abort_unless(auth()->user()->can('issue_awards'), 403, 'Authorised action.');
+        abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorised action.');
 
-        $systemPage = Page::with([
-            'layout.blocks',
-            'widgets' => function ($query) {
-                $query->orderBy('page_widget.sort_order');
-            }
-        ])
+        $systemPage = Book::with(['grid.gridModules', 'module'])
             ->where('slug', 'admin/awards')
             ->where('is_published', true)
             ->firstOrFail();
 
-        $distinctions = Distinction::orderBy('distinction_title')->get();
+        $distinctions = Distinction::with('catalogue')->orderBy('distinction_title')->get();
         $categories = DistinctionCatalogue::orderBy('catalogue_title')->get();
-
-        $activeSkinArray = Cache::get('active_skin_default_array');
-        $skinFolder = $activeSkinArray['folder_name'] ?? 'default';
 
         $cssPath = resource_path('css/awards.css');
         $midShapes = [];
@@ -59,7 +51,7 @@ class DistinctionController extends Controller
 
     public function store(Request $request)
     {
-        abort_unless(auth()->user()->can('issue_awards'), 403, 'Authorised action.');
+        abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorised action.');
 
         $request->merge([
             'distinction_catalogue_id' => $request->distinction_catalogue_id ?: null,
@@ -89,13 +81,13 @@ class DistinctionController extends Controller
 
         return response()->json([
             'status'  => 'success',
-            'message' => lexicon('msg_award_created', 'Distinction created successfully!')
+            'message' => lexicon('msg_distinction_created', 'Distinction created successfully!'),
         ]);
     }
 
     public function update(Request $request, Distinction $distinction)
     {
-        abort_unless(auth()->user()->can('issue_awards'), 403, 'Authorised action.');
+        abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorised action.');
 
         $request->merge([
             'distinction_catalogue_id' => $request->distinction_catalogue_id ?: null,
@@ -125,25 +117,25 @@ class DistinctionController extends Controller
 
         return response()->json([
             'status'  => 'success',
-            'message' => lexicon('msg_award_updated', 'Distinction updated successfully!')
+            'message' => lexicon('msg_distinction_updated', 'Distinction updated successfully!'),
         ]);
     }
 
     public function destroy(Distinction $distinction)
     {
-        abort_unless(auth()->user()->can('issue_awards'), 403, 'Authorised action.');
+        abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorised action.');
 
         $distinction->delete();
 
         return response()->json([
             'status'  => 'success',
-            'message' => lexicon('msg_award_deleted', 'Distinction deleted successfully!')
+            'message' => lexicon('msg_distinction_deleted', 'Distinction deleted successfully!'),
         ]);
     }
 
     public function images(Request $request)
     {
-        abort_unless(auth()->user()->can('issue_awards'), 403, 'Authorised action.');
+        abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorised action.');
 
         $activeSkinArray = Cache::get('active_skin_default_array');
         $activeSkin = $activeSkinArray['folder_name'] ?? 'default';
@@ -164,7 +156,7 @@ class DistinctionController extends Controller
 
         return response()->json([
             'images'      => $images,
-            'active_skin' => $activeSkin
+            'active_skin' => $activeSkin,
         ]);
     }
 }

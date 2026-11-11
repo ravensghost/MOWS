@@ -10,9 +10,9 @@ class PersonaMetadata extends Model
     protected $table = 'persona_metadata';
 
     protected $fillable = [
-        'persona_id', 
-        'attribute_key', 
-        'attribute_value'
+        'persona_id',
+        'attribute_key',
+        'attribute_value',
     ];
 
     /**
@@ -24,7 +24,7 @@ class PersonaMetadata extends Model
     }
 
     /**
-     * Legacy alias for persona.
+     * Required relationship alias for persona.
      */
     public function character(): BelongsTo
     {

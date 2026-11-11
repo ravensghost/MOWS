@@ -7,20 +7,22 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Insignia extends Model
 {
+    protected $table = 'insignia';
+
     protected $fillable = [
-        'rank_set_id',
-        'name',
-        'short_name',
-        'mid_type',
-        'mid_image',
-        'mid_css',
-        'mid_color',
-        'top_type',
-        'top_image',
-        'top_css',
-        'top_color',
-        'description',
-        'sort_order',
+        'insignia_catalogue_id',
+        'insignia_title',
+        'abbreviated_title',
+        'mid_layer_mode',
+        'mid_layer_asset',
+        'mid_layer_modifier',
+        'mid_layer_hue',
+        'top_layer_mode',
+        'top_layer_asset',
+        'top_layer_modifier',
+        'top_layer_hue',
+        'insignia_description',
+        'insignia_sort_order',
         'is_visible',
     ];
 
@@ -28,8 +30,13 @@ class Insignia extends Model
         'is_visible' => 'boolean',
     ];
 
+    public function insigniaCatalogue(): BelongsTo
+    {
+        return $this->belongsTo(InsigniaCatalogue::class, 'insignia_catalogue_id');
+    }
+
     public function rankSet(): BelongsTo
     {
-        return $this->belongsTo(RankSet::class);
+        return $this->belongsTo(InsigniaCatalogue::class, 'insignia_catalogue_id');
     }
 }

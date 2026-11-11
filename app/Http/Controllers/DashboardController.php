@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\CorrespondenceEntry;
+use App\Models\CorrespondenceParticipant;
+use App\Models\Folio;
 use App\Models\Page;
-use App\Models\Chapter;
-use App\Models\Message;
-use App\Models\ThreadParticipant;
+use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
@@ -14,14 +14,14 @@ class DashboardController extends Controller
     {
         $userId = auth()->id();
 
-        $draftChapters = Chapter::where('author_user_id', $userId)
+        $draftChapters = Folio::where('author_user_id', $userId)
             ->where('status', 'draft')
             ->orderByDesc('updated_at')
             ->get();
 
-        $threadIds = ThreadParticipant::where('user_id', $userId)->pluck('thread_id');
+        $threadIds = CorrespondenceParticipant::where('user_id', $userId)->pluck('correspondence_thread_id');
 
-        $unreadMessages = Message::whereIn('thread_id', $threadIds)
+        $unreadMessages = CorrespondenceEntry::whereIn('correspondence_thread_id', $threadIds)
             ->where('user_id', '!=', $userId)
             ->with('thread')
             ->orderByDesc('created_at')

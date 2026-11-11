@@ -3,15 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use App\Models\Book;
 use App\Models\ChronologicalRegister;
 use App\Models\Distinction;
-use App\Models\User;
-use App\Models\Persona;
-use App\Models\Book;
 use App\Models\Insignia;
+use App\Models\Persona;
 use App\Models\Position;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ChronologicalRegisterController extends Controller
 {
@@ -51,52 +51,46 @@ class ChronologicalRegisterController extends Controller
 
     public function issueAward(Request $request)
     {
-        $request->merge([
-            'distinction_id' => $request->distinction_id ?? $request->award_id,
-            'persona_id'     => $request->persona_id ?? $request->character_id,
-            'chronicle_text' => $request->chronicle_text ?? $request->reason ?? $request->description,
-        ]);
-
-        $request->validate([
+        $validated = $request->validate([
             'distinction_id' => 'required|exists:distinctions,id',
             'chronicle_text' => 'required|string',
             'user_id'        => 'nullable|exists:users,id',
             'persona_id'     => 'nullable|exists:personae,id',
         ]);
 
-        if (!$request->user_id && !$request->persona_id) {
+        if (empty($validated['user_id']) && empty($validated['persona_id'])) {
             return response()->json(['message' => 'You must select a user or persona to receive this distinction.'], 422);
         }
 
-        if ($request->user_id && $request->user_id == auth()->id()) {
+        if (!empty($validated['user_id']) && $validated['user_id'] == auth()->id()) {
             return response()->json(['message' => 'You cannot issue a distinction to your own user account.'], 422);
         }
 
-        $targetUserId = $request->user_id;
+        $targetUserId = $validated['user_id'] ?? null;
 
-        if ($request->persona_id) {
-            $persona = Persona::findOrFail($request->persona_id);
+        if (!empty($validated['persona_id'])) {
+            $persona = Persona::findOrFail($validated['persona_id']);
             if ($persona->user_id == auth()->id()) {
                 return response()->json(['message' => 'You cannot issue a distinction to your own persona.'], 422);
             }
             $targetUserId = $persona->user_id;
         }
 
-        $distinction = Distinction::findOrFail($request->distinction_id);
+        $distinction = Distinction::findOrFail($validated['distinction_id']);
 
-        if ($distinction->scope_target === 'IC' && $request->user_id && !$request->persona_id) {
+        if ($distinction->scope_target === 'IC' && !empty($validated['user_id']) && empty($validated['persona_id'])) {
             return response()->json(['message' => 'This is an In-Character distinction and cannot be given directly to a User.'], 422);
         }
-        if ($distinction->scope_target === 'OOC' && $request->persona_id) {
+        if ($distinction->scope_target === 'OOC' && !empty($validated['persona_id'])) {
             return response()->json(['message' => 'This is an Out-Of-Character distinction and cannot be given to a Persona.'], 422);
         }
 
         ChronologicalRegister::create([
             'user_id'             => $targetUserId,
-            'persona_id'          => $request->persona_id,
+            'persona_id'          => $validated['persona_id'] ?? null,
             'distinction_id'      => $distinction->id,
             'register_event_mode' => 'award',
-            'chronicle_text'      => $request->chronicle_text,
+            'chronicle_text'      => $validated['chronicle_text'],
             'authorising_user_id' => auth()->id(),
             'scope_target'        => $distinction->scope_target,
         ]);
@@ -106,11 +100,7 @@ class ChronologicalRegisterController extends Controller
 
     public function removeAward(Request $request, ChronologicalRegister $serviceRecord)
     {
-        $request->merge([
-            'chronicle_text' => $request->chronicle_text ?? $request->reason ?? $request->description,
-        ]);
-
-        $request->validate([
+        $validated = $request->validate([
             'chronicle_text' => 'required|string',
         ]);
 
@@ -119,7 +109,7 @@ class ChronologicalRegisterController extends Controller
             'persona_id'          => $serviceRecord->persona_id,
             'distinction_id'      => $serviceRecord->distinction_id,
             'register_event_mode' => $serviceRecord->register_event_mode,
-            'chronicle_text'      => 'REVOKED: ' . $request->chronicle_text,
+            'chronicle_text'      => 'REVOKED: ' . $validated['chronicle_text'],
             'authorising_user_id' => auth()->id(),
             'scope_target'        => $serviceRecord->scope_target ?? 'BOTH',
         ]);
@@ -129,12 +119,6 @@ class ChronologicalRegisterController extends Controller
 
     public function updateRecord(Request $request, ChronologicalRegister $serviceRecord)
     {
-        $request->merge([
-            'chronicle_text'      => $request->chronicle_text ?? $request->description,
-            'scope_target'        => $request->scope_target ?? $request->display_target,
-            'register_event_mode' => $request->register_event_mode ?? $request->event_type,
-        ]);
-
         $validated = $request->validate([
             'chronicle_text'      => 'required|string',
             'scope_target'        => 'required|in:IC,OOC,BOTH',
@@ -157,13 +141,6 @@ class ChronologicalRegisterController extends Controller
 
     public function issueManualEntry(Request $request)
     {
-        $request->merge([
-            'persona_id'          => $request->persona_id ?? $request->character_id,
-            'register_event_mode' => $request->register_event_mode ?? $request->event_type,
-            'scope_target'        => $request->scope_target ?? $request->display_target,
-            'chronicle_text'      => $request->chronicle_text ?? $request->description,
-        ]);
-
         $validated = $request->validate([
             'persona_id'          => 'required|exists:personae,id',
             'register_event_mode' => ['nullable', 'string', Rule::in(ChronologicalRegister::allEventTypes())],

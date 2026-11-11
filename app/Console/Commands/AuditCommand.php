@@ -222,7 +222,7 @@ class AuditCommand extends Command
                     'created_at' => 'created_at',
                     'updated_at' => 'updated_at',
                 ],
-                'relationships' => ['bookcase', 'shelf', 'chapters', 'folios', 'status'],
+                'relationships' => ['bookcase', 'shelf', 'chapters', 'folios', 'status', 'publicationState'],
                 'controllers' => [
                     'app/Http/Controllers/Admin/VolumeController.php',
                     'app/Http/Controllers/Admin/BookController.php',
@@ -386,7 +386,7 @@ class AuditCommand extends Command
                     'persona_mode' => ['character_type', 'persona_type'],
                     'persona_name' => 'name',
                     'persona_status' => 'status',
-                    'primary_portrait_uri' => 'avatar',
+                    'primary_portrait_url' => 'avatar',
                     'last_logged_location' => 'last_known_location',
                     'created_at' => 'created_at',
                     'updated_at' => 'updated_at',
@@ -1181,7 +1181,7 @@ class AuditCommand extends Command
                 'columns' => [
                     'id' => 'id',
                     'article_title' => 'title',
-                    'article_uri' => 'slug',
+                    'article_url' => 'slug',
                     'article_category' => 'category',
                     'article_text' => 'content',
                     'is_visible' => 'is_visible',
@@ -1272,15 +1272,46 @@ class AuditCommand extends Command
      */
     protected function sanitiseContentForColumnScan(string $targetTable, string $content): string
     {
+        // 0. Strip Blade @WidgetManifest JSON docblocks so manifest keys ("name", "title", "type") aren't flagged as DB columns
+        $clean = preg_replace('/@WidgetManifest\s*\(\s*\{.*?\}\s*\)/s', '', $content);
+
         // 1. Strip standard redirect flash messages: ->with('status', ...)
-        $clean = preg_replace('/->with\(\s*[\'"]status[\'"]\s*,/', '->with(\'__flash_ok__\',', $content);
+        $clean = preg_replace('/->with\(\s*[\'"]status[\'"]\s*,/', '->with(\'__flash_ok__\',', $clean);
+
+        // 1b. Strip JSON response status keys: ['status' => 'waiting_for_volume'|'unauthorised'|'locked'|'success'|etc.]
+        $clean = preg_replace(
+            '/[\'"]status[\'"]\s*=>\s*[\'"](?:success|error|warning|info|locked|unauthorised|unauthorized|waiting_for_volume|pending|ok)[\'"]/i',
+            '\'__json_status__\' => \'ok\'',
+            $clean
+        );
 
         // 2. When auditing tables other than 'personae', ignore Persona:: / $persona-> queries
-        //    so 'candidate_petitions' isn't penalised for Persona's columns (e.g. 'status' or 'name').
         if ($targetTable !== 'personae') {
             $clean = preg_replace('/\bPersona::(?:where|create|update)[a-zA-Z0-9_]*\s*\((?:[^()]+|\((?:[^()]+|\([^()]*\))*\))*\)/s', '', $clean);
             $clean = preg_replace('/\$persona->(?:where|create|update)[a-zA-Z0-9_]*\s*\((?:[^()]+|\((?:[^()]+|\([^()]*\))*\))*\)/s', '', $clean);
             $clean = preg_replace('/->whereIn\(\s*[\'"]status[\'"]\s*,\s*\[\s*[\'"]active[\'"]/', '->whereIn(\'__persona_state__\', [\'active\'', $clean);
+        }
+
+        // 3. When auditing tables other than 'books' / 'book_modules', ignore CMS Book::where('slug', ...) and 'page_widget.sort_order'
+        if (! in_array($targetTable, ['books', 'book_modules'], true)) {
+            $clean = preg_replace('/\bBook::where\(\s*[\'"]slug[\'"]\s*,/', 'Book::where(\'__cms_book_url__\',', $clean);
+            $clean = preg_replace('/[\'"]page_widget\.sort_order[\'"]/', '\'__cms_module_sort__\'', $clean);
+        }
+
+        // 4. When auditing tables other than 'chronological_registers', ignore ServiceRecord:: / ChronologicalRegister:: create blocks
+        if ($targetTable !== 'chronological_registers') {
+            $clean = preg_replace('/\b(?:ServiceRecord|ChronologicalRegister)::create\s*\((?:[^()]+|\((?:[^()]+|\([^()]*\))*\))*\)/s', '', $clean);
+        }
+
+        // 5. When auditing tables other than 'users', ignore User::select('id', 'name') and $user->name / auth()->user()->name
+        if ($targetTable !== 'users') {
+            $clean = preg_replace('/\bUser::where\([^;]+?->select\(\s*[\'"]id[\'"]\s*,\s*[\'"]name[\'"]\s*\)/s', 'User::where()->select(\'id\')', $clean);
+            $clean = preg_replace('/(?:\$user|\$lockedUser|\$recipient|->user|auth\(\)->user\(\))(?:\?->|->)name\b/', '->__user_name__', $clean);
+        }
+
+        // 6. When auditing tables other than 'user_attributes', ignore UserAttribute::where('key', 'value') queries
+        if ($targetTable !== 'user_attributes') {
+            $clean = preg_replace('/\bUserAttribute::where\([^;]+?;/s', '', $clean);
         }
 
         return $clean ?? $content;
@@ -1716,15 +1747,29 @@ class AuditCommand extends Command
         $bundleLines[] = "Generated: " . now()->toDateTimeString();
         $bundleLines[] = "================================================================================";
         $bundleLines[] = "";
+        $bundleLines[] = "### 0. MANDATORY AI REFACTORING RULES (READ FIRST — STRICT ENFORCEMENT)";
+        $bundleLines[] = "1. NO LEGACY FALLBACKS: Do NOT include backwards-compatible fallbacks to old/legacy column names,";
+        $bundleLines[] = "   table names, request keys, or model filenames (e.g., NEVER write `\$request->input('new_col', \$request->input('old_col'))`,";
+        $bundleLines[] = "   `\$request->has('old_col')`, or `\$model->new_col ?? \$model->old_col`).";
+        $bundleLines[] = "2. REGEX AUDITOR WARNING: The automated audit scanner checks raw file text via regex. If a legacy column";
+        $bundleLines[] = "   name or legacy table name appears ANYWHERE in the code—even as a fallback—the audit WILL FAIL.";
+        $bundleLines[] = "3. TARGET NAMES ONLY: Use ONLY the Target Table, Target Model, and Target Column names from the";
+        $bundleLines[] = "   Expected Blueprint Mapping below. Replace legacy Model imports (e.g. Position, Ranks, ServiceRecord,";
+        $bundleLines[] = "   Application, Section, Chapter) with their canonical Target Models (e.g. Assignment, Insignia,";
+        $bundleLines[] = "   ChronologicalRegister, CandidatePetition, Division, Folio).";
+        $bundleLines[] = "4. COMPLETE FILE OUTPUT: Provide complete, drop-in replacement files with zero placeholders or truncated code.";
+        $bundleLines[] = "";
         $bundleLines[] = "### 1. SCHEMA & BLUEPRINT DELTA";
         $bundleLines[] = "Target Table: {$targetTable} (Legacy: {$spec['legacy_table']})";
+        $bundleLines[] = "Target Model: " . ($spec['target_model'] ?? 'NONE (Pivot)') . " (Legacy DO NOT USE: " . ($spec['legacy_model'] ?? 'NONE') . ")";
         $bundleLines[] = "Active DB Table: " . ($audit['active_table'] ?? 'NONE');
         $bundleLines[] = "Live DB Columns: " . implode(', ', $audit['live_columns']);
-        $bundleLines[] = "Expected Blueprint Mapping (Target => Legacy): " . json_encode($spec['columns'], JSON_PRETTY_PRINT);
+        $bundleLines[] = "Expected Blueprint Mapping (Target => Legacy DO NOT USE): " . json_encode($spec['columns'], JSON_PRETTY_PRINT);
         $bundleLines[] = "Verified Target Columns: " . implode(', ', $audit['verified_target_cols']);
         $bundleLines[] = "Unmigrated Legacy Columns: " . json_encode($audit['unmigrated_legacy_cols']);
         $bundleLines[] = "Missing Target Columns: " . json_encode($audit['missing_target_cols']);
         $bundleLines[] = "Extra/Hallucinated DB Columns: " . implode(', ', $audit['extra_hallucinated_cols']);
+        $bundleLines[] = "Required Model Relationships: " . implode(', ', $spec['relationships'] ?? []);
         $bundleLines[] = "Missing Model Relationships: " . implode(', ', $audit['missing_relationships']);
         $bundleLines[] = "";
 

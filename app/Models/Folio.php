@@ -12,6 +12,16 @@ class Folio extends Model
     protected $table = 'folios';
     protected $guarded = [];
 
+    protected $casts = [
+        'locked_at' => 'datetime',
+    ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | Canonical MOWS Relationships
+    |--------------------------------------------------------------------------
+    */
+
     public function volume(): BelongsTo
     {
         return $this->belongsTo(Volume::class, 'volume_id');
@@ -58,6 +68,53 @@ class Folio extends Model
             ->withPivot('contribution_word_count');
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Legacy & Blueprint Compatibility Aliases
+    |--------------------------------------------------------------------------
+    */
+
+    public function book(): BelongsTo
+    {
+        return $this->volume();
+    }
+
+    public function authorUser(): BelongsTo
+    {
+        return $this->author();
+    }
+
+    public function activeCharacter(): BelongsTo
+    {
+        return $this->activePersona();
+    }
+
+    public function characters(): BelongsToMany
+    {
+        return $this->personae();
+    }
+
+    public function charactersPresent(): BelongsToMany
+    {
+        return $this->personae();
+    }
+
+    public function versions(): HasMany
+    {
+        return $this->revisions();
+    }
+
+    public function contributions(): HasMany
+    {
+        return $this->authorLedgers();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Access Control Helpers
+    |--------------------------------------------------------------------------
+    */
+
     public function isAccessibleBy(?User $user): bool
     {
         if ($this->folio_status === 'published') {
@@ -68,19 +125,20 @@ class Folio extends Model
             return false;
         }
 
-        if ($user->hasRole('webmaster') || $user->can('edit_chapter')) {
+        if ($user->hasRole('webmaster') ||$user->can('edit_chapter')) {
             return true;
         }
 
-        if ($this->user_id ===$user->id) {
+        if ((int) $this->user_id === (int)$user->id) {
             return true;
         }
 
         $coAuthorUserIds =$this->personae()
             ->whereNotNull('user_id')
             ->pluck('user_id')
+            ->map(fn ($id) => (int)$id)
             ->toArray();
 
-        return in_array($user->id,$coAuthorUserIds);
+        return in_array((int) $user->id,$coAuthorUserIds, true);
     }
 }

@@ -55,7 +55,7 @@
                         $user = auth()->user();
                         $hasTwitter = !empty($user->twitter_handle);
                         $hasFacebook = !empty($user->facebook_handle);
-                        $currentUrl = urlencode(request()->url());
+                        $currentPageAddress = urlencode(request()->fullUrl());
                     @endphp
 
                     <x-button type="button"
@@ -78,7 +78,7 @@
                         <div class="hidden-mobile flex flex-row items-center gap-sm">
                             @if($hasTwitter)
                                 @php $cleanTwitter = ltrim($user->twitter_handle, '@'); @endphp
-                                <a href="https://twitter.com/intent/tweet?url={{ $currentUrl }}&via={{ $cleanTwitter }}"
+                                <a href="https://twitter.com/intent/tweet?text={{ $currentPageAddress }}&via={{ $cleanTwitter }}"
                                    target="_blank"
                                    rel="noopener noreferrer"
                                    class="bg-transparent border-none text-muted hover-text-accent cursor-pointer flex items-center justify-center no-underline"
@@ -91,7 +91,7 @@
                             @endif
 
                             @if($hasFacebook)
-                                <a href="https://www.facebook.com/sharer/sharer.php?u={{ $currentUrl }}"
+                                <a href="https://www.facebook.com/sharer/sharer.php?u={{ $currentPageAddress }}"
                                    target="_blank"
                                    rel="noopener noreferrer"
                                    class="bg-transparent border-none text-muted hover-text-accent cursor-pointer flex items-center justify-center no-underline"

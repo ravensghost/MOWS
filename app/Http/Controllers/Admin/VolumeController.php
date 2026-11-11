@@ -19,6 +19,9 @@ class VolumeController extends Controller
             'ic_time'              => 'nullable|string|max:255',
         ]);
 
+        $maxOrder = Volume::where('shelf_id', $validated['shelf_id'] ?? null)->max('volume_sort_order') ?? 0;
+        $validated['volume_sort_order'] = $maxOrder + 1;
+
         $volume = Volume::create($validated);
 
         return response()->json([
@@ -41,7 +44,7 @@ class VolumeController extends Controller
 
         $volume = Volume::findOrFail($id);
 
-        // Assuming completed state ID is 3
+        // Assuming completed publication state ID is 3
         $wasCompleted = (int) $volume->publication_state_id === 3;
         $volume->update($validated);
         $isNowCompleted = (int) $volume->publication_state_id === 3;
@@ -68,9 +71,18 @@ class VolumeController extends Controller
 
     public function reorder(Request $request)
     {
-        foreach ($request->input('items', []) as $item) {
-            Volume::where('id', $item['id'])->update(['volume_sort_order' => $item['sort_order']]);
+        foreach ($request->input('items', []) as $index => $item) {
+            if (!isset($item['id'])) {
+                continue;
+            }
+
+            $sortOrder = $item['volume_sort_order'] ?? ($index + 1);
+
+            Volume::where('id', $item['id'])->update([
+                'volume_sort_order' => (int) $sortOrder,
+            ]);
         }
+
         return response()->json([
             'status'  => 'success',
             'data'    => null,

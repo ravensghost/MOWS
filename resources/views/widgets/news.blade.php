@@ -1,4 +1,4 @@
-{{-- 
+    {{-- 
 @WidgetManifest({
     "name": "Station News",
     "description": "Displays recent news and announcements.",
@@ -11,7 +11,7 @@
     @forelse($newsItems ?? [] as $news)
         <div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col overflow-hidden hover-border-accent transition-colors">
             <div class="p-panel flex flex-col flex-grow gap-sm">
-                <span class="text-h text-xl font-bold block">{{ $news->title }}</span>
+                <span class="text-h text-xl font-bold block">{{ $news->bulletin_title }}</span>
                 
                 <span class="text-muted text-xs block pb-2"
                       aria-label="{{ lexicon('tooltip_News_PublishedDate', 'Date this announcement was broadcast') }}"
@@ -21,7 +21,7 @@
                 </span>
                 
                 <div class="text-p tiptap-content">
-                    {!! \Stevebauman\Purify\Facades\Purify::clean($news->content) !!}
+                    {!! \Stevebauman\Purify\Facades\Purify::clean($news->bulletin_text) !!}
                 </div>
             </div>
         </div>

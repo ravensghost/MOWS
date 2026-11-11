@@ -14,10 +14,10 @@ class PublicationController extends Controller
 {
     public function storyManager()
     {
-        $systemPage = Book::where('slug', 'admin/story')
+        $systemPage = Book::where('books_uri', 'admin/story')
             ->where('is_published', true)
-            ->with(['grid.gridModules', 'widgets' => function ($query) {
-                $query->orderBy('page_widget.sort_order');
+            ->with(['layout.blocks', 'widgets' => function ($query) {
+                $query->orderBy('book_modules.module_sort_order');
             }])
             ->firstOrFail();
 
@@ -28,7 +28,7 @@ class PublicationController extends Controller
                     ->orderBy('volume_title');
             },
             'volumes.folios' => function ($q) {
-                $q->select('id', 'volume_id', 'folio_type', 'ic_day', 'ic_time', 'content_tier_l', 'content_tier_s', 'content_tier_v', 'folio_sort_order', 'created_at')
+                $q->select('id', 'volume_id', 'folio_mode', 'scene_location', 'folio_status', 'ic_day', 'ic_time', 'content_tier_l', 'content_tier_s', 'content_tier_v', 'folio_sort_order', 'created_at')
                     ->orderBy('folio_sort_order')
                     ->orderBy('created_at', 'desc');
             },
@@ -42,7 +42,7 @@ class PublicationController extends Controller
         $looseVolumes = Volume::whereNull('shelf_id')
             ->with([
                 'folios' => function ($q) {
-                    $q->select('id', 'volume_id', 'folio_type', 'ic_day', 'ic_time', 'content_tier_l', 'content_tier_s', 'content_tier_v', 'folio_sort_order', 'created_at')
+                    $q->select('id', 'volume_id', 'folio_mode', 'scene_location', 'folio_status', 'ic_day', 'ic_time', 'content_tier_l', 'content_tier_s', 'content_tier_v', 'folio_sort_order', 'created_at')
                         ->orderBy('folio_sort_order')
                         ->orderBy('created_at', 'desc');
                 },
@@ -53,7 +53,9 @@ class PublicationController extends Controller
             ->orderBy('volume_title')
             ->get();
 
-        $statuses = PublicationState::select('id', 'state_title', 'book_url')->orderBy('state_sort_order')->get();
+        $statuses = PublicationState::select('id', 'state_title', 'book_url')
+            ->orderBy('state_sort_order')
+            ->get();
 
         return view('admin.publication', compact('systemPage', 'shelves', 'looseVolumes', 'statuses'));
     }
@@ -75,7 +77,7 @@ class PublicationController extends Controller
         return response()->json([
             'status'  => 'success',
             'data'    => $status,
-            'message' => lexicon('msg_Story_StatusCreated', 'Book status created successfully.')
+            'message' => lexicon('msg_Story_StatusCreated', 'Publication state created successfully.')
         ]);
     }
 
@@ -94,7 +96,7 @@ class PublicationController extends Controller
         return response()->json([
             'status'  => 'success',
             'data'    => $status,
-            'message' => lexicon('msg_Story_StatusUpdated', 'Book status updated successfully.')
+            'message' => lexicon('msg_Story_StatusUpdated', 'Publication state updated successfully.')
         ]);
     }
 
@@ -105,7 +107,7 @@ class PublicationController extends Controller
         return response()->json([
             'status'  => 'success',
             'data'    => null,
-            'message' => lexicon('msg_Story_StatusDeleted', 'Book status deleted successfully.')
+            'message' => lexicon('msg_Story_StatusDeleted', 'Publication state deleted successfully.')
         ]);
     }
 }

@@ -10,8 +10,8 @@
                     @can('manage_navigation')
                         <x-button variant="success"
                                   href="/admin/navigation/options"
-                                  aria-label="{{ lexicon('tooltip_Navigation_ManageOptions', 'Configure navigation locations, groups, and visibility options') }}"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_ManageOptions', 'Configure navigation locations, groups, and visibility options')) }}'">
+                                  aria-label="{{ lexicon('tooltip_Navigation_ManageOptions', 'Configure navigation locations, groups, and access clearance options') }}"
+                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_ManageOptions', 'Configure navigation locations, groups, and access clearance options')) }}'">
                             <i class="bi bi-sliders"></i> {{ lexicon('btn_Navigation_ManageOptions', 'Manage Dropdown Options') }}
                         </x-button>
 
@@ -31,7 +31,7 @@
                 <x-form-input name="nav_search"
                               id="nav_search"
                               :label="lexicon('label_Navigation_FilterLinks', 'Filter Navigation Links')"
-                              :placeholder="lexicon('label_Navigation_FilterPlaceholder', 'Search by lexicon key, URL, group, or location...')"
+                              :placeholder="lexicon('label_Navigation_FilterPlaceholder', 'Search by translation code key, destination address, group, or display location...')"
                               :tooltip="lexicon('tooltip_Navigation_FilterInput', 'Instantaneously filter navigation menu items using fuzzy search')"
                               xModel="searchQuery" />
             </div>
@@ -42,9 +42,9 @@
                     <th class="p-3">{{ lexicon('label_common_SortOrder', 'Sort Order') }}</th>
                     <th class="p-3">{{ lexicon('label_common_group', 'Group') }}</th>
                     <th class="p-3">{{ lexicon('label_common_GroupSortOrder', 'Group Sort Order') }}</th>
-                    <th class="p-3">{{ lexicon('label_common_LexiconKey', 'Lexicon Key') }}</th>
-                    <th class="p-3">{{ lexicon('label_common_url', 'URL Address') }}</th>
-                    <th class="p-3">{{ lexicon('label_nav_location', 'Location') }}</th>
+                    <th class="p-3">{{ lexicon('label_common_LexiconKey', 'Translation Code Key') }}</th>
+                    <th class="p-3">{{ lexicon('label_common_url', 'Destination Address') }}</th>
+                    <th class="p-3">{{ lexicon('label_nav_location', 'Display Location') }}</th>
                     <th class="p-3 text-right">{{ lexicon('label_common_Actions', 'Actions') }}</th>
                 </x-slot:headers>
 
@@ -53,18 +53,18 @@
                     <tr id="link-row-{{ $link->id }}"
                         data-nav-search-item
                         data-id="{{ $link->id }}"
-                        data-lexicon-key="{{ $link->lexicon_key }}"
-                        data-url="{{ $link->url }}"
-                        data-group-name="{{ $link->group_name ?? '' }}"
-                        data-location="{{ $link->location }}"
+                        data-translation-code-key="{{ $link->translation_code_key }}"
+                        data-destination-url="{{ $link->destination_url }}"
+                        data-group-title="{{ $link->group_title ?? '' }}"
+                        data-display-location="{{ $link->display_location }}"
                         x-show="isLinkVisible({{ $link->id }}, {{ json_encode($link->children->pluck('id')->toArray()) }})"
                         class="border-b-table-row hover-bg-table-row bg-panel-sub">
-                        <td class="p-3 font-bold">{{ $link->order }}</td>
-                        <td class="p-3 font-bold">{{ $link->group_name ?? '—' }}</td>
-                        <td class="p-3 font-bold">{{ $link->group_order }}</td>
+                        <td class="p-3 font-bold">{{ $link->entry_sort_order }}</td>
+                        <td class="p-3 font-bold">{{ $link->group_title ?? '—' }}</td>
+                        <td class="p-3 font-bold">{{ $link->group_sort_order }}</td>
                         <td class="p-3 font-bold">
                             <div class="flex flex-row items-center gap-xs">
-                                <span>{{ $link->lexicon_key }}</span>
+                                <span>{{ $link->translation_code_key }}</span>
                                 @if(!$link->is_visible)
                                     <x-badge variant="danger"
                                              x-tooltip="'{{ addslashes(lexicon('tooltip_common_HiddenFromSite', 'Hidden from live site')) }}'">
@@ -74,7 +74,7 @@
                                 <x-button type="button"
                                           variant="text"
                                           class="text-xs text-muted hover-text-accent"
-                                          x-clipboard="'{{ addslashes($link->lexicon_key) }}'"
+                                          x-clipboard="'{{ addslashes($link->translation_code_key) }}'"
                                           aria-label="{{ lexicon('tooltip_common_CopyToken', 'Copy token name to clipboard') }}"
                                           x-tooltip="'{{ addslashes(lexicon('tooltip_common_CopyToken', 'Copy token name to clipboard')) }}'">
                                     <i class="bi bi-clipboard"></i>
@@ -83,21 +83,21 @@
                         </td>
                         <td class="p-3 font-mono text-xs">
                             <div class="flex flex-row items-center gap-xs">
-                                <span>{{ $link->url }}</span>
+                                <span>{{ $link->destination_url }}</span>
                                 <x-button type="button"
                                           variant="text"
                                           class="text-xs text-muted hover-text-accent"
-                                          x-clipboard="'{{ addslashes($link->url) }}'"
-                                          aria-label="{{ lexicon('tooltip_Navigation_CopyUrl', 'Copy URL to clipboard') }}"
-                                          x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_CopyUrl', 'Copy URL to clipboard')) }}'">
+                                          x-clipboard="'{{ addslashes($link->destination_url) }}'"
+                                          aria-label="{{ lexicon('tooltip_Navigation_CopyUrl', 'Copy destination address to clipboard') }}"
+                                          x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_CopyUrl', 'Copy destination address to clipboard')) }}'">
                                     <i class="bi bi-clipboard"></i>
                                 </x-button>
                             </div>
                         </td>
                         <td class="p-3">
-                            <x-badge variant="{{ $link->location === 'primary' ? 'success' : 'warning' }}"
-                                     x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_LinkLocation', 'Assigned menu location')) }}'">
-                                {{ $link->location === 'primary' ? lexicon('label_nav_primary', 'Main Nav') : lexicon('label_nav_drawer', 'Context Drawer') }}
+                            <x-badge variant="{{ $link->display_location === 'primary' ? 'success' : 'warning' }}"
+                                     x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_LinkLocation', 'Assigned menu display location')) }}'">
+                                {{ $link->display_location === 'primary' ? lexicon('label_nav_primary', 'Main Nav') : lexicon('label_nav_drawer', 'Context Drawer') }}
                             </x-badge>
                         </td>
                         <td class="p-3 text-right">
@@ -110,16 +110,16 @@
                                               x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_EditLink', 'Edit this menu item')) }}'"
                                               @click="openLinkModal('edit', { 
                                                 id: {{ $link->id }}, 
-                                                parent_id: '',
-                                                group_name: '{{ addslashes($link->group_name) }}', 
-                                                lexicon_key: '{{ addslashes($link->lexicon_key) }}', 
-                                                url: '{{ addslashes($link->url) }}', 
-                                                location: '{{ $link->location }}', 
-                                                visibility: '{{ $link->visibility }}',
+                                                parent_entry_id: '',
+                                                group_title: '{{ addslashes($link->group_title) }}', 
+                                                translation_code_key: '{{ addslashes($link->translation_code_key) }}', 
+                                                destination_url: '{{ addslashes($link->destination_url) }}', 
+                                                display_location: '{{ $link->display_location }}', 
+                                                access_clearance: '{{ $link->access_clearance }}',
                                                 required_permission: '{{ $link->required_permission ?? '' }}', 
-                                                target: '{{ $link->target }}', 
-                                                order: {{ $link->order }}, 
-                                                group_order: {{ $link->group_order ?? 0 }},
+                                                window_target: '{{ $link->window_target }}', 
+                                                entry_sort_order: {{ $link->entry_sort_order }}, 
+                                                group_sort_order: {{ $link->group_sort_order ?? 0 }},
                                                 is_visible: {{ $link->is_visible ? 'true' : 'false' }}
                                             })">
                                         <i class="bi bi-pencil"></i> {{ lexicon('btn_common_Edit', 'Edit') }}
@@ -129,7 +129,7 @@
                                               class="text-danger hover-danger text-xs"
                                               aria-label="{{ lexicon('tooltip_Navigation_DeleteLink', 'Delete this menu item') }}"
                                               x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_DeleteLink', 'Delete this menu item')) }}'"
-                                              x-data="deleteAction(`/admin/navigation/{{ $link->id }}`, 'DELETE', '{{ addslashes($link->lexicon_key) }}', '{{ addslashes(lexicon('msg_Navigation_ConfirmDelete', 'Are you sure you want to remove this menu item?')) }}')"
+                                              x-data="deleteAction(`/admin/navigation/{{ $link->id }}`, 'DELETE', '{{ addslashes($link->translation_code_key) }}', '{{ addslashes(lexicon('msg_Navigation_ConfirmDelete', 'Are you sure you want to remove this menu item?')) }}')"
                                               @click="confirmDelete()">
                                         <i class="bi bi-trash"></i> {{ lexicon('btn_common_Delete', 'Delete') }}
                                     </x-button>
@@ -143,19 +143,19 @@
                         <tr id="link-row-{{ $child->id }}"
                             data-nav-search-item
                             data-id="{{ $child->id }}"
-                            data-parent-id="{{ $link->id }}"
-                            data-lexicon-key="{{ $child->lexicon_key }}"
-                            data-url="{{ $child->url }}"
-                            data-group-name="{{ $child->group_name ?? '' }}"
-                            data-location="{{ $child->location }}"
-                            x-show="isLinkVisible({{ $child->id }}, [{{$link->id }}])"
+                            data-parent-entry-id="{{ $link->id }}"
+                            data-translation-code-key="{{ $child->translation_code_key }}"
+                            data-destination-url="{{ $child->destination_url }}"
+                            data-group-title="{{ $child->group_title ?? '' }}"
+                            data-display-location="{{ $child->display_location }}"
+                            x-show="isLinkVisible({{ $child->id }}, [{{ $link->id }}])"
                             class="border-b-table-row hover-bg-table-row">
-                            <td class="p-3 pl-6 text-muted">↳ {{ $child->order }}</td>
-                            <td class="p-3 text-muted">{{ $child->group_name ?? '—' }}</td>
-                            <td class="p-3 text-muted">{{ $child->group_order }}</td>
+                            <td class="p-3 pl-6 text-muted">↳ {{ $child->entry_sort_order }}</td>
+                            <td class="p-3 text-muted">{{ $child->group_title ?? '—' }}</td>
+                            <td class="p-3 text-muted">{{ $child->group_sort_order }}</td>
                             <td class="p-3">
                                 <div class="flex flex-row items-center gap-xs">
-                                    <span>{{ $child->lexicon_key }}</span>
+                                    <span>{{ $child->translation_code_key }}</span>
                                     @if(!$child->is_visible)
                                         <x-badge variant="danger"
                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_common_HiddenFromSite', 'Hidden from live site')) }}'">
@@ -165,7 +165,7 @@
                                     <x-button type="button"
                                               variant="text"
                                               class="text-xs text-muted hover-text-accent"
-                                              x-clipboard="'{{ addslashes($child->lexicon_key) }}'"
+                                              x-clipboard="'{{ addslashes($child->translation_code_key) }}'"
                                               aria-label="{{ lexicon('tooltip_common_CopyToken', 'Copy token name to clipboard') }}"
                                               x-tooltip="'{{ addslashes(lexicon('tooltip_common_CopyToken', 'Copy token name to clipboard')) }}'">
                                         <i class="bi bi-clipboard"></i>
@@ -174,21 +174,21 @@
                             </td>
                             <td class="p-3 font-mono text-xs">
                                 <div class="flex flex-row items-center gap-xs">
-                                    <span>{{ $child->url }}</span>
+                                    <span>{{ $child->destination_url }}</span>
                                     <x-button type="button"
                                               variant="text"
                                               class="text-xs text-muted hover-text-accent"
-                                              x-clipboard="'{{ addslashes($child->url) }}'"
-                                              aria-label="{{ lexicon('tooltip_Navigation_CopyUrl', 'Copy URL to clipboard') }}"
-                                              x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_CopyUrl', 'Copy URL to clipboard')) }}'">
+                                              x-clipboard="'{{ addslashes($child->destination_url) }}'"
+                                              aria-label="{{ lexicon('tooltip_Navigation_CopyUrl', 'Copy destination address to clipboard') }}"
+                                              x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_CopyUrl', 'Copy destination address to clipboard')) }}'">
                                         <i class="bi bi-clipboard"></i>
                                     </x-button>
                                 </div>
                             </td>
                             <td class="p-3">
-                                <x-badge variant="{{ $child->location === 'primary' ? 'success' : 'warning' }}"
-                                         x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_LinkLocation', 'Assigned menu location')) }}'">
-                                    {{ $child->location === 'primary' ? lexicon('label_nav_primary', 'Main Nav') : lexicon('label_nav_drawer', 'Context Drawer') }}
+                                <x-badge variant="{{ $child->display_location === 'primary' ? 'success' : 'warning' }}"
+                                         x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_LinkLocation', 'Assigned menu display location')) }}'">
+                                    {{ $child->display_location === 'primary' ? lexicon('label_nav_primary', 'Main Nav') : lexicon('label_nav_drawer', 'Context Drawer') }}
                                 </x-badge>
                             </td>
                             <td class="p-3 text-right">
@@ -201,16 +201,16 @@
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_EditLink', 'Edit this menu item')) }}'"
                                                   @click="openLinkModal('edit', { 
                                                     id: {{ $child->id }}, 
-                                                    parent_id: '{{ $child->parent_id }}',
-                                                    group_name: '{{ addslashes($child->group_name) }}', 
-                                                    lexicon_key: '{{ addslashes($child->lexicon_key) }}', 
-                                                    url: '{{ addslashes($child->url) }}', 
-                                                    location: '{{ $child->location }}', 
-                                                    visibility: '{{ $child->visibility }}',
+                                                    parent_entry_id: '{{ $child->parent_entry_id }}',
+                                                    group_title: '{{ addslashes($child->group_title) }}', 
+                                                    translation_code_key: '{{ addslashes($child->translation_code_key) }}', 
+                                                    destination_url: '{{ addslashes($child->destination_url) }}', 
+                                                    display_location: '{{ $child->display_location }}', 
+                                                    access_clearance: '{{ $child->access_clearance }}',
                                                     required_permission: '{{ $child->required_permission ?? '' }}', 
-                                                    target: '{{ $child->target }}', 
-                                                    order: {{ $child->order }}, 
-                                                    group_order: {{ $child->group_order ?? 0 }},
+                                                    window_target: '{{ $child->window_target }}', 
+                                                    entry_sort_order: {{ $child->entry_sort_order }}, 
+                                                    group_sort_order: {{ $child->group_sort_order ?? 0 }},
                                                     is_visible: {{ $child->is_visible ? 'true' : 'false' }}
                                                 })">
                                             <i class="bi bi-pencil"></i> {{ lexicon('btn_common_Edit', 'Edit') }}
@@ -220,7 +220,7 @@
                                                   class="text-danger hover-danger text-xs"
                                                   aria-label="{{ lexicon('tooltip_Navigation_DeleteLink', 'Delete this menu item') }}"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_DeleteLink', 'Delete this menu item')) }}'"
-                                                  x-data="deleteAction(`/admin/navigation/{{ $child->id }}`, 'DELETE', '{{ addslashes($child->lexicon_key) }}', '{{ addslashes(lexicon('msg_Navigation_ConfirmDelete', 'Are you sure you want to remove this menu item?')) }}')"
+                                                  x-data="deleteAction(`/admin/navigation/{{ $child->id }}`, 'DELETE', '{{ addslashes($child->translation_code_key) }}', '{{ addslashes(lexicon('msg_Navigation_ConfirmDelete', 'Are you sure you want to remove this menu item?')) }}')"
                                                   @click="confirmDelete()">
                                             <i class="bi bi-trash"></i> {{ lexicon('btn_common_Delete', 'Delete') }}
                                         </x-button>
@@ -269,107 +269,107 @@
                         <div x-ref="navModalDropdowns" class="flex flex-col gap-md">
                             <div class="grid grid-cols-1 gap-sm w-full lg-grid-cols-3 bg-panel border border-panel rounded-panel shadow-panel p-3">
                                 <div class="flex flex-col gap-xs">
-                                    <label for="modal_parent_id" class="text-xs font-bold text-input-muted">{{ lexicon('label_nav_ParentLink', 'Parent Link (Optional Dropdown)') }}</label>
-                                    <select id="modal_parent_id"
-                                            name="parent_id"
-                                            x-model="linkModal.parent_id"
+                                    <label for="modal_parent_entry_id" class="text-xs font-bold text-input-muted">{{ lexicon('label_nav_ParentLink', 'Parent Entry (Optional Dropdown)') }}</label>
+                                    <select id="modal_parent_entry_id"
+                                            name="parent_entry_id"
+                                            x-model="linkModal.parent_entry_id"
                                             class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent"
-                                            aria-label="{{ lexicon('label_nav_ParentLink', 'Parent Link (Optional Dropdown)') }}"
+                                            aria-label="{{ lexicon('label_nav_ParentLink', 'Parent Entry (Optional Dropdown)') }}"
                                             x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_ParentLink', 'Assign under a top-level main nav link to create a dropdown item')) }}'">
                                         <option value="">— {{ lexicon('label_common_None', 'Top Level') }} —</option>
                                         @foreach($parentOptions as $parent)
-                                            <option value="{{ $parent->id }}">{{ lexicon($parent->lexicon_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '',$parent->lexicon_key))) }}</option>
+                                            <option value="{{ $parent->id }}">{{ lexicon($parent->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $parent->translation_code_key))) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
 
                                 <div class="flex flex-col gap-xs">
-                                    <label for="modal_group_name" class="text-xs font-bold text-input-muted">{{ lexicon('label_nav_group', 'Group Name') }}</label>
-                                    <select id="modal_group_name"
-                                            name="group_name"
-                                            x-model="linkModal.group_name"
+                                    <label for="modal_group_title" class="text-xs font-bold text-input-muted">{{ lexicon('label_nav_group', 'Group Title') }}</label>
+                                    <select id="modal_group_title"
+                                            name="group_title"
+                                            x-model="linkModal.group_title"
                                             @change="
                                                 let selected = $el.options[$el.selectedIndex];
-                                                if (selected && selected.dataset.order) {
-                                                    linkModal.group_order = selected.dataset.order;
+                                                if (selected && selected.dataset.sortOrder) {
+                                                    linkModal.group_sort_order = selected.dataset.sortOrder;
                                                 }
                                             "
                                             class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent"
-                                            aria-label="{{ lexicon('label_nav_group', 'Group Name') }}"
+                                            aria-label="{{ lexicon('label_nav_group', 'Group Title') }}"
                                             x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_GroupName', 'Assign this link to a collapsible drawer group')) }}'">
                                         <option value="">— {{ lexicon('label_common_None', 'None') }} —</option>
                                         @foreach($groupOptions as $opt)
-                                            <option value="{{ $opt->value }}" data-order="{{ $opt->sort_order }}">{{ lexicon($opt->label,$opt->value) }}</option>
+                                            <option value="{{ $opt->parameter_value }}" data-sort-order="{{ $opt->parameter_sort_order }}">{{ lexicon($opt->parameter_label, $opt->parameter_value) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
 
-                                <x-form-input name="group_order"
-                                              id="modal_group_order"
+                                <x-form-input name="group_sort_order"
+                                              id="modal_group_sort_order"
                                               type="number"
                                               :label="lexicon('label_common_GroupSortOrder', 'Group Sort Order')"
-                                              :tooltip="lexicon('tooltip_Navigation_GroupSortOrder', 'Numeric display order for the group')"
-                                              xModel="linkModal.group_order" />
+                                              :tooltip="lexicon('tooltip_Navigation_GroupSortOrder', 'Numeric display sort order for the group')"
+                                              xModel="linkModal.group_sort_order" />
 
-                                <x-form-input name="lexicon_key"
-                                              id="modal_lexicon_key"
+                                <x-form-input name="translation_code_key"
+                                              id="modal_translation_code_key"
                                               type="text"
-                                              :label="lexicon('label_nav_LexiconKey', 'Lexicon Key')"
+                                              :label="lexicon('label_nav_LexiconKey', 'Translation Code Key')"
                                               :tooltip="lexicon('tooltip_Navigation_LexiconKey', 'Translation code key for this menu item')"
-                                              xModel="linkModal.lexicon_key"
+                                              xModel="linkModal.translation_code_key"
                                               :required="true" />
 
-                                <x-form-input name="url"
-                                              id="modal_url"
+                                <x-form-input name="destination_url"
+                                              id="modal_destination_url"
                                               type="text"
-                                              :label="lexicon('label_nav_url', 'URL Address')"
-                                              :tooltip="lexicon('tooltip_Navigation_Url', 'Destination path or full URL')"
-                                              xModel="linkModal.url"
+                                              :label="lexicon('label_nav_url', 'Destination Address')"
+                                              :tooltip="lexicon('tooltip_Navigation_Url', 'Destination path or full address')"
+                                              xModel="linkModal.destination_url"
                                               :required="true" />
 
-                                <x-form-input name="order"
-                                              id="modal_order"
+                                <x-form-input name="entry_sort_order"
+                                              id="modal_entry_sort_order"
                                               type="number"
-                                              :label="lexicon('label_sort_order', 'Sort Order')"
-                                              :tooltip="lexicon('tooltip_Navigation_SortOrder', 'Numeric display order within its group or bar')"
-                                              xModel="linkModal.order"
+                                              :label="lexicon('label_sort_order', 'Entry Sort Order')"
+                                              :tooltip="lexicon('tooltip_Navigation_SortOrder', 'Numeric display sort order within its group or bar')"
+                                              xModel="linkModal.entry_sort_order"
                                               :required="true" />
                             </div>
 
                             <div class="grid grid-cols-1 gap-sm w-full lg-grid-cols-3 bg-panel border border-panel rounded-panel shadow-panel p-3">
                                 <div class="flex flex-col gap-xs">
-                                    <label for="modal_location" class="text-xs font-bold text-input-muted">{{ lexicon('label_nav_location', 'Location') }}</label>
-                                    <select id="modal_location"
-                                            name="location"
-                                            x-model="linkModal.location"
+                                    <label for="modal_display_location" class="text-xs font-bold text-input-muted">{{ lexicon('label_nav_location', 'Display Location') }}</label>
+                                    <select id="modal_display_location"
+                                            name="display_location"
+                                            x-model="linkModal.display_location"
                                             class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent"
-                                            aria-label="{{ lexicon('label_nav_location', 'Location') }}"
+                                            aria-label="{{ lexicon('label_nav_location', 'Display Location') }}"
                                             x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_Location', 'Display in the Main Nav bar or Context Drawer')) }}'">
                                         @foreach($locationOptions as $opt)
-                                            <option value="{{ $opt->value }}">{{ lexicon($opt->label,$opt->value) }}</option>
+                                            <option value="{{ $opt->parameter_value }}">{{ lexicon($opt->parameter_label, $opt->parameter_value) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
 
                                 <div class="flex flex-col gap-xs">
-                                    <label for="modal_visibility" class="text-xs font-bold text-input-muted">{{ lexicon('label_vis_title', 'Visibility') }}</label>
-                                    <select id="modal_visibility"
-                                            name="visibility"
-                                            x-model="linkModal.visibility"
+                                    <label for="modal_access_clearance" class="text-xs font-bold text-input-muted">{{ lexicon('label_vis_title', 'Access Clearance') }}</label>
+                                    <select id="modal_access_clearance"
+                                            name="access_clearance"
+                                            x-model="linkModal.access_clearance"
                                             class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent"
-                                            aria-label="{{ lexicon('label_vis_title', 'Visibility') }}"
-                                            x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_Visibility', 'Minimum user access level required to view this link')) }}'">
+                                            aria-label="{{ lexicon('label_vis_title', 'Access Clearance') }}"
+                                            x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_Visibility', 'Minimum user access clearance required to view this link')) }}'">
                                         @foreach($visibilityOptions as $opt)
-                                            <option value="{{ $opt->value }}">{{ lexicon($opt->label,$opt->value) }}</option>
+                                            <option value="{{ $opt->parameter_value }}">{{ lexicon($opt->parameter_label, $opt->parameter_value) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
 
                                 <div class="flex flex-col gap-xs">
-                                    <label for="modal_target" class="text-xs font-bold text-input-muted">{{ lexicon('label_target_WindowTarget', 'Window Target') }}</label>
-                                    <select id="modal_target"
-                                            name="target"
-                                            x-model="linkModal.target"
+                                    <label for="modal_window_target" class="text-xs font-bold text-input-muted">{{ lexicon('label_target_WindowTarget', 'Window Target') }}</label>
+                                    <select id="modal_window_target"
+                                            name="window_target"
+                                            x-model="linkModal.window_target"
                                             class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent"
                                             aria-label="{{ lexicon('label_target_WindowTarget', 'Window Target') }}"
                                             x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_WindowTarget', 'Open link in the same window or a new tab')) }}'">
@@ -387,7 +387,7 @@
                                         class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent"
                                         aria-label="{{ lexicon('label_PageBuilder_RequiredPermission', 'Required Permission') }}"
                                         x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_RequiredPermission', 'Restrict this link to users holding a specific permission')) }}'">
-                                    <option value="">— {{ lexicon('label_Roles_NoneVisibilityBased', 'None (Public / Visibility Based)') }} —</option>
+                                    <option value="">— {{ lexicon('label_Roles_NoneVisibilityBased', 'None (Public / Access Clearance Based)') }} —</option>
                                     @foreach($permissions as $perm)
                                         <option value="{{ $perm->name }}">{{ $perm->name }}</option>
                                     @endforeach

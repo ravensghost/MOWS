@@ -6,27 +6,27 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use App\Models\Persona;
-use App\Models\Position;
-use App\Models\Ranks;
-use App\Models\ServiceRecord;
+use App\Models\Assignment;
+use App\Models\Insignia;
+use App\Models\ChronologicalRegister;
 
 class PersonaAssignmentController extends Controller
 {
     public function __invoke(Request $request, $id)
     {
         $validated = $request->validate([
-            'assignment_id' => 'required|exists:positions,id',
-            'insignia_id'   => 'required|exists:ranks,id',
+            'assignment_id' => 'required|exists:assignments,id',
+            'insignia_id'   => 'required|exists:insignia,id',
             'reason'        => 'nullable|string',
         ]);
 
-        $persona = Persona::with(['rank', 'position.section'])->findOrFail($id);
+        $persona = Persona::with(['insignia', 'assignment.division'])->findOrFail($id);
 
-        $oldRank = $persona->rank;
-        $oldPosition = $persona->position;
+        $oldInsignia = $persona->insignia;
+        $oldAssignment = $persona->assignment;
 
-        $rankChanged = (int) $persona->insignia_id !== (int) $validated['insignia_id'];
-        $positionChanged = (int) $persona->assignment_id !== (int) $validated['assignment_id'];
+        $insigniaChanged = (int) $persona->insignia_id !== (int) $validated['insignia_id'];
+        $assignmentChanged = (int) $persona->assignment_id !== (int) $validated['assignment_id'];
 
         $persona->update([
             'assignment_id' => $validated['assignment_id'],
@@ -37,45 +37,45 @@ class PersonaAssignmentController extends Controller
             ? ' Reason: ' . $validated['reason']
             : ' (Updated via Roster Management)';
 
-        if ($rankChanged) {
-            $newRank = Ranks::findOrFail($validated['insignia_id']);
+        if ($insigniaChanged) {
+            $newInsignia = Insignia::findOrFail($validated['insignia_id']);
             $actionText = 'Rank changed to';
 
-            if ($oldRank) {
-                if ($newRank->sort_order > $oldRank->sort_order) {
+            if ($oldInsignia) {
+                if ($newInsignia->insignia_sort_order > $oldInsignia->insignia_sort_order) {
                     $actionText = 'Promoted to';
-                } elseif ($newRank->sort_order < $oldRank->sort_order) {
+                } elseif ($newInsignia->insignia_sort_order < $oldInsignia->insignia_sort_order) {
                     $actionText = 'Demoted to';
                 }
             }
 
-            ServiceRecord::create([
-                'user_id'        => $persona->user_id,
-                'character_id'   => $persona->id,
-                'event_type'     => 'promotion',
-                'description'    => "{$actionText} {$newRank->name}.{$reasonSuffix}",
-                'issued_by'      => auth()->id(),
-                'display_target' => 'IC',
+            ChronologicalRegister::create([
+                'user_id'              => $persona->user_id,
+                'persona_id'           => $persona->id,
+                'register_event_mode'  => 'promotion',
+                'chronicle_text'       => "{$actionText} {$newInsignia->insignia_title}.{$reasonSuffix}",
+                'authorising_user_id'  => auth()->id(),
+                'scope_target'         => 'IC',
             ]);
         }
 
-        if ($positionChanged) {
-            $newPosition = Position::with('section')->findOrFail($validated['assignment_id']);
-            $newPosLabel = $newPosition->section
-                ? "{$newPosition->name} ({$newPosition->section->name})"
-                : $newPosition->name;
+        if ($assignmentChanged) {
+            $newAssignment = Assignment::with('division')->findOrFail($validated['assignment_id']);
+            $newPosLabel = $newAssignment->division
+                ? "{$newAssignment->assignment_title} ({$newAssignment->division->division_title})"
+                : $newAssignment->assignment_title;
 
-            $oldPosLabel = $oldPosition
-                ? ($oldPosition->section ? "{$oldPosition->name} ({$oldPosition->section->name})" : $oldPosition->name)
+            $oldPosLabel = $oldAssignment
+                ? ($oldAssignment->division ? "{$oldAssignment->assignment_title} ({$oldAssignment->division->division_title})" : $oldAssignment->assignment_title)
                 : 'Unassigned';
 
-            ServiceRecord::create([
-                'user_id'        => $persona->user_id,
-                'character_id'   => $persona->id,
-                'event_type'     => 'transfer',
-                'description'    => "Transferred from {$oldPosLabel} to {$newPosLabel}.{$reasonSuffix}",
-                'issued_by'      => auth()->id(),
-                'display_target' => 'IC',
+            ChronologicalRegister::create([
+                'user_id'              => $persona->user_id,
+                'persona_id'           => $persona->id,
+                'register_event_mode'  => 'transfer',
+                'chronicle_text'       => "Transferred from {$oldPosLabel} to {$newPosLabel}.{$reasonSuffix}",
+                'authorising_user_id'  => auth()->id(),
+                'scope_target'         => 'IC',
             ]);
         }
 

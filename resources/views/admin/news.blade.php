@@ -40,7 +40,7 @@
 
                 <div id="news-table-content" x-ref="newsTableContent">
                     <div id="news-fresh-data" class="hidden"
-                         data-news="{{ json_encode(collect($news ?? [])->map(fn($n) => ['id' =>$n->id, 'title' => $n->title, 'date' =>$n->created_at?->format('M d, Y')])) }}">
+                         data-news="{{ json_encode(collect($news ?? [])->map(fn($n) => ['id' =>$n->id, 'bulletin_title' => $n->bulletin_title, 'date' =>$n->created_at?->format('M d, Y')])) }}">
                     </div>
 
                     <x-table>
@@ -52,7 +52,7 @@
 
                         @forelse($news ?? [] as $item)
                             <tr id="news-row-{{ $item->id }}" class="table-row" x-show="isVisible({{ $item->id }})">
-                                <td class="p-4 font-bold text-p">{{ $item->title }}</td>
+                                <td class="p-4 font-bold text-p">{{ $item->bulletin_title }}</td>
                                 <td class="p-4 text-xs text-muted">
                                     <x-badge variant="info" x-tooltip="'{{ addslashes(lexicon('tooltip_News_PublishedDate', 'Date this announcement was broadcast')) }}'">
                                         {{ $item->created_at->format('M d, Y') }}
@@ -63,17 +63,17 @@
                                         <x-button type="button" variant="text" class="text-warning hover-text-h" 
                                                 @click="openModal('edit', { 
                                                     id: {{ $item->id }}, 
-                                                    title: $el.dataset.title, 
-                                                    content: $el.dataset.content 
+                                                    bulletin_title: $el.dataset.title, 
+                                                    bulletin_text: $el.dataset.content 
                                                 })"
-                                                data-title="{{ $item->title }}"
-                                                data-content="{{ $item->content }}"
+                                                data-title="{{ $item->bulletin_title }}"
+                                                data-content="{{ $item->bulletin_text }}"
                                                 x-tooltip="'{{ addslashes(lexicon('tooltip_News_EditAnnouncement', 'Edit this announcement')) }}'">
                                             <i class="bi bi-pencil"></i> {{ lexicon('btn_common_Edit', 'Edit') }}
                                         </x-button>
 
                                         <x-button type="button" variant="text" class="text-danger hover-text-h" 
-                                                  x-data="deleteAction(`/admin/news/{{ $item->id }}`, 'DELETE', '{{ addslashes($item->title) }}')"
+                                                  x-data="deleteAction(`/admin/news/{{ $item->id }}`, 'DELETE', '{{ addslashes($item->bulletin_title) }}')"
                                                   @click="confirmDelete()"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_News_DeleteAnnouncement', 'Delete this announcement permanently')) }}'">
                                             <i class="bi bi-trash"></i> {{ lexicon('btn_common_Delete', 'Delete') }}
@@ -109,15 +109,15 @@
                           x-data="ajaxForm" 
                           @submit.prevent="submit"
                           class="flex flex-col gap-md"
-                          @update-content.window="content = $event.detail">
+                          @update-content.window="bulletin_text = $event.detail">
                         @csrf
                         <input type="hidden" name="_method" :value="method">
                         
                         <x-form-input 
-                            name="title" 
+                            name="bulletin_title" 
                             id="news-title"
                             :label="lexicon('label_News_Headline', 'Headline')" 
-                            xModel="title" 
+                            xModel="bulletin_title" 
                             :tooltip="lexicon('tooltip_News_HeadlineInput', 'Enter the headline for this announcement')"
                             required />
 
@@ -130,14 +130,14 @@
                             
                             <!-- TipTap Editor UI inside the News Modal -->
                             <div class="bg-panel-sub border border-panel rounded-panel flex flex-col overflow-hidden" 
-                                x-data="tiptapEditor(content)" 
-                                @tiptap-update="content = $event.detail; $dispatch('update-content', $event.detail)"
+                                x-data="tiptapEditor(bulletin_text)" 
+                                @tiptap-update="bulletin_text = $event.detail; $dispatch('update-content', $event.detail)"
                                 @set-chapter-editor-content.window="setEditorContent($event.detail.content)">
                                 <x-tiptap-toolbar />
                                 <div x-ref="editorContainer" class="w-full p-3 flex-grow overflow-y-auto tiptap-content"></div>
                             </div>
 
-                            <input type="hidden" name="content" :value="content" required>
+                            <input type="hidden" name="bulletin_text" :value="bulletin_text" required>
                         </div>
 
                         <div class="border-t-actions border-panel pt-6 text-right mt-2 flex flex-row flex-wrap items-center justify-end gap-sm" 

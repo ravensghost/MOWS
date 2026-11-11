@@ -5,8 +5,8 @@
     "icon": "bi-journal-text"
 })
 --}}
-<div class="flex flex-col gap-md w-full mb-6" x-data>
-    <span class="text-2xl font-bold text-h block pb-2">{{ $widget->name }}</span>
+<div class="flex flex-col gap-md w-full mb-lg" x-data>
+    <span class="text-2xl font-bold text-h block pb-sm">{{ $widget->module_title ?? $widget->name ?? 'Story Folios' }}</span>
 
     @forelse($storyPosts ?? [] as $folio)
         @php
@@ -15,15 +15,15 @@
             $userBypassed = auth()->check() && $bypassMode === 'user_bypass' && auth()->user()->content_shield_bypass;
             $showGate = $isMature && !$userBypassed;
         @endphp
-        <div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col overflow-hidden p-panel gap-sm hover-border-accent transition-colors"
+        <div class="bg-panel border-panel rounded-panel shadow-panel flex flex-col overflow-hidden p-panel gap-sm hover-border-accent transition-colors"
              x-data="{ revealed: {{ $showGate ? 'false' : 'true' }} }">
-            <div class="flex flex-row flex-wrap justify-between items-center gap-sm text-sm text-muted pb-2">
+            <div class="flex flex-row flex-wrap justify-between items-center gap-sm text-sm text-muted pb-sm">
                 <span class="font-bold text-p">
-                    {{ $folio->activePersona->name ?? lexicon('label_common_UnknownPersona', 'Unknown Persona') }}
+                    {{ $folio->activePersona->persona_name ?? lexicon('label_common_UnknownPersona', 'Unknown Persona') }}
                 </span>
                 <div class="flex flex-row flex-wrap items-center gap-sm">
                     <span class="text-xs">
-                        Day {{ $folio->ic_day }}, {{ $folio->ic_time }} | {{ $folio->scene_location ?? 'Unknown Location' }}
+                        Day {{ $folio->ic_day }}, {{ $folio->ic_time }} &bull; {{ $folio->scene_location ?? 'Unknown Location' }}
                     </span>
                     <x-badge type="{{ $isMature ? 'danger' : 'info' }}">
                         {{ $folio->content_tier_l ?? 0 }}-{{ $folio->content_tier_s ?? 0 }}-{{ $folio->content_tier_v ?? 0 }}
@@ -32,7 +32,7 @@
             </div>
             
             <template x-if="!revealed">
-                <div class="panel-sub border-danger p-4 rounded-panel flex flex-col items-center justify-center gap-sm text-center">
+                <div class="bg-panel-sub border-danger p-panel rounded-panel flex flex-col items-center justify-center gap-sm text-center">
                     <i class="bi bi-shield-exclamation text-danger text-2xl"></i>
                     <span class="font-bold text-main">Mature Content Notice</span>
                     <span class="text-xs text-muted">This folio contains mature Content Tier ratings.</span>
@@ -46,7 +46,7 @@
                 </span>
             </template>
             
-            <div class="pt-2" x-show="revealed">
+            <div class="pt-sm" x-show="revealed">
                 <a href="/folio/{{ $folio->id }}" class="text-accent hover-text-h text-sm font-bold inline-block transition-colors no-underline">
                     Read Full Folio &rarr;
                 </a>

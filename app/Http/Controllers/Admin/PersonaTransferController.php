@@ -6,40 +6,40 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use App\Models\Persona;
-use App\Models\Position;
-use App\Models\ServiceRecord;
+use App\Models\Assignment;
+use App\Models\ChronologicalRegister;
 
 class PersonaTransferController extends Controller
 {
     public function __invoke(Request $request)
     {
         $validated = $request->validate([
-            'character_id' => 'required|exists:personae,id',
-            'position_id'  => 'required|exists:positions,id',
-            'description'  => 'required|string',
+            'persona_id'     => 'required|exists:personae,id',
+            'assignment_id'  => 'required|exists:assignments,id',
+            'chronicle_text' => 'required|string',
         ]);
 
-        $persona = Persona::findOrFail($validated['character_id']);
-        $newPosition = Position::with('section')->findOrFail($validated['position_id']);
+        $persona = Persona::findOrFail($validated['persona_id']);
+        $newAssignment = Assignment::with('division')->findOrFail($validated['assignment_id']);
 
-        $persona->assignment_id = $newPosition->id;
+        $persona->assignment_id = $newAssignment->id;
         $persona->save();
 
         Cache::forget('widget_roster_sections');
 
-        $positionLabel = $newPosition->section
-            ? "{$newPosition->name} ({$newPosition->section->name})"
-            : $newPosition->name;
+        $assignmentLabel = $newAssignment->division
+            ? "{$newAssignment->assignment_title} ({$newAssignment->division->division_title})"
+            : $newAssignment->assignment_title;
 
-        ServiceRecord::create([
-            'user_id'        => $persona->user_id,
-            'character_id'   => $persona->id,
-            'event_type'     => 'transfer',
-            'description'    => "Transferred to {$positionLabel}. Orders: " . $validated['description'],
-            'issued_by'      => auth()->id(),
-            'display_target' => 'IC',
+        ChronologicalRegister::create([
+            'user_id'             => $persona->user_id,
+            'persona_id'          => $persona->id,
+            'register_event_mode' => 'transfer',
+            'chronicle_text'      => "Transferred to {$assignmentLabel}. Orders: " . $validated['chronicle_text'],
+            'authorising_user_id' => auth()->id(),
+            'scope_target'        => 'IC',
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Character transferred and logged in service record!']);
+        return response()->json(['success' => true, 'message' => 'Character transferred and logged in chronological register!']);
     }
 }

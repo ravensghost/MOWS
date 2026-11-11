@@ -15,9 +15,9 @@ class CandidatePetitionSubmissionController extends Controller
     /**
      * Display the public petition/application submission form.
      */
-    public function show($type)
+    public function show($metaMode)
     {
-        $fields = Metadata::where('meta_mode', $type)
+        $fields = Metadata::where('meta_mode', $metaMode)
             ->orderBy('metadata_sort_order')
             ->get();
 
@@ -25,13 +25,13 @@ class CandidatePetitionSubmissionController extends Controller
             abort(404, lexicon('msg_FormsHub_FormNotFound', 'Form not found or has no active fields.'));
         }
 
-        $slug = $type === 'application' ? 'apply' : $type;
+        $slug = $metaMode === 'application' ? 'apply' : $metaMode;
         $systemPage = Book::with('layout.blocks')
             ->where('slug', $slug)
             ->where('is_published', 1)
             ->first();
 
-        return view('form', compact('fields', 'type', 'systemPage'));
+        return view('form', compact('fields', 'metaMode', 'systemPage'));
     }
 
     /**
@@ -64,7 +64,7 @@ class CandidatePetitionSubmissionController extends Controller
                     ->value('configuration_payload') ?? 3));
 
                 $activePersonaCount = Persona::where('user_id', auth()->id())
-                    ->whereIn('status', ['active', 'loa', 'eloa'])
+                    ->whereIn('persona_status', ['active', 'loa', 'eloa'])
                     ->count();
 
                 $pendingPetitionCount = CandidatePetition::where('user_id', auth()->id())
@@ -117,25 +117,25 @@ class CandidatePetitionSubmissionController extends Controller
                     continue;
                 }
 
-                $fieldMode = $fieldModel->metadata_mode ?? $fieldModel->type ?? 'text';
+                $fieldMode = $fieldModel->metadata_mode ?: 'text';
                 $formattedAnswer = '';
 
                 if ($fieldMode === 'service_record' && is_array($value)) {
                     $cleanRecords = [];
                     foreach ($value as $entry) {
-                        $desc = trim(strip_tags($entry['description'] ?? ''));
+                        $desc = trim(strip_tags($entry['chronicle_text'] ?? ''));
                         if ($desc === '') {
                             continue;
                         }
                         $era = trim(strip_tags($entry['era'] ?? ''));
-                        $eventType = in_array($entry['event_type'] ?? '', $allowedEvents, true)
-                            ? $entry['event_type']
+                        $eventCategory = in_array($entry['register_event_mode'] ?? '', $allowedEvents, true)
+                            ? $entry['register_event_mode']
                             : 'background';
 
                         $cleanRecords[] = [
-                            'era'         => $era,
-                            'event_type'  => $eventType,
-                            'description' => $desc,
+                            'era'                 => $era,
+                            'register_event_mode' => $eventCategory,
+                            'chronicle_text'      => $desc,
                         ];
                     }
                     $formattedAnswer = json_encode($cleanRecords);

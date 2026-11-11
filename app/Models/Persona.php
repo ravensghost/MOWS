@@ -13,9 +13,7 @@ class Persona extends Model
     protected $table = 'personae';
     protected $guarded = [];
 
-    protected $casts = [
-        'is_visible' => 'boolean',
-    ];
+    protected $casts = [];
 
     /**
      * The user account that owns this persona.
@@ -26,19 +24,35 @@ class Persona extends Model
     }
 
     /**
-     * The duty assignment/position held by this persona.
+     * The duty assignment held by this persona.
      */
-    public function position(): BelongsTo
+    public function assignment(): BelongsTo
     {
         return $this->belongsTo(Assignment::class, 'assignment_id');
     }
 
     /**
+     * Legacy alias for assignment.
+     */
+    public function position(): BelongsTo
+    {
+        return $this->assignment();
+    }
+
+    /**
      * The rank insignia assigned to this persona.
+     */
+    public function insignia(): BelongsTo
+    {
+        return $this->belongsTo(Insignia::class, 'insignia_id');
+    }
+
+    /**
+     * Legacy alias for insignia.
      */
     public function rank(): BelongsTo
     {
-        return $this->belongsTo(Insignia::class, 'insignia_id');
+        return $this->insignia();
     }
 
     /**

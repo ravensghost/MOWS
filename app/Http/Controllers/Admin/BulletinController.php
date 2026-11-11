@@ -31,22 +31,22 @@ class BulletinController extends Controller
     {
         // 1. Validate FIRST. If this fails, it stops execution immediately.
         $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'content' => 'required|string',
+            'bulletin_title' => 'required|string|max:255',
+            'bulletin_text' => 'required|string',
         ]);
 
         // 2. Create SECOND (only runs if validation passes)
         $news = Bulletin::create([
-            'title' => $validated['title'],
-            'content' => Purify::clean($validated['content']),
-            'author_id' => $request->user()->id,
+            'bulletin_title' => $validated['bulletin_title'],
+            'bulletin_text' => Purify::clean($validated['bulletin_text']),
+            'user_id' => $request->user()->id,
             'published_at' => now(),
         ]);
 
         // 3. Push to Discord THIRD (only runs if creation succeeds)
         \App\Services\NotificationService::sendDiscord(
             'news',
-            "📰 **New Station Announcement!**\n**{$news->title}**\nCheck out the latest broadcast on the station."
+            "📰 **New Station Announcement!**\n**{$news->bulletin_title}**\nCheck out the latest broadcast on the station."
         );
 
         return response()->json(['success' => true]);
@@ -55,11 +55,11 @@ class BulletinController extends Controller
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
-            'title'   => 'required|string|max:255',
-            'content' => 'required|string',
+            'bulletin_title'   => 'required|string|max:255',
+            'bulletin_text' => 'required|string',
         ]);
 
-        $validated['content'] = Purify::clean($validated['content']);
+        $validated['bulletin_text'] = Purify::clean($validated['bulletin_text']);
         Bulletin::where('id', $id)->update($validated);
 
         return response()->json(['success' => true]);

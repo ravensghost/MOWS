@@ -11,9 +11,10 @@ class Metadata extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'metadata_payloads' => 'array',
-        'is_required'       => 'boolean',
-        'is_visible'        => 'boolean',
-        'meta_mode'         => 'string',
+        'metadata_payloads'   => 'array',
+        'is_required'         => 'boolean',
+        'is_visible'          => 'boolean',
+        'metadata_sort_order' => 'integer',
+        'meta_mode'           => 'string',
     ];
 }

@@ -10,9 +10,9 @@ class Bulletin extends Model
     protected $table = 'bulletins';
 
     protected $fillable = [
-        'bulletins_title', 
-        'bulletins_text', 
-        'user_id', 
+        'bulletin_title',
+        'bulletin_text',
+        'user_id',
         'published_at'
     ];
 

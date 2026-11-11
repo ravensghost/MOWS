@@ -70,7 +70,7 @@ class MetadataController extends Controller
         $field = new Metadata();
         $hasArrayCast = $field->hasCast('metadata_payloads', ['array', 'json', 'collection']);
 
-        $groups = array_values((array) $request->input('service_record_groups', []));
+        $groups = array_values((array)$request->input('service_record_groups', []));
         $metadataPayloads = $request->metadata_mode === 'service_record'
             ? ($hasArrayCast ? $groups : json_encode($groups))
             : $request->metadata_payloads;
@@ -94,7 +94,7 @@ class MetadataController extends Controller
         $field = Metadata::findOrFail($id);
         $hasArrayCast = $field->hasCast('metadata_payloads', ['array', 'json', 'collection']);
 
-        $groups = array_values((array) $request->input('service_record_groups', []));
+        $groups = array_values((array)$request->input('service_record_groups', []));
         $metadataPayloads = $request->metadata_mode === 'service_record'
             ? ($hasArrayCast ? $groups : json_encode($groups))
             : $request->metadata_payloads;

@@ -3,22 +3,24 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use App\Models\Book;
 use App\Models\Grid;
-use App\Models\GridModule;
-use App\Models\Module;
 use App\Models\Metadata;
+use App\Models\Module;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
 use Stevebauman\Purify\Facades\Purify;
 
 class BookController extends Controller
 {
+    /**
+     * Display a listing of books and grid configurations.
+     */
     public function index()
     {
         $systemPage = Book::with([
-            'layout.blocks',
+            'grid.blocks',
             'widgets' => function ($query) {
                 $query->orderBy('page_widget.sort_order');
             }
@@ -27,20 +29,23 @@ class BookController extends Controller
             ->where('is_published', true)
             ->firstOrFail();
 
-        $pages = Book::with(['widgets', 'layout'])->orderBy('books_title')->get();
-        $layouts = GridModule::with('blocks')->orderBy('name')->get();
-        $widgets = Module::orderBy('name')->get();
+        $pages = Book::with(['widgets', 'grid'])->orderBy('books_title')->get();
+        $grids = Grid::with('blocks')->orderBy('grid_title')->get();
+        $widgets = Module::orderBy('module_title')->get();
         $availableWidgets = get_widget_manifest();
         $forms = Metadata::where('meta_mode', 'form')->orderBy('metadata_title')->get();
         $permissions = Permission::orderBy('name')->get();
 
-        return view('admin.pages', compact('systemPage', 'pages', 'widgets', 'layouts', 'availableWidgets', 'permissions', 'forms'));
+        return view('admin.pages', compact('systemPage', 'pages', 'widgets', 'grids', 'availableWidgets', 'permissions', 'forms'));
     }
 
+    /**
+     * Show the form for creating a new book.
+     */
     public function create()
     {
         $systemPage = Book::with([
-            'layout.blocks',
+            'grid.blocks',
             'widgets' => function ($query) {
                 $query->orderBy('page_widget.sort_order');
             }
@@ -49,21 +54,24 @@ class BookController extends Controller
             ->where('is_published', true)
             ->firstOrFail();
 
-        $layouts = GridModule::with('blocks')->orderBy('name')->get();
-        $widgets = Module::orderBy('name')->get();
+        $grids = Grid::with('blocks')->orderBy('grid_title')->get();
+        $widgets = Module::orderBy('module_title')->get();
         $availableWidgets = get_widget_manifest();
         $permissions = Permission::orderBy('name')->get();
         $forms = Metadata::where('meta_mode', 'form')->orderBy('metadata_title')->get();
 
         $page = new Book();
 
-        return view('admin.page-builder', compact('systemPage', 'page', 'layouts', 'widgets', 'availableWidgets', 'permissions', 'forms'));
+        return view('admin.page-builder', compact('systemPage', 'page', 'grids', 'widgets', 'availableWidgets', 'permissions', 'forms'));
     }
 
+    /**
+     * Show the form for editing the specified book.
+     */
     public function edit(Book $page)
     {
         $systemPage = Book::with([
-            'layout.blocks',
+            'grid.blocks',
             'widgets' => function ($query) {
                 $query->orderBy('page_widget.sort_order');
             }
@@ -73,18 +81,21 @@ class BookController extends Controller
             ->firstOrFail();
 
         $page->load('widgets');
-        $layouts = GridModule::with('blocks')->orderBy('name')->get();
-        $widgets = Module::orderBy('name')->get();
+        $grids = Grid::with('blocks')->orderBy('grid_title')->get();
+        $widgets = Module::orderBy('module_title')->get();
         $availableWidgets = get_widget_manifest();
         $permissions = Permission::orderBy('name')->get();
         $forms = Metadata::where('meta_mode', 'form')->orderBy('metadata_title')->get();
 
-        return view('admin.page-builder', compact('systemPage', 'page', 'layouts', 'widgets', 'availableWidgets', 'permissions', 'forms'));
+        return view('admin.page-builder', compact('systemPage', 'page', 'grids', 'widgets', 'availableWidgets', 'permissions', 'forms'));
     }
 
+    /**
+     * Store a newly created book in storage.
+     */
     public function store(Request $request)
     {
-        $rawSlug = $request->filled('slug') ? $request->slug : $request->title;
+        $rawSlug = $request->filled('slug') ? $request->slug : $request->books_title;
         $slug = $rawSlug === '/' ? '/' : collect(explode('/', $rawSlug))->map(fn($s) => Str::slug($s))->filter()->implode('/');
 
         if (Book::where('slug', $slug)->exists()) {
@@ -92,11 +103,11 @@ class BookController extends Controller
         }
 
         $page = Book::create([
-            'title'        => $request->title,
+            'books_title'  => $request->books_title,
             'slug'         => $slug,
             'content'      => '',
             'is_published' => $request->boolean('is_published', false),
-            'layout_id'    => $request->layout_id,
+            'grid_id'      => $request->grid_id,
         ]);
 
         $this->syncPageWidgets($page, $request);
@@ -104,9 +115,12 @@ class BookController extends Controller
         return response()->json(['success' => true]);
     }
 
+    /**
+     * Update the specified book in storage.
+     */
     public function update(Request $request, Book $page)
     {
-        $rawSlug = $request->filled('slug') ? $request->slug : $request->title;
+        $rawSlug = $request->filled('slug') ? $request->slug : $request->books_title;
         $slug = $rawSlug === '/' ? '/' : collect(explode('/', $rawSlug))->map(fn($s) => Str::slug($s))->filter()->implode('/');
 
         if (Book::where('slug', $slug)->where('id', '!=', $page->id)->exists()) {
@@ -114,10 +128,10 @@ class BookController extends Controller
         }
 
         $page->update([
-            'title'        => $request->title,
+            'books_title'  => $request->books_title,
             'slug'         => $slug,
             'is_published' => $request->boolean('is_published', false),
-            'layout_id'    => $request->layout_id,
+            'grid_id'      => $request->grid_id,
         ]);
 
         $this->syncPageWidgets($page, $request);
@@ -125,28 +139,35 @@ class BookController extends Controller
         return response()->json(['success' => true]);
     }
 
+    /**
+     * Remove the specified book from storage.
+     */
     public function destroy(Book $page)
     {
         $page->delete();
+
         return response()->json(['success' => true]);
     }
 
-    private function syncPageWidgets($page, $request)
+    /**
+     * Synchronise the widgets attached to the book.
+     */
+    private function syncPageWidgets(Book $page, Request $request): void
     {
         $syncData = [];
         if ($request->has('widgets')) {
             foreach ($request->widgets as $widgetId => $data) {
                 if (isset($data['selected']) && $data['selected'] == '1') {
-                    $options = $data['instance_options'] ?? [];
+                    $payloads = $data['instance_options'] ?? [];
 
-                    if (isset($options['content'])) {
-                        $options['content'] = Purify::clean($options['content']);
+                    if (isset($payloads['content'])) {
+                        $payloads['content'] = Purify::clean($payloads['content']);
                     }
 
                     $syncData[$widgetId] = [
-                        'layout_block_id'     => $data['layout_block_id'] ?? null,
+                        'grid_module_id'      => $data['grid_module_id'] ?? null,
                         'sort_order'          => $data['sort_order'] ?? 0,
-                        'instance_options'    => empty($options) ? null : json_encode($options),
+                        'instance_options'    => empty($payloads) ? null : json_encode($payloads),
                         'required_permission' => $data['required_permission'] ?? null,
                         'is_visible'          => filter_var($data['is_visible'] ?? false, FILTER_VALIDATE_BOOLEAN),
                     ];
