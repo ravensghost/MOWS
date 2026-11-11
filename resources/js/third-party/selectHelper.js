@@ -1,50 +1,85 @@
-// resources/js/third-party/selectHelper.js
-import TomSelect from 'tom-select';
+// resources/js/third-party/searchHelper.js
+import Fuse from 'fuse.js';
 
 /**
- * Global Select Helper Wrapper using Tom Select
+ * Global Search Helper Wrapper using Fuse.js
+ * Supports CSS selectors, NodeLists, HTMLCollections, HTMLElement containers, or raw object arrays.
  */
-window.Select = {
-    instances: {},
+window.Search = {
+    create(selectorOrItems, keys = ['name'], options = {}) {
+        let items = [];
+        let domElements = null;
 
-    init(selectorOrEl, options = {}) {
-        const el = typeof selectorOrEl === 'string' ? document.querySelector(selectorOrEl) : selectorOrEl;
-        if (!el) return null;
+        if (typeof selectorOrItems === 'string') {
+            domElements = document.querySelectorAll(selectorOrItems);
+        } else if (selectorOrItems instanceof NodeList || selectorOrItems instanceof HTMLCollection) {
+            domElements = selectorOrItems;
+        } else if (selectorOrItems instanceof HTMLElement) {
+            domElements = selectorOrItems.querySelectorAll('[data-search-item]');
+        } else if (Array.isArray(selectorOrItems)) {
+            if (selectorOrItems.length > 0 && selectorOrItems[0] instanceof HTMLElement) {
+                domElements = selectorOrItems;
+            } else {
+                items = selectorOrItems;
+            }
+        }
 
-        // Clean up pre-existing instance on the element
-        if (el.tomselect) {
-            el.tomselect.destroy();
+        if (domElements) {
+            items = Array.from(domElements).map(el => {
+                const item = { element: el };
+
+                // Extract dataset attributes or attribute values based on specified keys
+                keys.forEach(key => {
+                    // Handle nested or dotted keys if needed (e.g., books.title)
+                    if (key.includes('.')) {
+                        const parts = key.split('.');
+                        let val = el;
+                        parts.forEach(p => {
+                            val = val ? (val.dataset ? val.dataset[p] : val[p]) : '';
+                        });
+                        item[key] = val || '';
+                    } else {
+                        item[key] = el.dataset[key] || el.getAttribute(`data-${key}`) || '';
+                    }
+                });
+
+                // Store original ID if available on dataset (supports numeric or string IDs)
+                if (el.dataset.id !== undefined) {
+                    const numId = Number(el.dataset.id);
+                    item.id = Number.isNaN(numId) ? el.dataset.id : numId;
+                }
+                return item;
+            });
         }
 
         const defaultOptions = {
-            create: false,
-            sortField: {
-                field: 'text',
-                direction: 'asc'
-            },
+            keys: keys,
+            threshold: 0.3,
+            includeScore: false,
             ...options
         };
 
-        const instance = new TomSelect(el, defaultOptions);
+        const fuseInstance = new Fuse(items, defaultOptions);
 
-        if (el.id) {
-            this.instances[el.id] = instance;
-        }
-
-        return instance;
-    },
-
-    destroy(selectorOrEl) {
-        const el = typeof selectorOrEl === 'string' ? document.querySelector(selectorOrEl) : selectorOrEl;
-        if (el && el.tomselect) {
-            el.tomselect.destroy();
-            if (el.id && this.instances[el.id]) {
-                delete this.instances[el.id];
+        return {
+            fuse: fuseInstance,
+            search(query) {
+                if (!query || !query.trim()) {
+                    return items.map(item => item.id).filter(id => id !== undefined);
+                }
+                const results = fuseInstance.search(query.trim());
+                return results.map(result => result.item.id).filter(id => id !== undefined);
+            },
+            searchObjects(query) {
+                if (!query || !query.trim()) {
+                    return items;
+                }
+                return fuseInstance.search(query.trim()).map(result => result.item);
             }
-        }
+        };
     }
 };
 
-window.TomSelect = TomSelect;
+window.Fuse = Fuse;
 
-export default TomSelect;
+export default Fuse;

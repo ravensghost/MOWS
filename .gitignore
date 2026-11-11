@@ -53,3 +53,4 @@ config_codebase.txt
 tests_codebase.txt
 database_factories_seeders_codebase.txt
 audit_bundle.txt
+/app/console/Commands/
