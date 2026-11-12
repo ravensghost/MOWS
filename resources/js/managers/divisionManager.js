@@ -11,23 +11,24 @@ export default (config = {}) => ({
 
     section: {
         id: '',
-        name: '',
-        color: '#374151',
-        description: '',
-        order: 0,
-        is_visible: true
+        division_title: '',
+        division_base_colour: '#374151ff',
+        division_description: '',
+        division_sort_order: 0,
+        is_visible: true,
+        division_catalogue_id: ''
     },
 
     position: {
         id: '',
-        section_id: '',
-        name: '',
-        description: '',
-        capacity: 1,
+        division_id: '',
+        assignment_title: '',
+        assignment_description: '',
+        max_assignees: 1,
         is_open: true,
         is_visible: true,
-        section_name: '',
-        section_color: ''
+        division_title: '',
+        division_base_colour: ''
     },
 
     init() {
@@ -37,12 +38,12 @@ export default (config = {}) => ({
     },
 
     initTomSelect() {
-        const selectEl = document.getElementById('edit_position_section_id');
+        const selectEl = document.getElementById('edit_position_division_id');
         if (selectEl && window.Select && !this.sectionTomSelect) {
             this.sectionTomSelect = window.Select.init(selectEl, {
                 create: false,
                 onChange: (val) => {
-                    this.position.section_id = val;
+                    this.position.division_id = val;
                 }
             });
         }
@@ -67,76 +68,77 @@ export default (config = {}) => ({
     refreshAutosize() {
         this.$nextTick(() => {
             if (window.Autosize) {
-                document.querySelectorAll('textarea[name="description"]').forEach(el => {
+                document.querySelectorAll('textarea[name="division_description"], textarea[name="assignment_description"]').forEach(el => {
                     window.Autosize.update(el);
                 });
             }
         });
     },
 
-    openCreateSection() {
-        this.section = {
-            id: '',
-            name: '',
-            color: '#374151',
-            description: '',
-            order: 0,
-            is_visible: true
-        };
-        this.modal = 'section-create';
-        this.refreshAutosize();
-    },
-
-    openEditSection(secData) {
-        this.section = {
-            id: secData.id,
-            name: secData.name || '',
-            color: secData.color || '#374151',
-            description: secData.description || '',
-            order: secData.order ?? 0,
-            is_visible: secData.is_visible !== undefined ? Boolean(secData.is_visible) : true
-        };
-        this.modal = 'section-edit';
-        this.refreshAutosize();
-    },
-
-    openCreatePosition(posData) {
-        this.position = {
-            id: '',
-            section_id: posData.section_id,
-            section_name: posData.section_name || '',
-            section_color: posData.section_color || '#374151',
-            name: '',
-            description: '',
-            capacity: 1,
-            is_open: true,
-            is_visible: true
-        };
-        this.modal = 'position-create';
-        this.refreshAutosize();
-    },
-
-    openEditPosition(posData) {
-        this.position = {
-            id: posData.id,
-            section_id: String(posData.section_id),
-            name: posData.name || '',
-            description: posData.description || '',
-            capacity: posData.capacity ?? 1,
-            is_open: Boolean(posData.is_open),
-            is_visible: posData.is_visible !== undefined ? Boolean(posData.is_visible) : true,
-            section_name: '',
-            section_color: ''
-        };
-        this.modal = 'position-edit';
-
-        this.$nextTick(() => {
-            const selectEl = document.getElementById('edit_position_section_id');
-            if (selectEl && window.Select) {
-                window.Select.setValue(selectEl, String(posData.section_id), true);
+    openModal(mode, data = {}, type = 'division') {
+        if (type === 'division') {
+            if (mode === 'create') {
+                this.section = {
+                    id: '',
+                    division_title: '',
+                    division_base_colour: '#374151ff',
+                    division_description: '',
+                    division_sort_order: 0,
+                    is_visible: true,
+                    division_catalogue_id: ''
+                };
+                this.modal = 'section-create';
+            } else if (mode === 'edit') {
+                this.section = {
+                    id: data.id,
+                    division_title: data.division_title || data.name || '',
+                    division_base_colour: data.division_base_colour || data.color || '#374151ff',
+                    division_description: data.division_description || data.description || '',
+                    division_sort_order: data.division_sort_order ?? data.order ?? 0,
+                    is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true,
+                    division_catalogue_id: data.division_catalogue_id ?? ''
+                };
+                this.modal = 'section-edit';
             }
             this.refreshAutosize();
-        });
+        } else if (type === 'assignment') {
+            if (mode === 'create') {
+                this.position = {
+                    id: '',
+                    division_id: data.division_id,
+                    division_title: data.division_title || data.section_name || '',
+                    division_base_colour: data.division_base_colour || data.section_color || '#374151ff',
+                    assignment_title: '',
+                    assignment_description: '',
+                    max_assignees: 1,
+                    is_open: true,
+                    is_visible: true
+                };
+                this.modal = 'position-create';
+                this.refreshAutosize();
+            } else if (mode === 'edit') {
+                this.position = {
+                    id: data.id,
+                    division_id: String(data.division_id),
+                    assignment_title: data.assignment_title || data.name || '',
+                    assignment_description: data.assignment_description || data.description || '',
+                    max_assignees: data.max_assignees ?? data.capacity ?? 1,
+                    is_open: Boolean(data.is_open),
+                    is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true,
+                    division_title: '',
+                    division_base_colour: ''
+                };
+                this.modal = 'position-edit';
+
+                this.$nextTick(() => {
+                    const selectEl = document.getElementById('edit_position_division_id');
+                    if (selectEl && window.Select) {
+                        window.Select.setValue(selectEl, String(data.division_id), true);
+                    }
+                    this.refreshAutosize();
+                });
+            }
+        }
     },
 
     closeModal() {
@@ -158,7 +160,7 @@ export default (config = {}) => ({
         return haystack.some(text => String(text).toLowerCase().includes(q.toLowerCase()));
     },
 
-    matchesPosition(posName, posDesc, secName) {
+    isItemVisible(posName, posDesc, secName) {
         if (!this.searchQuery.trim()) return true;
         const q = this.searchQuery.trim();
         if (String(secName || '').toLowerCase().includes(q.toLowerCase())) return true;
@@ -175,7 +177,8 @@ export default (config = {}) => ({
     },
 
     async generateAiDescription() {
-        if (!this.section.name || !this.section.name.trim()) {
+        const title = this.section.division_title || '';
+        if (!title.trim()) {
             if (window.Swal && typeof window.Swal.fire === 'function') {
                 window.Swal.fire({
                     icon: 'warning',
@@ -188,13 +191,13 @@ export default (config = {}) => ({
 
         this.isGeneratingAi = true;
         try {
-            const { ok, data } = await window.Fetch.post(this.aiEndpoint, { name: this.section.name }, {
+            const { ok, data } = await window.Fetch.post(this.aiEndpoint, { name: title, division_title: title }, {
                 loading: false,
                 showError: false
             });
 
-            if (ok && data && data.description) {
-                this.section.description = data.description;
+            if (ok && data && (data.description || data.division_description)) {
+                this.section.division_description = data.division_description || data.description;
                 this.refreshAutosize();
             }
         } catch (error) {

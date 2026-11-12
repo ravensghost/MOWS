@@ -18,7 +18,7 @@
                             ⚙️ {{ lexicon('btn_awards_ManageSubgroups', 'Manage Subgroups') }}
                         </x-button>
                         <x-button variant="success" 
-                                  @click="openCreateModal()"
+                                  @click="openModal('create', {}, 'distinction')"
                                   x-tooltip="'{{ addslashes(lexicon('tooltip_awards_CreateAward', 'Create a new station award badge')) }}'"
                                   aria-label="{{ lexicon('tooltip_awards_CreateAward', 'Create a new station award badge') }}">
                             + {{ lexicon('btn_create_award', 'Create New Award') }}
@@ -53,7 +53,7 @@
                             </x-badge>
                         </td>
                         <td class="p-4">
-                            <x-award-badge 
+                            <x-distinction-badge 
                                 :award-name="$award->distinction_title"
                                 :description="$award->distinction_description"
                                 :base-layer="$award->distinction_base_colour"
@@ -68,7 +68,7 @@
                         </td>
                         <td class="p-4 text-right flex flex-row justify-end gap-sm items-center text-sm">
                             <x-button variant="text" class="text-warning hover-warning" 
-                                @click="openEditModal({{ json_encode($award) }})"
+                                @click="openModal('edit', {{ json_encode($award) }}, 'distinction')"
                                 x-tooltip="'{{ addslashes(lexicon('tooltip_common_EditAward', 'Edit this award configuration')) }}'"
                                 aria-label="{{ lexicon('tooltip_common_EditAward', 'Edit this award configuration') }}">
                                 {{ lexicon('btn_common_Edit', 'Edit') }}
@@ -98,7 +98,7 @@
                     <span x-text="isEdit ? '{{ addslashes(lexicon('label_edit_award', 'Edit Award')) }}' : '{{ addslashes(lexicon('label_create_award', 'Create Award')) }}'"></span>
                 </x-slot:top>
                 
-                <form :action="isEdit ? '/admin/awards/' + awardId : '/admin/awards'" method="POST" x-data="ajaxForm" @submit.prevent="submit" class="flex flex-col gap-md">
+                <form :action="isEdit ? '/admin/awards/' + id : '/admin/awards'" method="POST" x-data="ajaxForm" @submit.prevent="submit" class="flex flex-col gap-md">
                     @csrf
                     
                     <template x-if="isEdit">
@@ -142,10 +142,10 @@
                             </select>
                         </div>
                         <div class="flex flex-col gap-xs">
-                            <label for="award_category_id" class="text-xs font-bold text-input-muted">
+                            <label for="distinction_catalogue_id" class="text-xs font-bold text-input-muted">
                                 <span>{{ lexicon('label_awards_SubgroupCategory', 'Subgroup Category') }}</span>
                             </label>
-                            <select id="award_category_id" 
+                            <select id="distinction_catalogue_id" 
                                     name="distinction_catalogue_id" 
                                     x-model="distinction_catalogue_id" 
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent p-2"

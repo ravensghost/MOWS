@@ -24,9 +24,9 @@
          x-tooltip="'{{ addslashes($badgeTooltip) }}'"
          aria-label="{{ $badgeTooltip }}"
      @endif
-     style="--badge-dept: {{ $reactive ? '${rankForm.set_color || defaultDeptColor}' : $departmentColor }}; --badge-base: {{ $baseLayer }}; --badge-mid-color: {{ $reactive ? '${rankForm.mid_layer_hue || baseLayer}' : ($midLayerHue ?: $baseLayer) }}; --badge-top-color: {{ $reactive ? '${rankForm.top_layer_hue || baseLayer}' : ($topLayerHue ?: $baseLayer) }};"
+     style="--badge-dept: {{ $reactive ? '${modals.insignia.set_color || defaultDeptColor}' : $departmentColor }}; --badge-base: {{ $baseLayer }}; --badge-mid-color: {{ $reactive ? '${modals.insignia.mid_layer_hue || baseLayer}' : ($midLayerHue ?: $baseLayer) }}; --badge-top-color: {{ $reactive ? '${modals.insignia.top_layer_hue || baseLayer}' : ($topLayerHue ?: $baseLayer) }};"
      @if($reactive)
-         :style="`--badge-dept: ${rankForm.set_color || defaultDeptColor}; --badge-base: ${baseLayer}; --badge-mid-color: ${rankForm.mid_layer_hue || baseLayer}; --badge-top-color: ${rankForm.top_layer_hue || baseLayer};`"
+         :style="`--badge-dept: ${modals.insignia.set_color || defaultDeptColor}; --badge-base: ${baseLayer}; --badge-mid-color: ${modals.insignia.mid_layer_hue || baseLayer}; --badge-top-color: ${modals.insignia.top_layer_hue || baseLayer};`"
      @endif>
   
     <div class="layer-texture absolute top-0 left-0 w-full h-full z-0 block"></div>
@@ -35,8 +35,8 @@
     @if($reactive)
         <!-- Reactive Alpine Mode (Live Preview) -->
         <div class="layer-shaped absolute top-0 left-0 w-full h-full z-10 block" 
-             x-show="rankForm.mid_layer_mode === 'css' && rankForm.mid_layer_modifier" 
-             :class="rankForm.mid_layer_modifier"></div>
+             x-show="modals.insignia.mid_layer_mode === 'css' && modals.insignia.mid_layer_modifier" 
+             :class="modals.insignia.mid_layer_modifier"></div>
         
         <img x-show="midImageUrl !== '' && !imageError.mid" 
              :src="midImageUrl" 
@@ -46,8 +46,8 @@
              alt="{{ lexicon('label_ranks_MidLayerAlt', 'Middle Rank Layer') }}">
         
         <div class="layer-top-css absolute top-0 left-0 w-full h-full z-20 block" 
-             x-show="rankForm.top_layer_mode === 'css' && rankForm.top_layer_modifier" 
-             :class="rankForm.top_layer_modifier"></div>
+             x-show="modals.insignia.top_layer_mode === 'css' && modals.insignia.top_layer_modifier" 
+             :class="modals.insignia.top_layer_modifier"></div>
         
         <img x-show="topImageUrl !== '' && !imageError.top" 
              :src="topImageUrl" 
@@ -57,7 +57,7 @@
              alt="{{ lexicon('label_ranks_TopLayerAlt', 'Top Rank Layer') }}">
     @else
         <!-- Static Mode (Index Roster Cards) -->
-        @if($midLayerMode === 'image' && $midLayerAsset)
+        @if($midLayerMode === 'image' &&$midLayerAsset)
             <img src="/images/ranks/{{ rawurlencode($rankSet) }}/{{ rawurlencode($midLayerAsset) }}" 
                  x-show="!midImgError"
                  x-on:error="midImgError = true"
@@ -67,7 +67,7 @@
             <div class="layer-shaped absolute top-0 left-0 w-full h-full z-10 block {{ $midLayerModifier }}"></div>
         @endif
            
-        @if($topLayerMode === 'image' && $topLayerAsset)
+        @if($topLayerMode === 'image' &&$topLayerAsset)
             <img src="/images/ranks/{{ rawurlencode($rankSet) }}/{{ rawurlencode($topLayerAsset) }}" 
                  x-show="!topImgError"
                  x-on:error="topImgError = true" 

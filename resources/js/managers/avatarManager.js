@@ -1,10 +1,10 @@
 // resources/js/managers/avatarManager.js
-export default (primaryUrlInit, galleryInit, characterNameInit, galleryGroupInit, primaryUrlEndpoint, deleteUrlEndpoint) => ({
+export default (primaryUrlInit, galleryInit, personaNameInit, galleryGroupInit, primaryUrlEndpoint, deleteUrlEndpoint) => ({
     editModalOpen: false,
     isBusy: false,
     primaryUrl: primaryUrlInit,
     gallery: galleryInit,
-    characterName: characterNameInit,
+    personaName: personaNameInit,
     galleryGroup: galleryGroupInit,
     currentIndex: 0,
     lightboxInstance: null,

@@ -18,7 +18,7 @@ use Stevebauman\Purify\Facades\Purify;
 
 class FolioAuthoringController extends Controller
 {
-    public function createChapter()
+    public function createFolio()
     {
         $activeBooks = Volume::whereHas('publicationState', function ($q) {
             $q->where('book_url', 'active');
@@ -50,7 +50,12 @@ class FolioAuthoringController extends Controller
         ));
     }
 
-    public function editChapter(Folio $folio)
+    public function createChapter()
+    {
+        return $this->createFolio();
+    }
+
+    public function editFolio(Folio $folio)
     {
         if (! $folio->isAccessibleBy(auth()->user())) {
             abort(403, 'Unauthorised access to this draft folio.');
@@ -75,7 +80,12 @@ class FolioAuthoringController extends Controller
         ]);
     }
 
-    public function storeChapter(Request $request)
+    public function editChapter(Folio $folio)
+    {
+        return $this->editFolio($folio);
+    }
+
+    public function storeFolio(Request $request)
     {
         $validated = $request->validate([
             'folio_id'          => 'nullable|exists:folios,id',

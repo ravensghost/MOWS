@@ -7,7 +7,7 @@
     'systemPage' => null,
 ])
 
-<div x-data="chapterEdit"
+<div x-data="folioEdit"
      @ajax-success.window="isOpen = false"
      class="relative z-modal-50">
 
@@ -93,7 +93,7 @@
                     <div class="flex flex-col gap-md pt-sm border-t-panel">
                         <span class="text-xs font-bold text-muted uppercase tracking-wider">Folio Content & Content Tiers</span>
                         
-                        <x-chapter-ratings :languageRatings="$languageRatings" :sexRatings="$sexRatings" :violenceRatings="$violenceRatings" />
+                        <x-content-tier-badge :languageRatings="$languageRatings" :sexRatings="$sexRatings" :violenceRatings="$violenceRatings" />
 
                         <div class="flex flex-col gap-xs">
                             <label class="text-xs font-bold text-input-muted">Story Text</label>

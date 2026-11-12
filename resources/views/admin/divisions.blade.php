@@ -31,7 +31,7 @@
                         <x-button type="button"
                             variant="success"
                             class="p-btn-sm text-sm flex items-center gap-xs"
-                            @click="openCreateSection()"
+                            @click="openModal('create', {}, 'division')"
                             aria-label="{{ lexicon('tooltip_SectionsPositions_CreateSection', 'Create a new organisational section') }}"
                             x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_CreateSection', 'Create a new organisational section')) }}'">
                             <i class="bi bi-plus-lg" aria-hidden="true"></i>
@@ -145,7 +145,7 @@
                             <x-button type="button"
                                 variant="text"
                                 class="text-accent hover-text-h text-sm flex items-center gap-xs"
-                                @click="openCreatePosition({ division_id: {{ $sec->id }}, division_title: '{{ addslashes($sec->division_title) }}', division_base_colour: '{{ $sec->division_base_colour }}' })"
+                                @click="openModal('create', { division_id: {{ $sec->id }}, division_title: '{{ addslashes($sec->division_title) }}', division_base_colour: '{{ $sec->division_base_colour }}' }, 'assignment')"
                                 aria-label="{{ lexicon('tooltip_SectionsPositions_AddPosition', 'Add a new position to this section') }}"
                                 x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_AddPosition', 'Add a new position to this section')) }}'">
                                 <i class="bi bi-plus-circle" aria-hidden="true"></i>
@@ -155,7 +155,7 @@
                             <x-button type="button"
                                 variant="text"
                                 class="text-warning hover-text-h text-sm flex items-center gap-xs"
-                                @click="openEditSection({ id: {{ $sec->id }}, division_title: '{{ addslashes($sec->division_title) }}', division_base_colour: '{{ $sec->division_base_colour }}', division_description: '{{ addslashes($sec->division_description) }}', division_sort_order: {{ $sec->division_sort_order }}, is_visible: {{ $sec->is_visible ? 'true' : 'false' }}, division_catalogue_id: {{ $sec->division_catalogue_id ?? 'null' }} })"
+                                @click="openModal('edit', { id: {{ $sec->id }}, division_title: '{{ addslashes($sec->division_title) }}', division_base_colour: '{{ $sec->division_base_colour }}', division_description: '{{ addslashes($sec->division_description) }}', division_sort_order: {{ $sec->division_sort_order }}, is_visible: {{ $sec->is_visible ? 'true' : 'false' }}, division_catalogue_id: {{ $sec->division_catalogue_id ?? 'null' }} }, 'division')"
                                 aria-label="{{ lexicon('tooltip_SectionsPositions_EditSection', 'Edit section details and colour') }}"
                                 x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_EditSection', 'Edit section details and colour')) }}'">
                                 <i class="bi bi-pencil-square" aria-hidden="true"></i>
@@ -189,7 +189,7 @@
                             $isOpen = (bool) ($pos->is_open ?? true);
                             @endphp
                             <div class="bg-panel-sub border border-panel rounded-panel p-3 flex flex-row flex-wrap justify-between items-start gap-sm"
-                                x-show="matchesPosition('{{ addslashes($pos->assignment_title) }}', '{{ addslashes($pos->assignment_description ?? '') }}', '{{ addslashes($sec->division_title) }}')">
+                                x-show="isItemVisible('{{ addslashes($pos->assignment_title) }}', '{{ addslashes($pos->assignment_description ?? '') }}', '{{ addslashes($sec->division_title) }}')">
                                 <div class="flex flex-col gap-xs flex-grow">
                                     <div class="flex flex-row items-center gap-xs">
                                         <span class="font-bold text-p block">{{ $pos->assignment_title }}</span>
@@ -227,7 +227,7 @@
                                     <x-button type="button"
                                         variant="text"
                                         class="text-xs text-warning hover-text-h p-0 flex items-center gap-xs"
-                                        @click="openEditPosition({ id: {{ $pos->id }}, division_id: '{{ $pos->division_id }}', assignment_title: '{{ addslashes($pos->assignment_title) }}', assignment_description: '{{ addslashes($pos->assignment_description) }}', max_assignees: {{ $pos->max_assignees ?? 1 }}, is_open: {{ $isOpen ? 'true' : 'false' }}, is_visible: {{ $pos->is_visible ? 'true' : 'false' }} })"
+                                        @click="openModal('edit', { id: {{ $pos->id }}, division_id: '{{ $pos->division_id }}', assignment_title: '{{ addslashes($pos->assignment_title) }}', assignment_description: '{{ addslashes($pos->assignment_description) }}', max_assignees: {{ $pos->max_assignees ?? 1 }}, is_open: {{ $isOpen ? 'true' : 'false' }}, is_visible: {{ $pos->is_visible ? 'true' : 'false' }} }, 'assignment')"
                                         aria-label="{{ lexicon('tooltip_SectionsPositions_EditPosition', 'Edit this position') }}"
                                         x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_EditPosition', 'Edit this position')) }}'">
                                         <i class="bi bi-pencil" aria-hidden="true"></i>

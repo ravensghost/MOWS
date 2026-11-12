@@ -1,7 +1,7 @@
 {{-- 
 @WidgetManifest({
-    "name": "Character Roster",
-    "description": "Displays the active character manifest.",
+    "name": "Personae Table",
+    "description": "Displays the active personae manifest.",
     "icon": "bi-people",
     "fields": {
         "show_vacant": {
@@ -25,19 +25,19 @@
     $divisionCatalogueId = !empty($options['division_catalogue_id']) ? (int) $options['division_catalogue_id'] : null;
 
     // 2. Cache the query as a plain array to prevent Incomplete Class errors
-    $divisionsArray = \Illuminate\Support\Facades\Cache::rememberForever('widget_roster_sections', function() {
+    $divisionsArray = \Illuminate\Support\Facades\Cache::rememberForever('widget_personae_table_sections', function() {
         return \App\Models\Division::where('is_visible', true)
             ->with([
                 'assignments' => function($q) {
                     $q->where('is_visible', true);
                 },
-                'assignments.characters' => function($q) {
-                    $q->where('status', 'active');
+                'assignments.personae' => function($q) {
+                    $q->where('persona_status', 'active');
                 },
-                'assignments.characters.insignia' => function($q) {
+                'assignments.personae.insignia' => function($q) {
                     $q->where('is_visible', true);
                 },
-                'assignments.characters.insignia.insigniaCatalogue' => function($q) {
+                'assignments.personae.insignia.insigniaCatalogue' => function($q) {
                     $q->where('is_visible', true);
                 },
             ])
@@ -68,17 +68,23 @@
             <div class="grid grid-cols-1 lg-grid-cols-3 gap-md w-full ">
                 @foreach($division->assignments ?? [] as $assignment)
                     @continue(!($assignment->is_visible ?? true))
-                    @forelse($assignment->characters ?? [] as $character)
-                        <div class="bg-panel border border-panel rounded-input shadow-panel overflow-hidden hover-bg-panel-hover flex flex-row flex-wrap items-center p-3 gap-md {{ strtolower($character->persona_type ?? 'pc') === 'pc' ? 'border-pc shadow-pc' : (in_array(strtolower($character->persona_type ?? ''), ['sc', 'snpc']) ? 'border-success shadow-success' : 'border-warning shadow-warning') }}">
+                    @php
+                        $assignedPersonae = $assignment->personae ?? $assignment->characters ?? [];
+                    @endphp
+                    @forelse($assignedPersonae as $persona)
+                        @php
+                            $personaName = $persona->persona_designation ?? $persona->persona_name ?? '';
+                        @endphp
+                        <div class="bg-panel border border-panel rounded-input shadow-panel overflow-hidden hover-bg-panel-hover flex flex-row flex-wrap items-center p-3 gap-md {{ strtolower($persona->persona_type ?? 'pc') === 'pc' ? 'border-pc shadow-pc' : (in_array(strtolower($persona->persona_type ?? ''), ['sc', 'snpc']) ? 'border-success shadow-success' : 'border-warning shadow-warning') }}">
                             
                             <div class="bg-panel-header rounded-input flex-shrink-0 flex items-center justify-center overflow-hidden w-16 h-16">
-                                @if(!empty($character->portrait_image))
-                                    <a href="{{ asset('images/characters/'.$character->portrait_image) }}" 
+                                @if(!empty($persona->portrait_image))
+                                    <a href="{{ asset('images/characters/'.$persona->portrait_image) }}" 
                                        class="glightbox block w-full h-full"
-                                       data-glightbox="title: {{ $character->persona_designation }}"
-                                       aria-label="{{ $character->persona_designation }}"
-                                       x-tooltip="'{{ addslashes($character->persona_designation) }}'">
-                                        <img src="{{ asset('images/characters/'.$character->portrait_image) }}" alt="{{ $character->persona_designation }}" class="w-full h-full object-cover">
+                                       data-glightbox="title: {{ $personaName }}"
+                                       aria-label="{{ $personaName }}"
+                                       x-tooltip="'{{ addslashes($personaName) }}'">
+                                        <img src="{{ asset('images/characters/'.$persona->portrait_image) }}" alt="{{ $personaName }}" class="w-full h-full object-cover">
                                     </a>
                                 @else
                                     <i class="bi bi-person text-2xl text-muted" aria-hidden="true"></i>
@@ -87,28 +93,28 @@
                             
                             <div class="flex flex-col flex-grow gap-xs">
                                 @php
-                                    $rawInsignia = $character->insignia ?? null;
+                                    $rawInsignia = $persona->insignia ?? null;
                                     $rawCatalogue = $rawInsignia ? ($rawInsignia->insignia_catalogue ?? $rawInsignia->insigniaCatalogue ?? null) : null;
                                     $insigniaVisible = $rawInsignia && ($rawInsignia->is_visible ?? true) && (!$rawCatalogue || ($rawCatalogue->is_visible ?? true));
                                     $insignia = $insigniaVisible ? $rawInsignia : null;
                                     $catalogueCode = ($insignia && $rawCatalogue) ? ($rawCatalogue->catalogue_code ?? 'default') : 'default';
                                 @endphp
                             
-                                <a href="/bio/{{ $character->id }}" 
+                                <a href="/bio/{{ $persona->id }}" 
                                    class="font-bold text-lg text-p hover-text-h block transition-colors no-underline"
-                                   aria-label="{{ lexicon('tooltip_Roster_ViewCharacterBio', 'View character biography') }}"
-                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Roster_ViewCharacterBio', 'View character biography')) }}'">
+                                   aria-label="{{ lexicon('tooltip_Roster_ViewPersonaBio', 'View persona biography') }}"
+                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Roster_ViewPersonaBio', 'View persona biography')) }}'">
                                     @if(!empty($insignia->insignia_title))
                                         <span class="block text-sm">{{ $insignia->insignia_title }}</span> 
                                     @endif
-                                    <span>{{ $character->persona_designation }}</span>
+                                    <span>{{ $personaName }}</span>
                                 </a>
                                 <span class="block text-sm text-muted">{{ $assignment->assignment_title }}</span>
                                 
                                 @if($insignia)
                                     <div class="inline-block"
-                                         aria-label="{{ !empty($insignia->insignia_title) ? $insignia->insignia_title : lexicon('tooltip_common_CharacterRank', 'Character Rank') }}"
-                                         x-tooltip="'{{ addslashes(!empty($insignia->insignia_title) ? $insignia->insignia_title : lexicon('tooltip_common_CharacterRank', 'Character Rank')) }}'">
+                                         aria-label="{{ !empty($insignia->insignia_title) ? $insignia->insignia_title : lexicon('tooltip_common_PersonaRank', 'Persona Insignia') }}"
+                                         x-tooltip="'{{ addslashes(!empty($insignia->insignia_title) ? $insignia->insignia_title : lexicon('tooltip_common_PersonaRank', 'Persona Insignia')) }}'">
                                         <x-rank-badge 
                                             :rankSet="$catalogueCode" 
                                             baseLayer="{{ $skinSettings['theme_base_colour'] ?? '#1a1a1a' }}" 
@@ -137,8 +143,8 @@
                                     <span class="block text-sm text-muted">{{ $assignment->assignment_title }}</span>
                                     <a href="/apply" 
                                        class="block text-xs text-accent hover-text-h transition-colors no-underline"
-                                       aria-label="{{ lexicon('tooltip_Roster_ApplyForPosition', 'Submit a character application for this role') }}"
-                                       x-tooltip="'{{ addslashes(lexicon('tooltip_Roster_ApplyForPosition', 'Submit a character application for this role')) }}'">
+                                       aria-label="{{ lexicon('tooltip_Roster_ApplyForPosition', 'Submit a persona petition for this role') }}"
+                                       x-tooltip="'{{ addslashes(lexicon('tooltip_Roster_ApplyForPosition', 'Submit a persona petition for this role')) }}'">
                                         {{ lexicon('btn_common_ApplyForRole', 'Apply for this role') }} &rarr;
                                     </a>
                                 </div>
@@ -150,7 +156,7 @@
         </x-accordion-panel>
     @empty
         <div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col overflow-hidden p-panel text-center">
-            <span class="text-muted italic">{{ lexicon('msg_common_NoManifestEntries', 'No divisions or characters found in the manifest.') }}</span>
+            <span class="text-muted italic">{{ lexicon('msg_common_NoManifestEntries', 'No divisions or personae found in the manifest.') }}</span>
         </div>
     @endforelse
 </div>

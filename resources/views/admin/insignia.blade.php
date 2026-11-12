@@ -2,12 +2,12 @@
 @section('title', lexicon('admin_label_ranks', 'Rank Management'))
 
 @php
-    $defaultDeptColor = $departmentColor ?? '#ffffffFF';
-    $defaultBaseLayer = $baseLayer ?? '#1a1a1aFF';
+    $defaultDeptColor =$departmentColor ?? '#ffffffFF';
+    $defaultBaseLayer =$baseLayer ?? '#1a1a1aFF';
 @endphp
 
 @section('content')
-<div x-data="rankManager('{{ $defaultDeptColor }}', '{{ $defaultBaseLayer }}')" 
+<div x-data="insigniaManager('{{ $defaultDeptColor }}', '{{$defaultBaseLayer }}')" 
      x-init="initData()"
      @ajax-success.window="refreshDOM_US()">
 
@@ -47,7 +47,7 @@
                                 + {{ lexicon('btn_ranks_NewSet', 'New Rank Set') }}
                             </x-button>
                             <x-button variant="success" 
-                                      @click="openCreateRank()" 
+                                      @click="openModal('create', {}, 'insignia')" 
                                       aria-label="{{ lexicon('tooltip_ranks_CreateRank', 'Create a new rank badge') }}"
                                       x-tooltip="'{{ addslashes(lexicon('tooltip_ranks_CreateRank', 'Create a new rank badge')) }}'">
                                 + {{ lexicon('btn_ranks_CreateRank', 'Create Rank') }}
@@ -93,15 +93,15 @@
             </x-page-header>
 
             <div x-ref="ranksList" class="flex flex-col gap-lg">
-                @forelse($rankSets as $set)
+                @forelse($rankSets as$set)
                     <div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col overflow-hidden">
                         <div class="bg-panel-header text-h border-b border-panel p-panel-header flex flex-row flex-wrap items-center justify-between gap-md">
                             <div class="flex flex-col gap-xs">
                                 <span class="text-xl font-bold text-h block">{{ $set->catalogue_title }}</span>
                                 <div class="flex flex-row flex-wrap items-center gap-xs text-xs text-muted">
                                     <span>{{ lexicon('label_ranks_AssignedTo', 'Assigned to:') }}</span>
-                                    @if($set->divisions && $set->divisions->count() > 0)
-                                        @foreach($set->divisions as $assignedDivision)
+                                    @if($set->divisions &&$set->divisions->count() > 0)
+                                        @foreach($set->divisions as$assignedDivision)
                                             <x-badge variant="primary">{{ $assignedDivision->division_title }}</x-badge>
                                         @endforeach
                                     @else
@@ -133,14 +133,14 @@
                         
                         <div class="p-panel grid grid-cols-1 md-grid-cols-2 lg-grid-cols-3 gap-md w-full"
                              x-data="sortableManager('/admin/ranks/reorder')">
-                            @forelse($set->insignia as $rank)
+                            @forelse($set->insignia as$rank)
                                 @php
-                                    $badgeColor = $set->divisions && $set->divisions->count() > 0 ? ($set->divisions->first()->division_hue ?? '#ffffffFF') : '#ffffffFF';
+                                    $badgeColor =$set->divisions && $set->divisions->count() > 0 ? ($set->divisions->first()->division_hue ?? '#ffffffFF') : '#ffffffFF';
                                 @endphp
                                 <div class="bg-panel-sub border border-panel rounded-panel p-4 flex flex-row flex-wrap items-center justify-between gap-md cursor-grab active:cursor-grabbing"
                                      data-id="{{ $rank->id }}">
                                     <div class="flex flex-row flex-wrap items-center gap-md">
-                                        <x-rank-badge 
+                                        <x-insignia-badge 
                                             :rankSet="$set->catalogue_title" 
                                             :baseLayer="$defaultBaseLayer" 
                                             :departmentColor="$badgeColor" 
@@ -152,10 +152,10 @@
                                             :topLayerAsset="$rank->top_layer_asset"
                                             :topLayerModifier="$rank->top_layer_modifier"
                                             :topLayerHue="$rank->top_layer_hue"
-                                            :tooltip="$rank->insignia_title . ' (' . $rank->abbreviated_title . ')'"
+                                            :tooltip="$rank->insignia_title . ' (' .$rank->abbreviated_title . ')'"
                                         />
                                         <div class="flex flex-col gap-xs">
-                                            <span class="font-bold text-p block">{{ $rank->insignia_title }} ({{ $rank->abbreviated_title }})</span>
+                                            <span class="font-bold text-p block">{{ $rank->insignia_title }} ({{$rank->abbreviated_title }})</span>
                                             <span class="text-xs text-muted block">{{ lexicon('label_common_SortOrder', 'Sort Order') }}: {{ $rank->insignia_sort_order }}</span>
                                         </div>
                                     </div>
@@ -165,8 +165,11 @@
                                                       class="text-warning hover-warning text-xs justify-end" 
                                                       aria-label="{{ lexicon('tooltip_ranks_EditRank', 'Edit this rank badge') }}"
                                                       x-tooltip="'{{ addslashes(lexicon('tooltip_ranks_EditRank', 'Edit this rank badge')) }}'"
-                                                      @click="openEditRank({
+                                                      @click="openModal('edit', {
                                                           id: {{ $rank->id }},
+                                                          insignia_catalogue_id: {{ $set->id }},
+                                                          catalogue_title: '{{ addslashes($set->catalogue_title) }}',
+                                                          set_color: '{{ $badgeColor }}',
                                                           insignia_title: '{{ addslashes($rank->insignia_title) }}',
                                                           abbreviated_title: '{{ addslashes($rank->abbreviated_title) }}',
                                                           insignia_sort_order: {{ $rank->insignia_sort_order }},
@@ -180,7 +183,7 @@
                                                           top_layer_asset: '{{ addslashes($rank->top_layer_asset ?? '') }}',
                                                           top_layer_modifier: '{{ addslashes($rank->top_layer_modifier ?? '') }}',
                                                           top_layer_hue: '{{ addslashes($rank->top_layer_hue ?? '') }}'
-                                                      }, { id: {{ $set->id }}, catalogue_title: '{{ addslashes($set->catalogue_title) }}' }, '{{ $badgeColor }}')">
+                                                      }, 'insignia')">
                                                 {{ lexicon('btn_common_Edit', 'Edit') }}
                                             </x-button>
                                             
@@ -263,7 +266,7 @@
                           data-loading-title="{{ addslashes(lexicon('msg_ranks_AssigningSections', 'Assigning Sections...')) }}">
                         @csrf
                         <div x-ref="assignSectionsList" class="bg-panel-sub border border-panel rounded-panel p-4 flex flex-col gap-sm max-h-64 overflow-y-auto">
-                            @foreach($sections as $section)
+                            @foreach($sections as$section)
                                 <div class="flex flex-row flex-wrap items-center gap-sm">
                                     <input type="checkbox" 
                                            name="divisions[]" 
@@ -299,11 +302,11 @@
                 <x-modal show="modal === 'rank-create' || modal === 'rank-edit'" maxWidth="max-w-5xl" onClose="modal = null">
                     <x-slot:top>
                         <span x-text="modal === 'rank-edit' ? '{{ addslashes(lexicon('label_ranks_EditRankTitle', 'Edit Rank')) }}' : '{{ addslashes(lexicon('label_ranks_CreateRankTitle', 'Create Rank')) }}'"></span>
-                        <span class="text-accent" x-text="modal === 'rank-edit' && rankForm.insignia_title ? ' - ' + rankForm.insignia_title : ''"></span>
+                        <span class="text-accent" x-text="modal === 'rank-edit' && modals.insignia.insignia_title ? ' - ' + modals.insignia.insignia_title : ''"></span>
                     </x-slot:top>
                     
                     <div class="grid grid-cols-1 lg-grid-cols-12 gap-md w-full items-start">
-                        <form :action="modal === 'rank-edit' ? `/admin/ranks/${rankForm.id}` : '/admin/ranks'" 
+                        <form :action="modal === 'rank-edit' ? `/admin/ranks/${modals.insignia.id}` : '/admin/ranks'" 
                               method="POST" 
                               class="lg-col-span-8 flex flex-col gap-md" 
                               x-data="ajaxForm" 
@@ -323,26 +326,26 @@
                                 <select id="unified_insignia_catalogue_id"
                                         x-ref="rankSetSelect"
                                         name="insignia_catalogue_id" 
-                                        x-model="rankForm.insignia_catalogue_id" 
+                                        x-model="modals.insignia.insignia_catalogue_id" 
                                         @change="onSetChange" 
                                         aria-label="{{ lexicon('label_ranks_RankSet', 'Rank Set') }}"
                                         class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent"
                                         x-tooltip="'{{ addslashes(lexicon('tooltip_ranks_SelectRankSet', 'Select which rank set this rank belongs to')) }}'"
                                         :required="modal === 'rank-create'">
                                     <option value="">{{ lexicon('msg_ranks_SelectSet', 'Select a Set...') }}</option>
-                                    @foreach($rankSets as $set)
-                                        @php $setColor = $set->divisions && $set->divisions->count() > 0 ? ($set->divisions->first()->division_hue ?? '#ffffffFF') : '#ffffffFF'; @endphp
+                                    @foreach($rankSets as$set)
+                                        @php $setColor =$set->divisions && $set->divisions->count() > 0 ? ($set->divisions->first()->division_hue ?? '#ffffffFF') : '#ffffffFF'; @endphp
                                         <option value="{{ $set->id }}" data-catalogue-title="{{ $set->catalogue_title }}" data-color="{{ $setColor }}">{{ $set->catalogue_title }}</option>
                                     @endforeach
                                 </select>
                             </div>
 
                             <template x-if="modal === 'rank-edit'">
-                                <input type="hidden" name="insignia_catalogue_id" :value="rankForm.insignia_catalogue_id">
+                                <input type="hidden" name="insignia_catalogue_id" :value="modals.insignia.insignia_catalogue_id">
                             </template>
 
                             <!-- Reusable Badge Layer Fields Component -->
-                            <x-badge-layer-fields :midShapes="$midShapes" :topShapes="$topShapes" />
+                            <x-insignia-layer :midShapes="$midShapes" :topShapes="$topShapes" />
                             
                             <!-- Rank Title & Abbreviated Title -->
                             <div class="grid grid-cols-1 md-grid-cols-3 gap-md w-full">
@@ -350,7 +353,7 @@
                                     <x-form-input 
                                         name="insignia_title" 
                                         :label="lexicon('label_ranks_RankName', 'Rank Name')" 
-                                        xModel="rankForm.insignia_title"
+                                        xModel="modals.insignia.insignia_title"
                                         :tooltip="lexicon('tooltip_ranks_RankName', 'Full title of the rank (e.g. Captain)')"
                                         :required="true" 
                                     />
@@ -359,7 +362,7 @@
                                     <x-form-input 
                                         name="abbreviated_title" 
                                         :label="lexicon('label_ranks_ShortName', 'Short Name')" 
-                                        xModel="rankForm.abbreviated_title"
+                                        xModel="modals.insignia.abbreviated_title"
                                         :tooltip="lexicon('tooltip_ranks_ShortName', 'Abbreviated rank prefix (e.g. Capt.)')"
                                         :required="true" 
                                     />
@@ -372,7 +375,7 @@
                                     <x-form-input 
                                         name="insignia_description" 
                                         :label="lexicon('label_common_Description', 'Description')" 
-                                        xModel="rankForm.insignia_description"
+                                        xModel="modals.insignia.insignia_description"
                                         :tooltip="lexicon('tooltip_ranks_Description', 'Optional description of this rank')"
                                     />
                                 </div>
@@ -381,7 +384,7 @@
                                         name="insignia_sort_order" 
                                         type="number" 
                                         :label="lexicon('label_common_SortOrder', 'Sort Order')" 
-                                        xModel="rankForm.insignia_sort_order"
+                                        xModel="modals.insignia.insignia_sort_order"
                                         :tooltip="lexicon('tooltip_ranks_SortOrder', 'Numeric hierarchy order (lower numbers appear first)')"
                                     />
                                 </div>
@@ -391,7 +394,7 @@
                                         name="is_visible" 
                                         id="rank_is_visible" 
                                         value="1" 
-                                        x-model="rankForm.is_visible" 
+                                        x-model="modals.insignia.is_visible" 
                                         class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine">
                                     <label for="rank_is_visible" class="text-sm font-bold text-p cursor-pointer">
                                         <span>{{ lexicon('label_common_ShowOnSite', 'Show on Site (Visible)') }}</span>
@@ -415,6 +418,10 @@
                                 </x-button>
                             </div>
                         </form>
+
+                        <div class="lg-col-span-4 flex flex-col gap-md">
+                            <x-insignia-preview :baseLayer="$defaultBaseLayer" :departmentColor="$defaultDeptColor" />
+                        </div>
                     </div>
                 </x-modal>
             @endcan

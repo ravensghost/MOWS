@@ -46,7 +46,7 @@ export default (initialInterval = 30000) => ({
         }
 
         if (!htmlContent) {
-            const contentInput = form.querySelector('input[name="content"]');
+            const contentInput = form.querySelector('input[name="folio_text"]');
             htmlContent = contentInput ? contentInput.value : '';
         }
 
@@ -61,15 +61,15 @@ export default (initialInterval = 30000) => ({
 
         try {
             const formData = new FormData(form);
-            formData.set('content', htmlContent);
+            formData.set('folio_text', htmlContent);
 
             let url = form.action;
-            const chapterIdInput = form.querySelector('input[name="chapter_id"]');
-            if (chapterIdInput && chapterIdInput.value) {
-                url = `/chapters/${chapterIdInput.value}/autosave`;
-                this.log(`Target URL: ${url} (Draft ID: ${chapterIdInput.value})`, 'info');
+            const folioIdInput = form.querySelector('input[name="folio_id"]');
+            if (folioIdInput && folioIdInput.value) {
+                url = `/folios/${folioIdInput.value}/autosave`;
+                this.log(`Target URL: ${url} (Draft ID: ${folioIdInput.value})`, 'info');
             } else {
-                formData.set('status', 'draft');
+                formData.set('folio_status', 'draft');
                 this.log(`Target URL: ${url} (New Draft creation)`, 'info');
             }
 
@@ -82,16 +82,16 @@ export default (initialInterval = 30000) => ({
                 this.lastSaved = new Date().toLocaleTimeString();
                 this.log(`Auto-save successful at ${this.lastSaved}`, 'success', data);
 
-                if (data.chapter_id && (!chapterIdInput || !chapterIdInput.value)) {
-                    let hiddenIdInput = form.querySelector('input[name="chapter_id"]');
+                if (data.folio_id && (!folioIdInput || !folioIdInput.value)) {
+                    let hiddenIdInput = form.querySelector('input[name="folio_id"]');
                     if (!hiddenIdInput) {
                         hiddenIdInput = document.createElement('input');
                         hiddenIdInput.type = 'hidden';
-                        hiddenIdInput.name = 'chapter_id';
+                        hiddenIdInput.name = 'folio_id';
                         form.appendChild(hiddenIdInput);
                     }
-                    hiddenIdInput.value = data.chapter_id;
-                    this.log(`Assigned new chapter_id hidden input: ${data.chapter_id}`, 'success');
+                    hiddenIdInput.value = data.folio_id;
+                    this.log(`Assigned new folio_id hidden input: ${data.folio_id}`, 'success');
                 }
 
                 this.$dispatch('autosave-success', data);
