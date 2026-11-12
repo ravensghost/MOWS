@@ -33,25 +33,9 @@ class Grid extends Model
     }
 
     /**
-     * Retrieve the blocks associated with the grid.
-     */
-    public function blocks(): HasMany
-    {
-        return $this->hasMany(GridModule::class, 'grid_id')->orderBy('grid_module_sort_order');
-    }
-
-    /**
      * Retrieve the books associated with the grid.
      */
     public function books(): HasMany
-    {
-        return $this->hasMany(Book::class, 'grid_id');
-    }
-
-    /**
-     * Retrieve the pages associated with the grid.
-     */
-    public function pages(): HasMany
     {
         return $this->hasMany(Book::class, 'grid_id');
     }

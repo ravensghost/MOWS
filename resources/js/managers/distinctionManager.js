@@ -2,22 +2,48 @@
 export default function distinctionManager() {
     return {
         modalOpen: false,
-        categoryModalOpen: false,
+        catalogueModalOpen: false,
         isEdit: false,
-        awardId: null,
-        name: '',
-        description: '',
+        id: null,
+        distinction_title: '',
+        distinction_description: '',
 
-        master_group: 'BOTH',
-        award_category_id: '',
+        scope_target: 'BOTH',
+        distinction_catalogue_id: '',
 
-        base_color: '#1a1a1a',
-        mid_type: 'css',
-        mid_image: '',
-        mid_css: 'original',
-        top_type: '',
-        top_image: '',
-        top_css: '',
+        distinction_base_colour: '#1a1a1a',
+        mid_layer_mode: 'css',
+        mid_layer_asset: '',
+        mid_layer_modifier: 'original',
+        top_layer_mode: '',
+        top_layer_asset: '',
+        top_layer_modifier: '',
+
+        modals: {
+            distinction: {
+                open: false,
+                mode: 'create',
+                id: null,
+                distinction_title: '',
+                distinction_description: '',
+                scope_target: 'BOTH',
+                distinction_catalogue_id: '',
+                distinction_base_colour: '#1a1a1a',
+                mid_layer_mode: 'css',
+                mid_layer_asset: '',
+                mid_layer_modifier: 'original',
+                top_layer_mode: '',
+                top_layer_asset: '',
+                top_layer_modifier: ''
+            },
+            catalogue: {
+                open: false,
+                mode: 'create',
+                id: null,
+                catalogue_title: ''
+            }
+        },
+
         available_images: [],
         active_skin: 'default',
         loading_images: false,
@@ -30,11 +56,15 @@ export default function distinctionManager() {
             if (typeof this[model] !== 'undefined') {
                 this[model] = value;
             }
+            if (this.modals.distinction && typeof this.modals.distinction[model] !== 'undefined') {
+                this.modals.distinction[model] = value;
+            }
         },
 
         async loadImages() {
+            this.loading_images = true;
             try {
-                const { ok, data } = await window.Fetch.get('/admin/awards/images', {
+                const { ok, data } = await window.Fetch.get('/admin/distinctions/images', {
                     loading: false,
                     showError: false
                 });
@@ -49,41 +79,66 @@ export default function distinctionManager() {
             } catch (e) {
                 this.available_images = [];
                 this.active_skin = 'default';
+            } finally {
+                this.loading_images = false;
             }
         },
 
-        openCreateModal() {
-            this.isEdit = false;
-            this.awardId = null;
-            this.name = '';
-            this.description = '';
-            this.master_group = 'BOTH';
-            this.award_category_id = '';
-            this.base_color = '#1a1a1a';
-            this.mid_type = 'css';
-            this.mid_image = '';
-            this.mid_css = 'original';
-            this.top_type = '';
-            this.top_image = '';
-            this.top_css = '';
+        openModal(mode = 'create', data = {}, target = 'distinction') {
+            this.isEdit = mode === 'edit';
+
+            if (target === 'catalogue') {
+                this.modals.catalogue.mode = mode;
+                this.modals.catalogue.id = mode === 'edit' ? (data.id || null) : null;
+                this.modals.catalogue.catalogue_title = mode === 'edit' ? (data.catalogue_title || '') : '';
+                this.modals.catalogue.open = true;
+                this.catalogueModalOpen = true;
+                return;
+            }
+
+            const record = mode === 'edit' ? data : {};
+
+            this.id = record.id || null;
+            this.distinction_title = record.distinction_title || '';
+            this.distinction_description = record.distinction_description || '';
+            this.scope_target = record.scope_target || 'BOTH';
+            this.distinction_catalogue_id = record.distinction_catalogue_id || '';
+            this.distinction_base_colour = record.distinction_base_colour || '#1a1a1a';
+            this.mid_layer_mode = record.mid_layer_mode || 'css';
+            this.mid_layer_asset = record.mid_layer_asset || '';
+            this.mid_layer_modifier = record.mid_layer_modifier || 'original';
+            this.top_layer_mode = record.top_layer_mode || '';
+            this.top_layer_asset = record.top_layer_asset || '';
+            this.top_layer_modifier = record.top_layer_modifier || '';
+
+            this.modals.distinction = {
+                open: true,
+                mode: mode,
+                id: this.id,
+                distinction_title: this.distinction_title,
+                distinction_description: this.distinction_description,
+                scope_target: this.scope_target,
+                distinction_catalogue_id: this.distinction_catalogue_id,
+                distinction_base_colour: this.distinction_base_colour,
+                mid_layer_mode: this.mid_layer_mode,
+                mid_layer_asset: this.mid_layer_asset,
+                mid_layer_modifier: this.mid_layer_modifier,
+                top_layer_mode: this.top_layer_mode,
+                top_layer_asset: this.top_layer_asset,
+                top_layer_modifier: this.top_layer_modifier
+            };
+
             this.modalOpen = true;
         },
 
-        openEditModal(award) {
-            this.isEdit = true;
-            this.awardId = award.id;
-            this.name = award.name;
-            this.description = award.description || '';
-            this.master_group = award.master_group || 'BOTH';
-            this.award_category_id = award.award_category_id || '';
-            this.base_color = award.base_color || '#1a1a1a';
-            this.mid_type = award.mid_type || 'css';
-            this.mid_image = award.mid_image || '';
-            this.mid_css = award.mid_css || 'original';
-            this.top_type = award.top_type || '';
-            this.top_image = award.top_image || '';
-            this.top_css = award.top_css || '';
-            this.modalOpen = true;
+        closeModal(target = 'distinction') {
+            if (target === 'catalogue') {
+                this.modals.catalogue.open = false;
+                this.catalogueModalOpen = false;
+                return;
+            }
+            this.modals.distinction.open = false;
+            this.modalOpen = false;
         }
     };
 }

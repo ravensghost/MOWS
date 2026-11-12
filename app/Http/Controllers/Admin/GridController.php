@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 class GridController extends Controller
 {
     /**
-     * Store a newly created grid and synchronise its modules.
+     * Store a newly created grid and synchronise its grid modules.
      */
     public function store(Request $request)
     {
@@ -19,13 +19,13 @@ class GridController extends Controller
         ]);
 
         $grid = Grid::create($request->only(['grid_title', 'grid_synopsis']));
-        $this->syncBlocks($grid, $request->input('blocks', []));
+        $this->syncGridModules($grid, $request->input('grid_modules', []));
 
         return response()->json(['success' => true]);
     }
 
     /**
-     * Update the specified grid and synchronise its modules.
+     * Update the specified grid and synchronise its grid modules.
      */
     public function update(Request $request, Grid $grid)
     {
@@ -35,7 +35,7 @@ class GridController extends Controller
         ]);
 
         $grid->update($request->only(['grid_title', 'grid_synopsis']));
-        $this->syncBlocks($grid, $request->input('blocks', []));
+        $this->syncGridModules($grid, $request->input('grid_modules', []));
 
         return response()->json(['success' => true]);
     }
@@ -53,25 +53,25 @@ class GridController extends Controller
     /**
      * Synchronise the grid modules belonging to the grid.
      */
-    private function syncBlocks(Grid $grid, array $blocks): void
+    private function syncGridModules(Grid $grid, array $gridModules): void
     {
         $keptIds = [];
 
-        foreach ($blocks as $index => $blockData) {
-            if (!empty($blockData['grid_module_title'])) {
-                $block = $grid->blocks()->updateOrCreate(
-                    ['id' => $blockData['id'] ?? null],
+        foreach ($gridModules as $index => $moduleData) {
+            if (!empty($moduleData['grid_module_title'])) {
+                $gridModule = $grid->gridModules()->updateOrCreate(
+                    ['id' => $moduleData['id'] ?? null],
                     [
-                        'grid_module_title'      => $blockData['grid_module_title'],
-                        'column_span'            => $blockData['column_span'] ?? 12,
-                        'row_span'               => $blockData['row_span'] ?? 1,
+                        'grid_module_title'      => $moduleData['grid_module_title'],
+                        'column_span'            => $moduleData['column_span'] ?? 12,
+                        'row_span'               => $moduleData['row_span'] ?? 1,
                         'grid_module_sort_order' => $index,
                     ]
                 );
-                $keptIds[] = $block->id;
+                $keptIds[] = $gridModule->id;
             }
         }
 
-        $grid->blocks()->whereNotIn('id', $keptIds)->delete();
+        $grid->gridModules()->whereNotIn('id', $keptIds)->delete();
     }
 }

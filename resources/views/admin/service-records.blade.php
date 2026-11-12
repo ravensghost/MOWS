@@ -12,11 +12,11 @@
             <script type="application/json" x-ref="serviceRecordsSearchData">
                 {!! json_encode($recentRecords->map(fn($r) => [
                     'id' => $r->id,
-                    'recipient' => $r->character_id ? ($r->character->name ?? '') : ($r->user->name ?? ''),
-                    'event_type' => $r->event_type,
-                    'award_name' => optional($r->award)->name ?? '',
-                    'description' => $r->description ?? '',
-                    'target' => $r->display_target ?? 'BOTH'
+                    'recipient' => $r->persona_id ? ($r->persona->persona_name ?? '') : ($r->user->name ?? ''),
+                    'register_event_mode' => $r->register_event_mode,
+                    'distinction_title' => optional($r->distinction)->distinction_title ?? '',
+                    'chronicle_text' => $r->chronicle_text ?? '',
+                    'scope_target' => $r->scope_target ?? 'BOTH'
                 ])->values()) !!}
             </script>
     
@@ -114,27 +114,27 @@
                     <tbody class="divide-y divide-panel">
                         @forelse($recentRecords as $record)
                             <tr class="border-b-table-row hover-bg-table-row" 
-                                x-data="{ editing: false, editReason: '{{ addslashes($record->description) }}', editTarget: '{{ $record->display_target ?? 'BOTH' }}', editEventType: '{{ $record->event_type }}', removing: false }"
+                                x-data="{ editing: false, editReason: '{{ addslashes($record->chronicle_text) }}', editTarget: '{{ $record->scope_target ?? 'BOTH' }}', editEventMode: '{{ $record->register_event_mode }}', removing: false }"
                                 x-show="matchesRecord({{ $record->id }})"
                                 x-cloak>
                                 <td class="p-4 text-xs text-muted whitespace-nowrap">{{ function_exists('world_date') ? world_date($record->created_at) : $record->created_at->format('Y-m-d') }}</td>
                                 <td class="p-4 font-bold text-p">
-                                    @if($record->character_id)
-                                        {{ $record->character->name ?? lexicon('label_ServiceRecords_UnknownCharacter', 'Unknown Character') }}
+                                    @if($record->persona_id)
+                                        {{ $record->persona->persona_name ?? lexicon('label_ServiceRecords_UnknownCharacter', 'Unknown Character') }}
                                     @else
                                         {{ $record->user->name ?? lexicon('label_ServiceRecords_UnknownUser', 'Unknown User') }}
                                     @endif
                                 </td>
                                 <td class="p-4">
-                                    <x-badge :variant="($record->display_target ?? 'OOC') === 'BOTH' ? 'success' : 'warning'"
+                                    <x-badge :variant="($record->scope_target ?? 'OOC') === 'BOTH' ? 'success' : 'warning'"
                                              x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_DisplayTargetBadge', 'Display target context scope')) }}'"
                                              aria-label="{{ lexicon('tooltip_ServiceRecords_DisplayTargetBadge', 'Display target context scope') }}">
-                                        {{ $record->display_target ?? 'OOC' }}
+                                        {{ $record->scope_target ?? 'OOC' }}
                                     </x-badge>
                                 </td>
                                 <td class="p-4 text-sm">
                                     @php
-                                        $badgeVariant = match($record->event_type) {
+                                        $badgeVariant = match($record->register_event_mode) {
                                             'promotion', 'commendation', 'milestone' => 'success',
                                             'transfer', 'assignment', 'affiliation', 'faction' => 'primary',
                                             'award' => 'warning',
@@ -143,7 +143,7 @@
                                             'manual_entry', 'family', 'relationship', 'psychological', 'evaluation', 'physicals' => 'completed',
                                             default => 'primary',
                                         };
-                                        $isRevoked = \Illuminate\Support\Str::startsWith($record->description, 'REVOKED:');
+                                        $isRevoked = \Illuminate\Support\Str::startsWith($record->chronicle_text, 'REVOKED:');
                                     @endphp
                                 
                                     <div class="flex flex-row flex-wrap gap-xs items-center">
@@ -155,27 +155,27 @@
                                             </x-badge>
                                         @endif
                                     
-                                        @if($record->award)
+                                        @if($record->distinction)
                                             <x-badge :variant="$badgeVariant"
                                                      x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_AwardBadge', 'Award record entry')) }}'"
                                                      aria-label="{{ lexicon('tooltip_ServiceRecords_AwardBadge', 'Award record entry') }}">
-                                                {{ $record->award->name }}
+                                                {{ $record->distinction->distinction_title }}
                                             </x-badge>
                                         @else
                                             <x-badge :variant="$badgeVariant"
                                                      x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_EventBadge', 'Career event record entry')) }}'"
                                                      aria-label="{{ lexicon('tooltip_ServiceRecords_EventBadge', 'Career event record entry') }}">
-                                                {{ \Illuminate\Support\Str::title(str_replace('_', ' ', $record->event_type)) }}
+                                                {{ \Illuminate\Support\Str::title(str_replace('_', ' ', $record->register_event_mode)) }}
                                             </x-badge>
                                         @endif
                                     </div>
                                 </td>
                                 <td class="p-4 text-xs text-muted">
                                     <span x-show="!editing">
-                                        {{ $record->description }}
-                                        @if($record->issuer)
+                                        {{ $record->chronicle_text }}
+                                        @if($record->authorisingUser)
                                             <span class="inline-block text-xs opacity-75 ml-1">
-                                                ({{ lexicon('label_ServiceRecords_AuthorisedBy', 'Authorised by:') }} {{ $record->issuer->name }})
+                                                ({{ lexicon('label_ServiceRecords_AuthorisedBy', 'Authorised by:') }} {{ $record->authorisingUser->name }})
                                             </span>
                                         @endif
                                     </span>
@@ -191,9 +191,9 @@
                                         @csrf
                                         @method('PUT')
                                         
-                                        @if(!$record->award_id)
-                                            <select name="event_type"
-                                                    x-model="editEventType"
+                                        @if(!$record->distinction_id)
+                                            <select name="register_event_mode"
+                                                    x-model="editEventMode"
                                                     aria-label="{{ lexicon('label_common_Type', 'Type') }}"
                                                     x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_SelectEventType', 'Select service record event category')) }}'"
                                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input box-border focus-border-accent focus-shadow-accent text-xs"
@@ -208,19 +208,19 @@
                                             </select>
                                         @endif
     
-                                        @if(!$record->award_id || optional($record->award)->master_group === 'BOTH')
-                                            <x-context-select name="display_target"
+                                        @if(!$record->distinction_id || optional($record->distinction)->scope_target === 'BOTH')
+                                            <x-context-select name="scope_target"
                                                               xModel="editTarget"
-                                                              :value="$record->display_target ?? 'BOTH'"
+                                                              :value="$record->scope_target ?? 'BOTH'"
                                                               :bare="true"
                                                               class="w-24 text-xs h-input"
                                                               required />
                                         @else
-                                            <input type="hidden" name="display_target" value="{{ $record->display_target ?? 'BOTH' }}">
+                                            <input type="hidden" name="scope_target" value="{{ $record->scope_target ?? 'BOTH' }}">
                                         @endif
                             
                                         <input type="text" 
-                                               name="description" 
+                                               name="chronicle_text" 
                                                x-model="editReason" 
                                                aria-label="{{ lexicon('label_ServiceRecords_ReasonCitation', 'Reason / Citation') }}"
                                                x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_EditCitationInput', 'Modify citation text')) }}'"
@@ -264,7 +264,7 @@
                                               class="flex flex-col gap-xs">
                                             @csrf
                                             <input type="text" 
-                                                   name="reason" 
+                                                   name="chronicle_text" 
                                                    aria-label="{{ lexicon('label_ServiceRecords_RemoveReasonPlaceholder', 'Reason for removal...') }}"
                                                    x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_RemovalReasonInput', 'Enter mandatory reason for revoking this record')) }}'"
                                                    class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent text-xs" 
@@ -385,7 +385,7 @@
                                 <span class="text-required" x-show="recipientType === 'character'">*</span>
                             </label>
                             <select id="award-character-select"
-                                    name="character_id" 
+                                    name="persona_id" 
                                     aria-label="{{ lexicon('label_ServiceRecords_SelectCharacter', 'Select Character') }}"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_CharacterSelect', 'Select active character profile')) }}'"
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
@@ -393,7 +393,7 @@
                                 <option value="">{{ lexicon('label_common_SelectCharacter', '-- Select Character --') }}</option>
                                 @foreach($characters as $character)
                                     <option value="{{ $character->id }}">
-                                        {{ $character->name }} @if($character->user) ({{ lexicon('label_ServiceRecords_Owner', 'Owner:') }} {{ $character->user->name }}) @endif
+                                        {{ $character->persona_name }} @if($character->user) ({{ lexicon('label_ServiceRecords_Owner', 'Owner:') }} {{ $character->user->name }}) @endif
                                     </option>
                                 @endforeach
                             </select>
@@ -404,14 +404,14 @@
                                 <span class="text-required">*</span>
                             </label>
                             <select id="award-definition-select"
-                                    name="award_id" 
+                                    name="distinction_id" 
                                     aria-label="{{ lexicon('label_ServiceRecords_AwardToIssue', 'Award to Issue') }}"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_AwardSelect', 'Select award from catalog')) }}'"
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
                                     required>
                                 <option value="">{{ lexicon('label_ServiceRecords_SelectAward', '-- Select an Award --') }}</option>
                                 <template x-for="award in filteredAwards" :key="award.id">
-                                    <option :value="award.id" x-text="award.category ? `${award.name} (${award.category.name})` : award.name"></option>
+                                    <option :value="award.id" x-text="award.catalogue ? `${award.distinction_title} (${award.catalogue.catalogue_title})` : award.distinction_title"></option>
                                 </template>
                             </select>
                         </div>
@@ -421,7 +421,7 @@
                                 <span class="text-required">*</span>
                             </label>
                             <textarea id="award-reason-textarea"
-                                      name="reason" 
+                                      name="chronicle_text" 
                                       aria-label="{{ lexicon('label_ServiceRecords_ReasonCitation', 'Reason / Citation') }}"
                                       x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_AwardCitationInput', 'Explain why this award is being issued')) }}'"
                                       x-init="window.autosize && window.autosize($el)"
@@ -446,7 +446,7 @@
                                 <span class="text-required">*</span>
                             </label>
                             <select id="promo-character-select"
-                                    name="character_id" 
+                                    name="persona_id" 
                                     aria-label="{{ lexicon('label_ServiceRecords_SelectCharacter', 'Select Character') }}"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_CharacterSelect', 'Select active character profile')) }}'"
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
@@ -454,7 +454,7 @@
                                 <option value="">{{ lexicon('label_common_SelectCharacter', '-- Select Character --') }}</option>
                                 @foreach($characters as $character)
                                     <option value="{{ $character->id }}">
-                                        {{ $character->name }} @if($character->rank) ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{$character->rank->name }}) @endif
+                                        {{ $character->persona_name }} @if($character->insignia) ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{ $character->insignia->insignia_title }}) @endif
                                     </option>
                                 @endforeach
                             </select>
@@ -465,14 +465,14 @@
                                 <span class="text-required">*</span>
                             </label>
                             <select id="promo-rank-select"
-                                    name="rank_id" 
+                                    name="insignia_id" 
                                     aria-label="{{ lexicon('label_ServiceRecords_NewAssignedRank', 'New Assigned Rank') }}"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_NewRankSelect', 'Select new assigned rank')) }}'"
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
                                     required>
                                 <option value="">{{ lexicon('label_ServiceRecords_OptSelectRank', '-- Select Rank --') }}</option>
                                 @foreach($ranks as $rank)
-                                    <option value="{{ $rank->id }}">{{ $rank->name }}</option>
+                                    <option value="{{ $rank->id }}">{{ $rank->insignia_title }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -482,7 +482,7 @@
                                 <span class="text-required">*</span>
                             </label>
                             <textarea id="promo-reason-textarea"
-                                      name="description" 
+                                      name="chronicle_text" 
                                       aria-label="{{ lexicon('label_ServiceRecords_ReasonJustification', 'Reason / Justification') }}"
                                       x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_PromotionReasonInput', 'Explain the reason for this promotion or demotion')) }}'"
                                       x-init="window.autosize && window.autosize($el)"
@@ -507,7 +507,7 @@
                                 <span class="text-required">*</span>
                             </label>
                             <select id="transfer-character-select"
-                                    name="character_id" 
+                                    name="persona_id" 
                                     aria-label="{{ lexicon('label_ServiceRecords_SelectCharacter', 'Select Character') }}"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_CharacterSelect', 'Select active character profile')) }}'"
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
@@ -515,7 +515,7 @@
                                 <option value="">{{ lexicon('label_common_SelectCharacter', '-- Select Character --') }}</option>
                                 @foreach($characters as $character)
                                     <option value="{{ $character->id }}">
-                                        {{ $character->name }} @if($character->position) ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{$character->position->name }}) @endif
+                                        {{ $character->persona_name }} @if($character->assignment) ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{ $character->assignment->assignment_title }}) @endif
                                     </option>
                                 @endforeach
                             </select>
@@ -526,7 +526,7 @@
                                 <span class="text-required">*</span>
                             </label>
                             <select id="transfer-position-select"
-                                    name="position_id" 
+                                    name="assignment_id" 
                                     aria-label="{{ lexicon('label_ServiceRecords_AssignPosition', 'Assign Position') }}"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_PositionSelect', 'Select new duty position')) }}'"
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
@@ -534,7 +534,7 @@
                                 <option value="">{{ lexicon('label_ServiceRecords_OptSelectPosition', '-- Select Position --') }}</option>
                                 @foreach($positions as $position)
                                     <option value="{{ $position->id }}">
-                                        {{ $position->name }} @if($position->section) ({{$position->section->name }}) @endif
+                                        {{ $position->assignment_title }} @if($position->division) ({{ $position->division->division_title }}) @endif
                                     </option>
                                 @endforeach
                             </select>
@@ -545,7 +545,7 @@
                                 <span class="text-required">*</span>
                             </label>
                             <textarea id="transfer-reason-textarea"
-                                      name="description" 
+                                      name="chronicle_text" 
                                       aria-label="{{ lexicon('label_ServiceRecords_OrdersReason', 'Orders / Reason') }}"
                                       x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_TransferReasonInput', 'Enter orders or reason for transfer')) }}'"
                                       x-init="window.autosize && window.autosize($el)"
@@ -570,7 +570,7 @@
                                 <span class="text-required">*</span>
                             </label>
                             <select id="status-character-select"
-                                    name="character_id" 
+                                    name="persona_id" 
                                     aria-label="{{ lexicon('label_ServiceRecords_SelectCharacter', 'Select Character') }}"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_CharacterSelect', 'Select active character profile')) }}'"
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
@@ -578,7 +578,7 @@
                                 <option value="">{{ lexicon('label_common_SelectCharacter', '-- Select Character --') }}</option>
                                 @foreach($characters as $character)
                                     <option value="{{ $character->id }}">
-                                        {{ $character->name }} ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{ strtoupper(str_replace('_', ' ',$character->status)) }})
+                                        {{ $character->persona_name }} ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{ strtoupper(str_replace('_', ' ', $character->persona_status)) }})
                                     </option>
                                 @endforeach
                             </select>
@@ -589,7 +589,7 @@
                                 <span class="text-required">*</span>
                             </label>
                             <select id="status-value-select"
-                                    name="status" 
+                                    name="persona_status" 
                                     aria-label="{{ lexicon('label_common_Status', 'Status') }}"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_StatusSelect', 'Select new duty status')) }}'"
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
@@ -608,7 +608,7 @@
                                 <span class="text-required">*</span>
                             </label>
                             <textarea id="status-reason-textarea"
-                                      name="description" 
+                                      name="chronicle_text" 
                                       aria-label="{{ lexicon('label_ServiceRecords_StatusNotes', 'Status Change and Justification / Notes') }}"
                                       x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_StatusReasonInput', 'Enter justification for status change')) }}'"
                                       x-init="window.autosize && window.autosize($el)"
@@ -633,14 +633,14 @@
                                 <span class="text-required">*</span>
                             </label>
                             <select id="manual-character-select"
-                                    name="character_id" 
+                                    name="persona_id" 
                                     aria-label="{{ lexicon('label_ServiceRecords_SelectCharacter', 'Select Character') }}"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_CharacterSelect', 'Select active character profile')) }}'"
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
                                     required>
                                 <option value="">{{ lexicon('label_common_SelectCharacter', '-- Select Character --') }}</option>
                                 @foreach($characters as $character)
-                                    <option value="{{ $character->id }}">{{ $character->name }}</option>
+                                    <option value="{{ $character->id }}">{{ $character->persona_name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -651,22 +651,22 @@
                                     <span class="text-required">*</span>
                                 </label>
                                 <select id="manual-event-type-select"
-                                        name="event_type"
+                                        name="register_event_mode"
                                         aria-label="{{ lexicon('label_common_Type', 'Event Type') }}"
                                         x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_SelectEventType', 'Select service record event category')) }}'"
                                         class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent"
                                         required>
-                                    @foreach($eventTypeGroups as $groupKey =>$groupData)
+                                    @foreach($eventTypeGroups as $groupKey => $groupData)
                                         <optgroup label="{{ $groupData['label'] }}">
-                                            @foreach($groupData['types'] as $typeKey =>$typeLabel)
-                                                <option value="{{ $typeKey }}" @selected($typeKey === 'manual_entry')>{{$typeLabel }}</option>
+                                            @foreach($groupData['types'] as $typeKey => $typeLabel)
+                                                <option value="{{ $typeKey }}" @selected($typeKey === 'manual_entry')>{{ $typeLabel }}</option>
                                             @endforeach
                                         </optgroup>
                                     @endforeach
                                 </select>
                             </div>
                             <div class="flex flex-col gap-xs">
-                                <x-context-select name="display_target"
+                                <x-context-select name="scope_target"
                                                   id="manual-display-target-select"
                                                   value="BOTH"
                                                   required />
@@ -678,7 +678,7 @@
                                 <span class="text-required">*</span>
                             </label>
                             <textarea id="manual-desc-textarea"
-                                      name="description" 
+                                      name="chronicle_text" 
                                       aria-label="{{ lexicon('label_common_Description', 'Description') }}"
                                       x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_ManualNoteInput', 'Enter detailed service note')) }}'"
                                       x-init="window.autosize && window.autosize($el)"

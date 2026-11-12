@@ -14,15 +14,15 @@
     $title = $rawTitle !== '' ? $rawTitle : lexicon('label_Personality_DefaultTitle', 'Personality & Psychological Profile');
 
     // Retrieve eager-loaded candidate petition answers linked to this persona without N+1 queries
+    $targetPersona = $persona ?? $character ?? null;
     $petition = null;
-    if ($character) {
-        if ($character->relationLoaded('petition')) {
-            $petition = $character->petition;
-        } elseif ($character->relationLoaded('application')) {
-            $petition = $character->application;
+
+    if ($targetPersona) {
+        if ($targetPersona->relationLoaded('petition')) {
+            $petition = $targetPersona->petition;
         } else {
             $petition = \App\Models\CandidatePetition::with('answers')
-                ->where('persona_id', $character->id)
+                ->where('persona_id', $targetPersona->id)
                 ->first();
         }
     }
@@ -35,20 +35,18 @@
 
     $answers = $answersCollection->keyBy(function ($item) use ($metadataMap) {
         $meta = ($item->relationLoaded('metadata') ? $item->metadata : null)
-            ?? ($item->relationLoaded('formField') ? $item->formField : null)
             ?? $metadataMap->get($item->metadata_id);
 
-        $fieldName = $meta->metadata_label ?? $meta->metadata_key ?? $meta->name ?? '';
+        $fieldName = $meta->metadata_title ?? $meta->metadata_label ?? $meta->metadata_key ?? '';
         return strtolower(trim($fieldName));
     });
 
-    // Helper to pull petition_answer (or legacy answer) by field name or fallback
     $getAnswer = function ($names) use ($answers) {
         foreach ((array) $names as $name) {
             $key = strtolower(trim($name));
             if ($answers->has($key)) {
                 $entry = $answers[$key];
-                $val = $entry->petition_answer ?? $entry->answer ?? null;
+                $val = $entry->petition_answer ?? null;
                 if (filled($val)) {
                     return $val;
                 }

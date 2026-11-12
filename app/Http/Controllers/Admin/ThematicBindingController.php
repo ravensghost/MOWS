@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use App\Models\Skin;
+use App\Models\ThematicBinding;
 use App\Models\Page;
 use ZipArchive;
 
@@ -17,38 +17,33 @@ class ThematicBindingController extends Controller
 
         $systemPage = Page::where('slug', 'admin/themes')
             ->where('is_published', true)
-            ->with(['layout.blocks', 'widgets' => function ($query) {
-                $query->orderBy('page_widget.sort_order');
+            ->with(['layout.blocks', 'widgets' => function ($query) {$query->orderBy('page_widget.sort_order');
             }])
             ->firstOrFail();
 
-        $skins = Skin::orderBy('name')->get();
+        $skins = ThematicBinding::orderBy('binding_title')->get();
 
         // Reuse the exact same cache key as AppServiceProvider
-        $activeSkinArray = Cache::rememberForever('active_skin_default_array', function () {
-            $skin = Skin::where('is_global_default', 1)->first();
+        $activeSkinArray = Cache::rememberForever('active_skin_default_array', function () {$skin = ThematicBinding::where('is_global_default', 1)->first();
             return $skin ? $skin->toArray() : null;
         });
         $defaultSkin = $activeSkinArray ? (object) $activeSkinArray : null;
 
         // 1. Scan resources/css/ for all active --theme-* variables, their usage, and their default fallbacks
-        [$themeUsage, $discoveredDefaults] = $this->scanThemeVariableUsage();
+        [$themeUsage, $discoveredDefaults] =$this->scanThemeVariableUsage();
 
         // 2. Read saved custom values from theme.css (if it exists)
         $savedVariables = [];
         if ($defaultSkin) {
-            $cssPath = public_path('skins/' . $defaultSkin->folder_name . '/css/theme.css');
+            $cssPath = public_path('skins/' .$defaultSkin->directory_name . '/css/theme.css');
             if (file_exists($cssPath)) {
                 $content = file_get_contents($cssPath);
-                $cleanContent = preg_replace('/\/\*.*?\*\//s', '', $content);
+                $cleanContent = preg_replace('/\/\*.*?\*\//s', '',$content);
 
-                if (preg_match_all('/(--[a-zA-Z0-9\-]+)\s*:\s*([^;]+);/', $cleanContent, $matches)) {
-                    foreach ($matches[1] as $index => $key) {
-                        $rawVal = trim($matches[2][$index]);
-                        if (preg_match('/^url\([\'"]?(.*?)[\'"]?\)$/i', $rawVal, $urlMatches)) {
-                            $savedVariables[trim($key)] = $urlMatches[1];
-                        } else {
-                            $savedVariables[trim($key)] = $rawVal;
+                if (preg_match_all('/(--[a-zA-Z0-9\-]+)\s*:\s*([^;]+);/', $cleanContent,$matches)) {
+                    foreach ($matches[1] as$index => $key) {$rawVal = trim($matches[2][$index]);
+                        if (preg_match('/^url\([\'"]?(.*?)[\'"]?\)$/i', $rawVal,$urlMatches)) {
+                            $savedVariables[trim($key)] = $urlMatches[1]; } else {$savedVariables[trim($key)] =$rawVal;
                         }
                     }
                 }
@@ -57,12 +52,11 @@ class ThematicBindingController extends Controller
 
         // 3. Merge active variables with saved values or CSS fallbacks
         $themeVariables = [];
-        foreach ($discoveredDefaults as $varName => $defaultFallback) {
-            $themeVariables[$varName] = $savedVariables[$varName] ?? $defaultFallback;
+        foreach ($discoveredDefaults as$varName => $defaultFallback) {$themeVariables[$varName] =$savedVariables[$varName] ?? $defaultFallback;
         }
 
-        $structuralOptions = $this->getStructuralOptions();
-        $groupedVars = $this->buildGroupedVariables($themeVariables, $themeUsage);
+        $structuralOptions =$this->getStructuralOptions();
+        $groupedVars =$this->buildGroupedVariables($themeVariables,$themeUsage);
 
         return view('admin.themes', compact(
             'skins',
@@ -79,11 +73,11 @@ class ThematicBindingController extends Controller
         abort_unless(auth()->user()->can('manage_themes'), 403, lexicon('msg_Themes_Unauthorised', 'Unauthorised access to the Theme & Skin Engine.'));
 
         $request->validate([
-            'theme_vars'  => 'required|array',
-            'custom_head' => 'nullable|string'
+            'theme_vars'            => 'required|array',
+            'custom_head_injection' => 'nullable|string'
         ]);
 
-        $defaultSkin = Skin::where('is_global_default', 1)->first();
+        $defaultSkin = ThematicBinding::where('is_global_default', 1)->first();
 
         if (!$defaultSkin) {
             return response()->json([
@@ -93,24 +87,24 @@ class ThematicBindingController extends Controller
         }
 
         $defaultSkin->update([
-            'custom_head' => $request->input('custom_head')
+            'custom_head_injection' => $request->input('custom_head_injection')
         ]);
 
         Cache::forget('active_skin_default_array');
         Cache::forget('widget_active_skin_folder');
 
-        $cssPath = public_path('skins/' . $defaultSkin->folder_name . '/css/theme.css');
+        $cssPath = public_path('skins/' .$defaultSkin->directory_name . '/css/theme.css');
         $dir = dirname($cssPath);
         if (!is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
 
-        [$usageMap, $discoveredDefaults] = $this->scanThemeVariableUsage();
+        [$usageMap, $discoveredDefaults] =$this->scanThemeVariableUsage();
 
         $cssContent = ":root {\n    /* Auto-generated by MOWS Theme Engine */\n";
 
-        foreach ($request->input('theme_vars') as $key => $value) {
-            $safeKey = preg_replace('/[^a-zA-Z0-9\-]/', '', $key);
+        foreach ($request->input('theme_vars') as $key =>$value) {
+            $safeKey = preg_replace('/[^a-zA-Z0-9\-]/', '',$key);
 
             // Skip any legacy variables that are no longer used in resources/css
             if (!isset($usageMap[$safeKey])) {
@@ -119,21 +113,21 @@ class ThematicBindingController extends Controller
 
             $safeValue = trim(strip_tags($value));
 
-            if (str_contains(strtolower($safeKey), 'image') && $safeValue !== 'none') {
+            if (str_contains(strtolower($safeKey), 'image') &&$safeValue !== 'none') {
                 if (!preg_match('/^url\(/i', $safeValue)) {
                     $safeValue = "url('{$safeValue}')";
                 }
             }
 
-            $comment = $this->formatUsageComment($usageMap[$safeKey]);
+            $comment =$this->formatUsageComment($usageMap[$safeKey]);
 
             $cssContent .= "    {$safeKey}: {$safeValue}; /* {$comment} */\n";
         }
         $cssContent .= "}\n";
 
-        file_put_contents($cssPath, $cssContent);
+        file_put_contents($cssPath,$cssContent);
 
-        if ($request->ajax() || $request->wantsJson()) {
+        if ($request->ajax() ||$request->wantsJson()) {
             return response()->json([
                 'status'  => 'success',
                 'success' => true,
@@ -147,7 +141,7 @@ class ThematicBindingController extends Controller
     /**
      * Builds the categorised and pre-formatted array of theme variables for the Blade view.
      */
-    private function buildGroupedVariables(array $themeVariables, array $themeUsage): array
+    private function buildGroupedVariables(array $themeVariables, array$themeUsage): array
     {
         $categoryMap = [
             'font'       => lexicon('label_Themes_GroupTypography', 'Typography & Fonts'),
@@ -177,28 +171,22 @@ class ThematicBindingController extends Controller
             'transition' => lexicon('label_Themes_GroupBorders', 'Borders & Styling'),
         ];
 
-        $defaultGroup = lexicon('label_Themes_GroupMisc', 'Colours & Misc Variables');
-        $groupedVars = [];
+        $defaultGroup = lexicon('label_Themes_GroupMisc', 'Colours & Misc Variables');$groupedVars = [];
 
-        foreach ($themeVariables as $key => $value) {
-            $stripped = str_replace('--theme-', '', $key);
-            $prefix = explode('-', $stripped)[0];
-            $groupName = $categoryMap[$prefix] ?? $defaultGroup;
+        foreach ($themeVariables as $key =>$value) {
+            $stripped = str_replace('--theme-', '',$key);
+            $prefix = explode('-',$stripped)[0];
+            $groupName =$categoryMap[$prefix] ?? $defaultGroup;
 
-            $label = ucwords(str_replace(['--', '-'], ['', ' '], $key));
-            $isHex = (bool) preg_match('/^#[a-fA-F0-9]{3,8}$/', $value);
+            $label = ucwords(str_replace(['--', '-'], ['', ' '], $key));$isHex = (bool) preg_match('/^#[a-fA-F0-9]{3,8}$/',$value);
 
             $varUsage = $themeUsage[$key] ?? [];
-            $shortParts = [];
-            $fullParts = [];
+            $shortParts = [];$fullParts = [];
 
-            foreach ($varUsage as $cssFile => $selectors) {
-                $uniqueSel = array_unique($selectors);
-                $fullParts[] = $cssFile . ': ' . implode(', ', $uniqueSel);
+            foreach ($varUsage as$cssFile => $selectors) {$uniqueSel = array_unique($selectors);$fullParts[] = $cssFile . ': ' . implode(', ', $uniqueSel);
 
                 $shownSel = array_slice($uniqueSel, 0, 2);
-                $moreCount = count($uniqueSel) - count($shownSel);
-                $shortParts[] = $cssFile . ' (' . implode(', ', $shownSel) . ($moreCount > 0 ? " +{$moreCount}" : '') . ')';
+                $moreCount = count($uniqueSel) - count($shownSel);$shortParts[] = $cssFile . ' (' . implode(', ', $shownSel) . ($moreCount > 0 ? " +{$moreCount}" : '') . ')';
             }
 
             $shortUsageText = !empty($shortParts)
@@ -278,40 +266,35 @@ class ThematicBindingController extends Controller
             return [[], []];
         }
 
-        $usage = [];
-        $defaults = [];
+        $usage = [];$defaults = [];
 
         $iterator = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($cssDir, \RecursiveDirectoryIterator::SKIP_DOTS)
         );
 
-        foreach ($iterator as $file) {
-            if ($file->getExtension() !== 'css' || $file->getFilename() === 'bootstrap-icons.min.css') {
+        foreach ($iterator as$file) {
+            if ($file->getExtension() !== 'css' ||$file->getFilename() === 'bootstrap-icons.min.css') {
                 continue;
             }
 
-            $fileName = $file->getFilename();
+            $fileName =$file->getFilename();
             $content = file_get_contents($file->getRealPath());
-            $cleanContent = preg_replace('/\/\*.*?\*\//s', '', $content);
+            $cleanContent = preg_replace('/\/\*.*?\*\//s', '',$content);
 
-            if (preg_match_all('/([^{}]+)\{([^{}]+)\}/s', $cleanContent, $blocks, PREG_SET_ORDER)) {
-                foreach ($blocks as $block) {
-                    $selector = trim(preg_replace('/\s+/', ' ', $block[1]));
-                    $body = $block[2];
+            if (preg_match_all('/([^{}]+)\{([^{}]+)\}/s', $cleanContent,$blocks, PREG_SET_ORDER)) {
+                foreach ($blocks as$block) {
+                    $selector = trim(preg_replace('/\s+/', ' ',$block[1]));
+                    $body =$block[2];
 
                     // Match var(--theme-name, fallback) or var(--theme-name)
-                    if (preg_match_all('/var\(\s*(--theme-[a-zA-Z0-9\-]+)\s*(?:,\s*([^)]+))?\)/', $body, $varMatches, PREG_SET_ORDER)) {
-                        foreach ($varMatches as $match) {
-                            $varName = trim($match[1]);
-                            $fallback = isset($match[2]) ? trim($match[2]) : '';
+                    if (preg_match_all('/var\(\s*(--theme-[a-zA-Z0-9\-]+)\s*(?:,\s*([^)]+))?\)/', $body,$varMatches, PREG_SET_ORDER)) {
+                        foreach ($varMatches as $match) {$varName = trim($match[1]);$fallback = isset($match[2]) ? trim($match[2]) : '';
 
-                            $usage[$varName][$fileName][] = $selector;
+                            $usage[$varName][$fileName][] =$selector;
 
                             if (!isset($defaults[$varName]) && $fallback !== '' && !str_starts_with($fallback, 'var(')) {
-                                if (preg_match('/^url\([\'"]?(.*?)[\'"]?\)$/i', $fallback, $urlMatches)) {
-                                    $defaults[$varName] = $urlMatches[1];
-                                } else {
-                                    $defaults[$varName] = $fallback;
+                                if (preg_match('/^url\([\'"]?(.*?)[\'"]?\)$/i', $fallback,$urlMatches)) {
+                                    $defaults[$varName] = $urlMatches[1]; } else {$defaults[$varName] =$fallback;
                                 }
                             } elseif (!isset($defaults[$varName])) {
                                 $defaults[$varName] = '';
@@ -322,7 +305,7 @@ class ThematicBindingController extends Controller
             }
         }
 
-        return [$usage, $defaults];
+        return [$usage,$defaults];
     }
 
     /**
@@ -334,15 +317,11 @@ class ThematicBindingController extends Controller
             return 'UNUSED in resources/css';
         }
 
-        ksort($fileMap);
-        $parts = [];
+        ksort($fileMap);$parts = [];
 
-        foreach ($fileMap as $file => $selectors) {
-            $uniqueSelectors = array_unique($selectors);
-            $shown = array_slice($uniqueSelectors, 0, 3);
-            $extraCount = count($uniqueSelectors) - count($shown);
+        foreach ($fileMap as$file => $selectors) {$uniqueSelectors = array_unique($selectors);$shown = array_slice($uniqueSelectors, 0, 3);$extraCount = count($uniqueSelectors) - count($shown);
 
-            $selectorList = implode(', ', $shown);
+            $selectorList = implode(', ',$shown);
             if ($extraCount > 0) {
                 $selectorList .= " +{$extraCount} more";
             }
@@ -363,24 +342,22 @@ class ThematicBindingController extends Controller
         ]);
 
         $zip = new ZipArchive;
-        $file = $request->file('skin_package');
+        $file =$request->file('skin_package');
 
-        if ($zip->open($file->getRealPath()) === TRUE) {
-            $folderName = 'skin_' . time();
-            $extractPath = public_path('skins/' . $folderName);
+        if ($zip->open($file->getRealPath()) === TRUE) {$directoryName = 'skin_' . time();
+            $extractPath = public_path('skins/' .$directoryName);
 
-            $zip->extractTo($extractPath);
-            $zip->close();
+            $zip->extractTo($extractPath);$zip->close();
 
-            Skin::create([
-                'name'              => 'Imported Skin (' . date('M d, Y') . ')',
-                'folder_name'       => $folderName,
-                'version'           => '1.0',
+            ThematicBinding::create([
+                'binding_title'     => 'Imported Skin (' . date('M d, Y') . ')',
+                'directory_name'    => $directoryName,
+                'package_version'   => '1.0',
                 'is_active'         => 1,
                 'is_global_default' => 0
             ]);
 
-            if ($request->ajax() || $request->wantsJson()) {
+            if ($request->ajax() ||$request->wantsJson()) {
                 return response()->json([
                     'status'  => 'success',
                     'success' => true,
@@ -391,7 +368,7 @@ class ThematicBindingController extends Controller
             return redirect('/admin/themes')->with('status', lexicon('msg_Themes_SkinUploaded', 'Skin package uploaded and installed successfully.'));
         }
 
-        if ($request->ajax() || $request->wantsJson()) {
+        if ($request->ajax() ||$request->wantsJson()) {
             return response()->json([
                 'status'  => 'error',
                 'message' => lexicon('msg_Themes_ZipExtractError', 'Failed to extract the zip archive.')
@@ -401,53 +378,51 @@ class ThematicBindingController extends Controller
         return back()->with('error', lexicon('msg_Themes_ZipExtractError', 'Failed to extract the zip archive.'));
     }
 
-    public function activate(Request $request, Skin $skin)
+    public function activate(Request $request, ThematicBinding$skin)
     {
         abort_unless(auth()->user()->can('manage_themes'), 403, lexicon('msg_Themes_Unauthorised', 'Unauthorised access to the Theme & Skin Engine.'));
 
-        Skin::query()->update(['is_global_default' => 0]);
+        ThematicBinding::query()->update(['is_global_default' => 0]);
         $skin->update(['is_global_default' => 1]);
 
         // Clear AppServiceProvider and Widget caches so the new skin activates immediately
         Cache::forget('active_skin_default_array');
         Cache::forget('widget_active_skin_folder');
 
-        if ($request->ajax() || $request->wantsJson()) {
+        if ($request->ajax() ||$request->wantsJson()) {
             return response()->json([
                 'status'  => 'success',
                 'success' => true,
-                'message' => lexicon('msg_Themes_SkinActivated', 'Skin is now the global default.') . " ({$skin->name})"
+                'message' => lexicon('msg_Themes_SkinActivated', 'Skin is now the global default.') . " ({$skin->binding_title})"
             ]);
         }
 
-        return redirect('/admin/themes')->with('status', lexicon('msg_Themes_SkinActivated', 'Skin is now the global default.') . " ({$skin->name})");
+        return redirect('/admin/themes')->with('status', lexicon('msg_Themes_SkinActivated', 'Skin is now the global default.') . " ({$skin->binding_title})");
     }
 
-    public function export(Skin $skin)
+    public function export(ThematicBinding $skin)
     {
         abort_unless(auth()->user()->can('manage_themes'), 403, lexicon('msg_Themes_Unauthorised', 'Unauthorised access to the Theme & Skin Engine.'));
 
-        $folderPath = public_path('skins/' . $skin->folder_name);
+        $folderPath = public_path('skins/' .$skin->directory_name);
 
         if (!is_dir($folderPath)) {
             return back()->with('error', lexicon('msg_Themes_DirNotFound', 'Skin directory not found on the server.'));
         }
 
-        $zipFileName = $skin->folder_name . '_export.zip';
-        $zipFilePath = storage_path('app/public/' . $zipFileName);
+        $zipFileName =$skin->directory_name . '_export.zip';
+        $zipFilePath = storage_path('app/public/' .$zipFileName);
 
         $zip = new ZipArchive;
-        if ($zip->open($zipFilePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
-            $files = new \RecursiveIteratorIterator(
+        if ($zip->open($zipFilePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {$files = new \RecursiveIteratorIterator(
                 new \RecursiveDirectoryIterator($folderPath),
                 \RecursiveIteratorIterator::LEAVES_ONLY
             );
 
-            foreach ($files as $name => $file) {
+            foreach ($files as$file) {
                 if (!$file->isDir()) {
-                    $filePath = $file->getRealPath();
-                    $relativePath = substr($filePath, strlen($folderPath) + 1);
-                    $zip->addFile($filePath, $relativePath);
+                    $filePath =$file->getRealPath();
+                    $relativePath = substr($filePath, strlen($folderPath) + 1);$zip->addFile($filePath,$relativePath);
                 }
             }
             $zip->close();

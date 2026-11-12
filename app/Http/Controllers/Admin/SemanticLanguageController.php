@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use App\Services\AiTranslationService;
-use App\Models\Term;
+use App\Models\LexiconCodex;
 use App\Models\Configuration;
 
 class SemanticLanguageController extends Controller
@@ -26,7 +26,7 @@ class SemanticLanguageController extends Controller
             ? $request->common_lang_code
             : $request->custom_lang_code));
 
-        if ($request->lang_type === 'custom' && $request->filled('custom_lang_name')) {
+        if ($request->lang_type === 'custom' &&$request->filled('custom_lang_name')) {
             Configuration::updateOrCreate(
                 ['configuration_token' => 'lexicon_label_' . $locale],
                 ['configuration_payload' => trim($request->custom_lang_name)]
@@ -34,36 +34,35 @@ class SemanticLanguageController extends Controller
             Cache::forget('global_settings');
         }
 
-        if ($request->lang_type === 'common') {
-            $baseTerms = Term::pluck('translations', 'code_key')
-                ->map(fn($t) => $t['gb'] ?? '')
+        if ($request->lang_type === 'common') {$baseEntries = LexiconCodex::pluck('translation_payloads', 'semantic_token')
+                ->map(fn($t) =>$t['gb'] ?? '')
                 ->toArray();
 
             try {
                 $aiService = new AiTranslationService();
-                $translatedTerms = $aiService->translate($baseTerms, $locale);
+                $translatedEntries =$aiService->translate($baseEntries,$locale);
 
-                foreach ($translatedTerms as $codeKey => $translatedString) {
-                    $term = Term::where('code_key', $codeKey)->first();
-                    if ($term) {
-                        $translations = $term->translations ?? [];
-                        $translations[$locale] = $translatedString;
-                        $term->update(['translations' => $translations]);
+                foreach ($translatedEntries as $semanticToken =>$translatedString) {
+                    $entry = LexiconCodex::where('semantic_token',$semanticToken)->first();
+                    if ($entry) {
+                        $payloads =$entry->translation_payloads ?? [];
+                        $payloads[$locale] =$translatedString;
+                        $entry->update(['translation_payloads' =>$payloads]);
                     }
                 }
             } catch (\Exception $e) {
-                if ($request->wantsJson() || $request->ajax()) {
+                if ($request->wantsJson() ||$request->ajax()) {
                     return response()->json(['message' => 'AI Translation Failed: ' . $e->getMessage()], 500);
                 }
                 return back()->with('status', 'AI Translation Failed: ' . $e->getMessage());
             }
         } else {
-            Term::chunk(100, function ($terms) use ($locale) {
-                foreach ($terms as $term) {
-                    $translations = $term->translations ?? [];
-                    if (!isset($translations[$locale])) {
-                        $translations[$locale] = '';
-                        $term->update(['translations' => $translations]);
+            LexiconCodex::chunk(100, function ($entries) use ($locale) {
+                foreach ($entries as$entry) {
+                    $payloads =$entry->translation_payloads ?? [];
+                    if (!isset($payloads[$locale])) {
+                        $payloads[$locale] = '';
+                        $entry->update(['translation_payloads' =>$payloads]);
                     }
                 }
             });
@@ -71,7 +70,7 @@ class SemanticLanguageController extends Controller
 
         Cache::forget('mows_lexicon');
 
-        if ($request->wantsJson() || $request->ajax()) {
+        if ($request->wantsJson() ||$request->ajax()) {
             return response()->json([
                 'success' => true,
                 'message' => "Language module [{$locale}] initialised successfully."
@@ -97,7 +96,7 @@ class SemanticLanguageController extends Controller
 
         Cache::forget('global_settings');
 
-        if ($request->wantsJson() || $request->ajax()) {
+        if ($request->wantsJson() ||$request->ajax()) {
             return response()->json([
                 'success' => true,
                 'message' => lexicon('msg_Lexicon_LangUpdated', 'Language display name updated.')
@@ -121,16 +120,15 @@ class SemanticLanguageController extends Controller
         }
 
         $globalSetting = Configuration::where('configuration_token', 'global_lexicon_setting')->first();
-        if ($globalSetting && $globalSetting->configuration_payload === $code) {
-            $globalSetting->update(['configuration_payload' => 'auto']);
+        if ($globalSetting &&$globalSetting->configuration_payload === $code) {$globalSetting->update(['configuration_payload' => 'auto']);
         }
 
-        Term::chunk(100, function ($terms) use ($code) {
-            foreach ($terms as $term) {
-                $translations = $term->translations ?? [];
-                if (array_key_exists($code, $translations)) {
-                    unset($translations[$code]);
-                    $term->update(['translations' => $translations]);
+        LexiconCodex::chunk(100, function ($entries) use ($code) {
+            foreach ($entries as$entry) {
+                $payloads =$entry->translation_payloads ?? [];
+                if (array_key_exists($code,$payloads)) {
+                    unset($payloads[$code]);
+                    $entry->update(['translation_payloads' =>$payloads]);
                 }
             }
         });
@@ -153,15 +151,14 @@ class SemanticLanguageController extends Controller
         $code = strtolower(trim($code));
 
         if ($code === 'gb') {
-            Term::truncate();
+            LexiconCodex::truncate();
         } else {
-            Term::all()->each(function ($term) use ($code) {
-                $translations = $term->translations ?? [];
-                unset($translations[$code]);
-                if (empty($translations)) {
-                    $term->delete();
+            LexiconCodex::all()->each(function ($entry) use ($code) {
+                $payloads =$entry->translation_payloads ?? [];
+                unset($payloads[$code]);
+                if (empty($payloads)) {$entry->delete();
                 } else {
-                    $term->update(['translations' => $translations]);
+                    $entry->update(['translation_payloads' =>$payloads]);
                 }
             });
         }
@@ -177,10 +174,10 @@ class SemanticLanguageController extends Controller
 
         $locale = strtolower(trim($locale));
 
-        $terms = Term::all()->mapWithKeys(function ($term) use ($locale) {
-            $translations = $term->translations ?? [];
-            $value = $translations[$locale] ?? ($translations['gb'] ?? '');
-            return [$term->code_key => $value];
+        $entries = LexiconCodex::all()->mapWithKeys(function ($entry) use ($locale) {
+            $payloads =$entry->translation_payloads ?? [];
+            $value =$payloads[$locale] ?? ($payloads['gb'] ?? '');
+            return [$entry->semantic_token =>$value];
         })->toArray();
 
         $langName = ($locale === 'gb')
@@ -190,7 +187,7 @@ class SemanticLanguageController extends Controller
         $exportData = array_merge([
             '_lang' => $locale,
             '_lang_name' => $langName
-        ], $terms);
+        ], $entries);
 
         $json = json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
@@ -210,7 +207,7 @@ class SemanticLanguageController extends Controller
                 'import_lang_code' => 'nullable|string|max:10'
             ]);
 
-            $file = $request->file('import_file');
+            $file =$request->file('import_file');
             $fileContent = file_get_contents($file->getRealPath());
             $importedData = json_decode($fileContent, true);
 
@@ -245,46 +242,42 @@ class SemanticLanguageController extends Controller
             $mergedCount = 0;
             $createdCount = 0;
 
-            foreach ($importedData as $codeKey => $incomingTranslation) {
-                if (empty($codeKey) || !is_string($incomingTranslation)) continue;
+            foreach ($importedData as $semanticToken =>$incomingTranslation) {
+                if (empty($semanticToken) || !is_string($incomingTranslation)) continue;
 
-                if (str_starts_with($codeKey, 'public_label_')) {
-                    $masterGroup = 'public_label';
-                    $subgroup = substr($codeKey, 13) ?: 'general';
-                } elseif (str_starts_with($codeKey, 'admin_label_')) {
-                    $masterGroup = 'admin_label';
-                    $subgroup = substr($codeKey, 12) ?: 'general';
+                if (str_starts_with($semanticToken, 'public_label_')) {$prefixGroupTitle = 'public_label';
+                    $groupTitle = substr($semanticToken, 13) ?: 'general';
+                } elseif (str_starts_with($semanticToken, 'admin_label_')) {$prefixGroupTitle = 'admin_label';
+                    $groupTitle = substr($semanticToken, 12) ?: 'general';
                 } else {
-                    $parts = explode('_', $codeKey);
-                    $masterGroup = count($parts) > 0 ? $parts[0] : 'general';
-                    $subgroup = count($parts) > 1 ? $parts[1] : 'general';
+                    $parts = explode('_',$semanticToken);
+                    $prefixGroupTitle = count($parts) > 0 ? $parts[0] : 'general';$groupTitle = count($parts) > 1 ?$parts[1] : 'general';
                 }
 
-                $term = Term::where('code_key', $codeKey)->first();
+                $entry = LexiconCodex::where('semantic_token',$semanticToken)->first();
 
-                if ($term) {
-                    $currentTranslations = $term->translations ?? [];
-                    $currentTranslations[$langCode] = $incomingTranslation;
-                    $term->translations = $currentTranslations;
-                    if ($langCode === 'gb' && $incomingTranslation !== '') {
-                        $term->display_value = $incomingTranslation;
+                if ($entry) {
+                    $currentPayloads =$entry->translation_payloads ?? [];
+                    $currentPayloads[$langCode] =$incomingTranslation;
+                    $entry->translation_payloads =$currentPayloads;
+                    if ($langCode === 'gb' &&$incomingTranslation !== '') {
+                        $entry->default_lexicon_string =$incomingTranslation;
                     }
-                    $term->save();
-                    $mergedCount++;
+                    $entry->save();$mergedCount++;
                 } else {
-                    Term::create([
-                        'code_key'      => $codeKey,
-                        'master_group'  => $masterGroup,
-                        'subgroup'      => $subgroup,
-                        'display_value' => $incomingTranslation ?: $codeKey,
-                        'translations'  => [$langCode => $incomingTranslation]
+                    LexiconCodex::create([
+                        'semantic_token'         => $semanticToken,
+                        'prefix_group_title'     => $prefixGroupTitle,
+                        'group_title'            => $groupTitle,
+                        'default_lexicon_string' => $incomingTranslation ?: $semanticToken,
+                        'translation_payloads'   => [$langCode =>$incomingTranslation]
                     ]);
                     $createdCount++;
                 }
             }
 
             if ($langCode !== 'gb') {
-                $settingKey = 'lexicon_label_' . $langCode;
+                $settingKey = 'lexicon_label_' .$langCode;
                 Configuration::updateOrCreate(
                     ['configuration_token' => $settingKey],
                     ['configuration_payload' => $langName ?: strtoupper($langCode)]
@@ -296,7 +289,7 @@ class SemanticLanguageController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => "Successfully merged {$mergedCount} existing terms and added {$createdCount} new terms for language [{$langCode}]."
+                'message' => "Successfully merged {$mergedCount} existing entries and added {$createdCount} new entries for language [{$langCode}]."
             ]);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Import Exception: ' . $e->getMessage()], 500);
@@ -307,14 +300,11 @@ class SemanticLanguageController extends Controller
     {
         abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
 
-        $terms = Term::all()->mapWithKeys(function ($term) {
-            return [$term->code_key => ""];
+        $entries = LexiconCodex::all()->mapWithKeys(function ($entry) {
+            return [$entry->semantic_token => ""];
         })->toArray();
 
-        $templateData = array_merge([
-            '_lang' => 'new',
-            '_lang_name' => 'New Language'
-        ], $terms);
+        $templateData = array_merge([ '_lang' => 'new', '_lang_name' => 'New Language' ],$entries);
 
         $json = json_encode($templateData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 

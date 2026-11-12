@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Volume;
 use App\Models\ChronologicalRegister;
-use App\Models\ServiceRecord;
 use App\Models\Persona;
 use App\Models\User;
+use App\Models\Volume;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -24,11 +23,10 @@ class VolumeReviewController extends Controller
 
             foreach ($personae as $persona) {
                 if ($persona->user) {
-                    $personaName = $persona->persona_name ?? $persona->name;
                     $recipients->push([
                         'type' => 'character',
                         'id'   => $persona->id,
-                        'name' => $personaName . ' (' . $persona->user->name . ') [Character]',
+                        'name' => $persona->persona_name . ' (' . $persona->user->name . ') [Character]',
                     ]);
                 }
             }
@@ -54,7 +52,6 @@ class VolumeReviewController extends Controller
     {
         $validated = $request->validate([
             'register_event_mode' => 'nullable|in:milestone,assignment,commendation,award',
-            'event_type'          => 'nullable|in:milestone,assignment,commendation,award',
             'chronicle_text'      => 'nullable|string|max:255',
             'volume_synopsis'     => 'nullable|string|max:255',
             'recipients'          => 'required|array',
@@ -62,21 +59,17 @@ class VolumeReviewController extends Controller
             'recipients.*.type'   => 'required|in:character,user',
         ]);
 
-        $eventMode = $validated['register_event_mode'] ?? $validated['event_type'] ?? 'milestone';
+        $eventMode = $validated['register_event_mode'] ?? 'milestone';
         $citationText = $validated['chronicle_text']
             ?? $validated['volume_synopsis']
             ?? $volume->volume_title;
 
-        $registerClass = class_exists(ChronologicalRegister::class)
-            ? ChronologicalRegister::class
-            : ServiceRecord::class;
-
-        DB::transaction(function () use ($validated, $eventMode, $citationText, $registerClass) {
+        DB::transaction(function () use ($validated, $eventMode, $citationText) {
             foreach ($validated['recipients'] as $recipient) {
                 if ($recipient['type'] === 'character') {
                     $persona = Persona::find($recipient['id']);
                     if ($persona) {
-                        $registerClass::create([
+                        ChronologicalRegister::create([
                             'persona_id'          => $persona->id,
                             'user_id'             => $persona->user_id,
                             'authorising_user_id' => auth()->id(),
@@ -88,7 +81,7 @@ class VolumeReviewController extends Controller
                 } else {
                     $user = User::find($recipient['id']);
                     if ($user) {
-                        $registerClass::create([
+                        ChronologicalRegister::create([
                             'user_id'             => $user->id,
                             'authorising_user_id' => auth()->id(),
                             'scope_target'        => 'OOC',

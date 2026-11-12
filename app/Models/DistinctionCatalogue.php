@@ -15,9 +15,4 @@ class DistinctionCatalogue extends Model
     {
         return $this->hasMany(Distinction::class, 'distinction_catalogue_id');
     }
-
-    public function awards(): HasMany
-    {
-        return $this->distinctions();
-    }
 }

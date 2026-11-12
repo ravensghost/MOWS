@@ -3,20 +3,20 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\Module;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\File;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Str;
-use App\Models\Widget;
 
 class ModuleController extends Controller
 {
     /**
-     * Synchronise widget manifests and execute declared widget schema migrations safely.
+     * Synchronise module manifests and execute declared schema migrations safely.
      */
     public function sync(): JsonResponse
     {
@@ -27,43 +27,39 @@ class ModuleController extends Controller
         }
 
         $widgetFiles = File::files($widgetPath);
-        $discoveredWidgets = [];
-        $syncedCount = 0;
+        $discoveredWidgets = [];$syncedCount = 0;
         $schemaChanges = [
             'tables_created' => [],
             'columns_added' => [],
         ];
 
         DB::transaction(function () use ($widgetFiles, &$discoveredWidgets, &$syncedCount, &$schemaChanges) {
-            foreach ($widgetFiles as $file) {
+            foreach ($widgetFiles as$file) {
                 $content = File::get($file);
 
-                if (preg_match('/@WidgetManifest\((.*?)\)\s*--\}\}/s', $content, $matches)) {
+                if (preg_match('/@WidgetManifest\((.*?)\)\s*--\}\}/s', $content,$matches)) {
                     $manifest = json_decode(trim($matches[1]), true);
 
                     if (json_last_error() === JSON_ERROR_NONE) {
-                        $widgetKey = str_replace('.blade.php', '', $file->getFilename());
-                        $discoveredWidgets[$widgetKey] = $manifest;
+                        $moduleToken = str_replace('.blade.php', '', $file->getFilename());$discoveredWidgets[$moduleToken] =$manifest;
 
-                        $defaultOptions = [];
+                        $defaultSettings = [];
                         if (isset($manifest['fields']) && is_array($manifest['fields'])) {
-                            foreach ($manifest['fields'] as $key => $field) {
-                                if (isset($field['default'])) {
-                                    $defaultOptions[$key] = $field['default'];
+                            foreach ($manifest['fields'] as $key =>$field) {
+                                if (isset($field['default'])) {$defaultSettings[$key] =$field['default'];
                                 }
                             }
                         }
 
-                        Widget::updateOrCreate(
-                            ['widget_key' => $widgetKey],
+                        Module::updateOrCreate(
+                            ['module_token' => $moduleToken],
                             [
-                                'name' => $manifest['name'] ?? Str::title(str_replace('_', ' ', $widgetKey)),
-                                'default_options' => json_encode($defaultOptions)
+                                'module_title' => $manifest['module_title'] ?? Str::title(str_replace('_', ' ', $moduleToken)),
+                                'module_default_settings' => $defaultSettings,
                             ]
                         );
 
-                        if (isset($manifest['schema']) && is_array($manifest['schema'])) {
-                            $this->syncWidgetSchema($manifest['schema'], $schemaChanges);
+                        if (isset($manifest['schema']) && is_array($manifest['schema'])) {$this->syncWidgetSchema($manifest['schema'],$schemaChanges);
                         }
 
                         $syncedCount++;
@@ -78,8 +74,7 @@ class ModuleController extends Controller
         $tablesCount = count($schemaChanges['tables_created']);
         $columnsCount = count($schemaChanges['columns_added']);
 
-        if ($tablesCount > 0 || $columnsCount > 0) {
-            $parts = [];
+        if ($tablesCount > 0 || $columnsCount > 0) {$parts = [];
             if ($tablesCount > 0) {
                 $parts[] = "{$tablesCount} table(s) created";
             }
@@ -91,33 +86,32 @@ class ModuleController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => "Successfully synchronised {$syncedCount} widgets{$schemaSummary}.",
+            'message' => "Successfully synchronised {$syncedCount} modules{$schemaSummary}.",
             'data' => $discoveredWidgets,
             'schema_changes' => $schemaChanges,
         ]);
     }
 
     /**
-     * Evaluate a widget's schema declaration and execute Schema::create() or Schema::table() safely.
+     * Evaluate a module's schema declaration and execute Schema::create() or Schema::table() safely.
      */
     protected function syncWidgetSchema(array $schema, array &$schemaChanges): void
     {
-        // 1. Create new tables declared by the widget
+        // 1. Create new tables declared by the module
         if (!empty($schema['tables']) && is_array($schema['tables'])) {
-            foreach ($schema['tables'] as $tableName => $tableSpec) {
+            foreach ($schema['tables'] as $tableName =>$tableSpec) {
                 if (!$this->isValidIdentifier($tableName)) {
                     continue;
                 }
 
                 if (!Schema::hasTable($tableName)) {
-                    Schema::create($tableName, function (Blueprint $table) use ($tableSpec) {
-                        $table->id();
+                    Schema::create($tableName, function (Blueprint$table) use ($tableSpec) {$table->id();
 
-                        $columns = $tableSpec['columns'] ?? [];
+                        $columns =$tableSpec['columns'] ?? [];
                         if (is_array($columns)) {
-                            foreach ($columns as $colName => $colSpec) {
+                            foreach ($columns as $colName =>$colSpec) {
                                 if ($this->isValidIdentifier($colName) && is_array($colSpec)) {
-                                    $this->applyColumnDefinition($table, $colName, $colSpec);
+                                    $this->applyColumnDefinition($table, $colName,$colSpec);
                                 }
                             }
                         }
@@ -127,26 +121,26 @@ class ModuleController extends Controller
                         }
                     });
 
-                    $schemaChanges['tables_created'][] = $tableName;
+                    $schemaChanges['tables_created'][] =$tableName;
                 } else {
                     // If the table already exists, ensure any newly declared columns are added
-                    $columns = $tableSpec['columns'] ?? [];
+                    $columns =$tableSpec['columns'] ?? [];
                     if (is_array($columns)) {
-                        $this->syncTableColumns($tableName, $columns, $schemaChanges);
+                        $this->syncTableColumns($tableName, $columns,$schemaChanges);
                     }
                 }
             }
         }
 
-        // 2. Alter existing tables with additional columns declared by the widget
+        // 2. Alter existing tables with additional columns declared by the module
         if (!empty($schema['alter']) && is_array($schema['alter'])) {
-            foreach ($schema['alter'] as $tableName => $columns) {
+            foreach ($schema['alter'] as $tableName =>$columns) {
                 if (!$this->isValidIdentifier($tableName) || !is_array($columns)) {
                     continue;
                 }
 
                 if (Schema::hasTable($tableName)) {
-                    $this->syncTableColumns($tableName, $columns, $schemaChanges);
+                    $this->syncTableColumns($tableName, $columns,$schemaChanges);
                 }
             }
         }
@@ -159,21 +153,19 @@ class ModuleController extends Controller
     {
         $missingColumns = [];
 
-        foreach ($columns as $colName => $colSpec) {
-            if ($this->isValidIdentifier($colName) && is_array($colSpec) && !Schema::hasColumn($tableName, $colName)) {
-                $missingColumns[$colName] = $colSpec;
+        foreach ($columns as $colName =>$colSpec) {
+            if ($this->isValidIdentifier($colName) && is_array($colSpec) && !Schema::hasColumn($tableName, $colName)) {$missingColumns[$colName] =$colSpec;
             }
         }
 
         if (!empty($missingColumns)) {
             Schema::table($tableName, function (Blueprint $table) use ($missingColumns) {
-                foreach ($missingColumns as $colName => $colSpec) {
-                    $this->applyColumnDefinition($table, $colName, $colSpec);
+                foreach ($missingColumns as $colName =>$colSpec) {
+                    $this->applyColumnDefinition($table, $colName,$colSpec);
                 }
             });
 
-            foreach (array_keys($missingColumns) as $colName) {
-                $schemaChanges['columns_added'][] = "{$tableName}.{$colName}";
+            foreach (array_keys($missingColumns) as $colName) {$schemaChanges['columns_added'][] = "{$tableName}.{$colName}";
             }
         }
     }
@@ -181,7 +173,7 @@ class ModuleController extends Controller
     /**
      * Map a declarative column specification onto Laravel's Blueprint builder using a strict whitelist.
      */
-    protected function applyColumnDefinition(Blueprint $table, string $colName, array $colSpec): void
+    protected function applyColumnDefinition(Blueprint $table, string $colName, array$colSpec): void
     {
         $type = strtolower($colSpec['type'] ?? 'string');
 
@@ -195,28 +187,23 @@ class ModuleController extends Controller
             'json' => $table->json($colName),
             'timestamp' => $table->timestamp($colName),
             'date' => $table->date($colName),
-            'decimal' => $table->decimal(
-                $colName,
-                (int) ($colSpec['precision'] ?? 8),
-                (int) ($colSpec['scale'] ?? 2)
+            'decimal' => $table->decimal($colName,
+                (int) ($colSpec['precision'] ?? 8), (int) ($colSpec['scale'] ?? 2)
             ),
             default => $table->string($colName),
         };
 
-        if (!empty($colSpec['nullable'])) {
-            $column->nullable();
+        if (!empty($colSpec['nullable'])) {$column->nullable();
         }
 
         if (array_key_exists('default', $colSpec)) {
             $column->default($colSpec['default']);
         }
 
-        if (!empty($colSpec['unique'])) {
-            $column->unique();
+        if (!empty($colSpec['unique'])) {$column->unique();
         }
 
-        if (!empty($colSpec['index'])) {
-            $column->index();
+        if (!empty($colSpec['index'])) {$column->index();
         }
     }
 
@@ -225,67 +212,67 @@ class ModuleController extends Controller
      */
     protected function isValidIdentifier(string $identifier): bool
     {
-        return (bool) preg_match('/^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/', $identifier);
+        return (bool) preg_match('/^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/',$identifier);
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'widget_key' => 'required|string|unique:widgets,widget_key',
+            'module_title' => 'required|string|max:255',
+            'module_token' => 'required|string|unique:modules,module_token',
         ]);
 
-        $options = $request->input('options', []);
+        $settings =$request->input('module_default_settings', []);
 
-        if (isset($options['content'])) {
-            $options['content'] = purify($options['content']);
+        if (isset($settings['content'])) {
+            $settings['content'] = purify($settings['content']);
         }
 
-        Widget::create([
-            'name' => $request->name,
-            'widget_key' => $request->widget_key,
-            'default_options' => $options
+        Module::create([
+            'module_title'            => $request->module_title,
+            'module_token'            => $request->module_token,
+            'module_default_settings' => $settings,
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Widget template created successfully!'
+            'message' => 'Module template created successfully!',
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request,$id): JsonResponse
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'widget_key' => 'required|string|unique:widgets,widget_key,' . $id,
+            'module_title' => 'required|string|max:255',
+            'module_token' => 'required|string|unique:modules,module_token,' . $id,
         ]);
 
-        $widget = Widget::findOrFail($id);
-        $options = $request->input('options', []);
+        $module = Module::findOrFail($id);
+        $settings =$request->input('module_default_settings', []);
 
-        if (isset($options['content'])) {
-            $options['content'] = purify($options['content']);
+        if (isset($settings['content'])) {
+            $settings['content'] = purify($settings['content']);
         }
 
-        $widget->update([
-            'name' => $request->name,
-            'widget_key' => $request->widget_key,
-            'default_options' => $options
+        $module->update([
+            'module_title'            => $request->module_title,
+            'module_token'            => $request->module_token,
+            'module_default_settings' => $settings,
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Widget template updated successfully!'
+            'message' => 'Module template updated successfully!',
         ]);
     }
 
-    public function destroy($id)
+    public function destroy($id): JsonResponse
     {
-        Widget::findOrFail($id)->delete();
+        Module::findOrFail($id)->delete();
 
         return response()->json([
             'success' => true,
-            'message' => 'Widget template deleted successfully!'
+            'message' => 'Module template deleted successfully!',
         ]);
     }
 }

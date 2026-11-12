@@ -1,48 +1,48 @@
 // resources/js/managers/candidatePetitionManager.js
 export default (config = {}) => ({
     reviewModalOpen: false,
-    appId: '',
-    charName: '',
+    petitionId: '',
+    personaName: '',
     applicantName: '',
     submittedAt: '',
     answers: [],
     hasParseError: false,
 
     reassignModalOpen: false,
-    charId: '',
+    personaId: '',
     currentPosId: '',
     currentRankId: '',
 
     i18n: {
-        rejectConfirm: config.rejectConfirm || 'Are you sure you want to reject this application?',
+        rejectConfirm: config.rejectConfirm || 'Are you sure you want to reject this candidate petition?',
         confirmRejectBtn: config.confirmRejectBtn || 'Yes, Reject',
-        rejectFailed: config.rejectFailed || 'Failed to reject application.',
+        rejectFailed: config.rejectFailed || 'Failed to reject candidate petition.',
     },
 
-    openReviewModal(data = {}) {
-        this.appId = data.appId || '';
-        this.charName = data.charName || '';
-        this.applicantName = data.applicantName || '';
-        this.submittedAt = data.submittedAt || '';
+    openModal(mode = 'edit', data = {}, context = 'review') {
+        if (context === 'review') {
+            this.petitionId = data.petitionId || '';
+            this.personaName = data.personaName || '';
+            this.applicantName = data.applicantName || '';
+            this.submittedAt = data.submittedAt || '';
 
-        try {
-            const decoded = data.base64Answers ? JSON.parse(atob(data.base64Answers)) : [];
-            this.answers = typeof decoded === 'string' ? JSON.parse(decoded) : decoded;
-            this.hasParseError = false;
-        } catch (e) {
-            this.answers = [];
-            this.hasParseError = true;
+            try {
+                const decoded = data.base64Answers ? JSON.parse(atob(data.base64Answers)) : [];
+                this.answers = typeof decoded === 'string' ? JSON.parse(decoded) : decoded;
+                this.hasParseError = false;
+            } catch (e) {
+                this.answers = [];
+                this.hasParseError = true;
+            }
+
+            this.reviewModalOpen = true;
+        } else if (context === 'reassign') {
+            this.personaId = data.personaId || '';
+            this.personaName = data.personaName || '';
+            this.currentPosId = data.currentPosId || '';
+            this.currentRankId = data.currentRankId || '';
+            this.reassignModalOpen = true;
         }
-
-        this.reviewModalOpen = true;
-    },
-
-    openReassignModal(data = {}) {
-        this.charId = data.charId || '';
-        this.charName = data.charName || '';
-        this.currentPosId = data.currentPosId || '';
-        this.currentRankId = data.currentRankId || '';
-        this.reassignModalOpen = true;
     },
 
     async refreshDOM() {
@@ -57,7 +57,7 @@ export default (config = {}) => ({
         }
     },
 
-    async rejectApplication() {
+    async rejectPetition() {
         const result = await window.Swal.confirm(
             this.i18n.rejectConfirm,
             'You cannot revert this action!',
@@ -66,10 +66,10 @@ export default (config = {}) => ({
 
         if (result.isConfirmed) {
             try {
-                const { ok, data } = await window.Fetch.post(`/admin/applications/${this.appId}/reject`, {}, {
+                const { ok, data } = await window.Fetch.post(`/admin/applications/${this.petitionId}/reject`, {}, {
                     loading: true,
                     loadingTitle: 'Processing...',
-                    loadingHtml: 'Rejecting application...',
+                    loadingHtml: 'Rejecting candidate petition...',
                     showError: false
                 });
 

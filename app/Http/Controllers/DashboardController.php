@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Book;
 use App\Models\CorrespondenceEntry;
 use App\Models\CorrespondenceParticipant;
 use App\Models\Folio;
-use App\Models\Page;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -15,7 +15,7 @@ class DashboardController extends Controller
         $userId = auth()->id();
 
         $draftChapters = Folio::where('author_user_id', $userId)
-            ->where('status', 'draft')
+            ->where('folio_status', 'draft')
             ->orderByDesc('updated_at')
             ->get();
 
@@ -28,11 +28,14 @@ class DashboardController extends Controller
             ->take(10)
             ->get();
 
-        $systemPage = Page::where('slug', 'dashboard')
+        $systemPage = Book::where('book_url', 'dashboard')
             ->where('is_published', true)
-            ->with(['layout.blocks', 'widgets' => function ($q) {
-                $q->orderBy('page_widget.sort_order');
-            }])
+            ->with([
+                'grid.gridModules',
+                'modules' => function ($q) {
+                    $q->orderBy('book_modules.module_sort_order');
+                }
+            ])
             ->first();
 
         $user = auth()->user();
@@ -59,7 +62,7 @@ class DashboardController extends Controller
         );
 
         $message = $isOnLoa
-            ? lexicon('msg_Dashboard_LoaActive', "Leave of Absence active ({$statusLabel}). Your characters and service records have been updated.")
+            ? lexicon('msg_Dashboard_LoaActive', "Leave of Absence active ({$statusLabel}). Your characters and chronological registers have been updated.")
             : lexicon('msg_Dashboard_LoaReturned', 'Welcome back! Your account and characters have been returned to Active Duty.');
 
         if ($request->wantsJson()) {

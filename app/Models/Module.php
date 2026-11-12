@@ -10,26 +10,35 @@ class Module extends Model
 {
     use HasFactory;
 
+    protected $table = 'modules';
+
     protected $fillable = [
-        'name',
-        'widget_key',
-        'default_options',
+        'module_title',
+        'module_token',
+        'module_default_settings',
     ];
 
     protected $casts = [
-        'default_options' => 'array',
+        'module_default_settings' => 'array',
     ];
 
     /**
-     * The pages this widget is attached to.
+     * The books this module is attached to.
      */
-    public function pages(): BelongsToMany
+    public function books(): BelongsToMany
     {
-        return $this->belongsToMany(Book::class, 'page_widget')
-            ->withPivot(['id', 'layout_block_id', 'sort_order', 'instance_options', 'required_permission', 'is_visible'])
+        return $this->belongsToMany(Book::class, 'book_modules', 'module_id', 'book_id')
+            ->withPivot([
+                'id',
+                'grid_module_id',
+                'module_sort_order',
+                'book_config',
+                'access_clearance',
+                'is_visible',
+            ])
             ->withCasts([
-                'instance_options' => 'array',
-                'is_visible'       => 'boolean',
+                'book_config' => 'array',
+                'is_visible'  => 'boolean',
             ])
             ->withTimestamps();
     }

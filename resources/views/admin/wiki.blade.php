@@ -28,7 +28,7 @@
                               id="wiki_search"
                               type="text"
                               :label="lexicon('label_Wiki_FilterArticles', 'Filter Wiki Articles')"
-                              :placeholder="lexicon('label_Wiki_SearchPlaceholder', 'Search by title, category, or content...')"
+                              :placeholder="lexicon('label_Wiki_SearchPlaceholder', 'Search by article_title, article_category, or article_text...')"
                               :tooltip="lexicon('tooltip_Wiki_SearchInput', 'Instantaneously filter wiki articles using fuzzy search')"
                               xModel="searchQuery" />
             </div>
@@ -47,14 +47,14 @@
                     @forelse($articles as $article)
                         <tr class="table-row"
                             data-wiki-search-item
-                            data-title="{{ addslashes($article->title) }}"
-                            data-category="{{ addslashes($article->category) }}"
-                            data-content="{{ addslashes(strip_tags($article->content)) }}"
+                            data-article-title="{{ addslashes($article->article_title) }}"
+                            data-article-category="{{ addslashes($article->article_category) }}"
+                            data-article-text="{{ addslashes(strip_tags($article->article_text)) }}"
                             x-show="isArticleVisible({{ $article->id }})"
                             x-cloak>
-                            <td class="p-4 font-bold text-p">{{ $article->title }}</td>
+                            <td class="p-4 font-bold text-p">{{ $article->article_title }}</td>
                             <td class="p-4 text-muted">
-                                <x-badge type="primary">{{ $article->category }}</x-badge>
+                                <x-badge type="primary">{{ $article->article_category }}</x-badge>
                             </td>
                             <td class="p-4 text-center">
                                 <x-badge :variant="$article->is_visible ? 'success' : 'warning'"
@@ -70,9 +70,9 @@
                                                   class="text-warning hover-warning"
                                                   @click="openWikiModal('edit', {
                                                       id: {{ $article->id }},
-                                                      title: '{{ addslashes($article->title) }}',
-                                                      category: '{{ addslashes($article->category) }}',
-                                                      content: `{!! addslashes($article->content) !!}`,
+                                                      article_title: '{{ addslashes($article->article_title) }}',
+                                                      article_category: '{{ addslashes($article->article_category) }}',
+                                                      article_text: `{!! addslashes($article->article_text) !!}`,
                                                       is_visible: {{ $article->is_visible ? 'true' : 'false' }}
                                                   })"
                                                   aria-label="{{ lexicon('tooltip_common_Edit', 'Edit this wiki article') }}"
@@ -83,7 +83,7 @@
                                         <x-button type="button"
                                                   variant="text"
                                                   class="text-danger hover-danger"
-                                                  x-data="deleteAction(`/admin/wiki/{{ $article->id }}`, 'DELETE', '{{ addslashes($article->title) }}')"
+                                                  x-data="deleteAction(`/admin/wiki/{{ $article->id }}`, 'DELETE', '{{ addslashes($article->article_title) }}')"
                                                   @click="confirmDelete"
                                                   aria-label="{{ lexicon('tooltip_common_Delete', 'Delete this article permanently') }}"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_common_Delete', 'Delete this article permanently')) }}'">
@@ -122,31 +122,31 @@
                         <input type="hidden" name="_method" :value="wikiModal.method">
 
                         <div class="grid grid-cols-1 md-grid-cols-2 gap-md bg-panel-sub border border-panel rounded-panel p-3">
-                            <x-form-input name="title"
-                                          id="wiki_title"
+                            <x-form-input name="article_title"
+                                          id="wiki_article_title"
                                           type="text"
                                           :label="lexicon('label_common_Title', 'Title')"
                                           :tooltip="lexicon('tooltip_Wiki_TitleInput', 'Enter article title')"
-                                          xModel="wikiModal.title"
+                                          xModel="wikiModal.article_title"
                                           :required="true" />
 
-                            <x-form-input name="category"
-                                          id="wiki_category"
+                            <x-form-input name="article_category"
+                                          id="wiki_article_category"
                                           type="text"
                                           :label="lexicon('label_common_Category', 'Category')"
                                           :tooltip="lexicon('tooltip_Wiki_CategoryInput', 'Enter category namespace (e.g. Technology, Species, History)')"
-                                          xModel="wikiModal.category"
+                                          xModel="wikiModal.article_category"
                                           :required="true" />
                         </div>
 
                         <div class="flex flex-col gap-xs mt-2">
                             <label class="text-xs font-bold text-input-muted">{{ lexicon('label_common_Content', 'Content') }}</label>
                             <div class="bg-panel border border-panel rounded-panel flex flex-col overflow-hidden"
-                                 x-data="tiptapEditor(wikiModal.content)"
-                                 @tiptap-update="wikiModal.content = $event.detail">
+                                 x-data="tiptapEditor(wikiModal.article_text)"
+                                 @tiptap-update="wikiModal.article_text = $event.detail">
                                 <x-tiptap-toolbar />
                                 <div x-ref="editorContainer" class="p-3 flex-grow tiptap-content min-h-[250px]"></div>
-                                <input type="hidden" name="content" :value="wikiModal.content">
+                                <input type="hidden" name="article_text" :value="wikiModal.article_text">
                             </div>
                         </div>
 

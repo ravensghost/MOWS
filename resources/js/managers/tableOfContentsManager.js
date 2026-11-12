@@ -1,92 +1,117 @@
 // resources/js/managers/tableOfContentsManager.js
 export default () => ({
+    // 1. State Properties Upfront
+    isOpen: false,
+    open: false,
+    mode: 'create',
+    id: '',
+    action: '/admin/navigation',
+    formAction: '/admin/navigation',
+    method: 'POST',
+    parent_entry_id: '',
+    group_title: '',
+    group_sort_order: 0,
+    translation_code_key: '',
+    destination_url: '',
+    display_location: 'primary',
+    access_clearance: 'public',
+    required_permission: '',
+    window_target: '_self',
+    entry_sort_order: 0,
+    is_visible: true,
     searchQuery: '',
     searchHelperInstance: null,
-    matchedIds: null,
+    filteredIds: null,
+    isLoading: false,
 
-    linkModal: {
-        open: false,
-        mode: 'create',
-        id: '',
-        parent_id: '',
-        group_name: '',
-        group_order: 0,
-        lexicon_key: '',
-        url: '',
-        location: 'primary',
-        visibility: 'public',
-        required_permission: '',
-        target: '_self',
-        order: 0,
-        is_visible: true,
-        action: '/admin/navigation',
-        method: 'POST'
+    // 2. Lifecycle Hook
+    init() {
+        this.initSearch();
     },
 
-    init() {
-        this.initFuse();
+    // 3. Search & Filtering (Fuse.js Integration)
+    initSearch() {
+        if (window.Search && this.$el.querySelector('[data-search-item]')) {
+            try {
+                this.searchHelperInstance = window.Search.create(
+                    '[data-search-item]',
+                    ['translation_code_key', 'destination_url', 'group_title', 'display_location'],
+                    { threshold: 0.35 }
+                );
+            } catch (e) {
+                this.searchHelperInstance = null;
+            }
+        }
         this.$watch('searchQuery', (val) => {
-            if (!val.trim()) {
-                this.matchedIds = null;
+            if (!val.trim() || !this.searchHelperInstance) {
+                this.filteredIds = null;
                 return;
             }
-            if (this.searchHelperInstance) {
-                const results = this.searchHelperInstance.search(val.trim());
-                this.matchedIds = results ? results.map(id => Number(id)) : [];
-            }
+            const results = this.searchHelperInstance.search(val.trim());
+            this.filteredIds = results ? results.map(id => Number(id)) : [];
         });
     },
 
-    initFuse() {
-        if (window.Search) {
-            this.searchHelperInstance = window.Search.create('[data-nav-search-item]', ['lexicon_key', 'url', 'group_name', 'location'], {
-                threshold: 0.35
-            });
+    isItemVisible(id, childIds = []) {
+        if (!this.searchQuery.trim() || this.filteredIds === null) return true;
+        if (this.filteredIds.includes(Number(id))) return true;
+        return Array.isArray(childIds) && childIds.some(childId => this.filteredIds.includes(Number(childId)));
+    },
+
+    // 4. Modal Handlers (Using window.Modal utility)
+    openModal(mode, data = {}) {
+        const baseUrl = '/admin/navigation';
+        if (mode === 'create') {
+            window.Modal.create(this, {
+                parent_entry_id: '',
+                group_title: '',
+                group_sort_order: 0,
+                translation_code_key: '',
+                destination_url: '',
+                display_location: 'primary',
+                access_clearance: 'public',
+                required_permission: '',
+                window_target: '_self',
+                entry_sort_order: 0,
+                is_visible: true
+            }, baseUrl);
+            this.formAction = baseUrl;
+            this.action = baseUrl;
+        } else {
+            window.Modal.edit(this, {
+                ...data,
+                parent_entry_id: data.parent_entry_id && data.parent_entry_id !== 'null' ? String(data.parent_entry_id) : '',
+                group_title: data.group_title && data.group_title !== 'null' ? data.group_title : '',
+                required_permission: data.required_permission && data.required_permission !== 'null' ? data.required_permission : '',
+                is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true
+            }, (id) => `${baseUrl}/${id}`);
+            this.formAction = `${baseUrl}/${data.id}`;
+            this.action = `${baseUrl}/${data.id}`;
         }
+        this.isOpen = true;
+        this.open = true;
     },
 
-    isLinkVisible(id, childIds = []) {
-        if (this.matchedIds === null) return true;
-        if (this.matchedIds.includes(Number(id))) return true;
-        return childIds.some(childId => this.matchedIds.includes(Number(childId)));
+    closeModal() {
+        window.Modal.close(this);
+        this.isOpen = false;
+        this.open = false;
     },
 
+    // 5. DOM Refresh Handler (sanitize = false)
     async refreshDOM() {
         if (typeof window.updateDOM === 'function') {
-            await window.updateDOM(this.$refs, ['navTableContent', 'navModalDropdowns'], () => {
-                this.linkModal.open = false;
+            await window.updateDOM(this.$refs, ['tocTableContent', 'tocModalDropdowns'], () => {
+                this.closeModal();
                 this.$nextTick(() => {
-                    this.initFuse();
+                    this.initSearch();
                 });
             }, false);
         } else {
-            this.linkModal.open = false;
+            this.closeModal();
             this.$nextTick(() => {
-                this.initFuse();
+                this.initSearch();
             });
         }
-    },
-
-    openLinkModal(mode, data = {}) {
-        if (mode === 'create') {
-            window.Modal.create(this.linkModal, {
-                location: 'primary',
-                visibility: 'public',
-                target: '_self',
-                is_visible: true,
-                group_order: 0,
-                order: 0
-            }, '/admin/navigation');
-        } else {
-            window.Modal.edit(this.linkModal, data, (id) => `/admin/navigation/${id}`);
-        }
-
-        this.linkModal.group_name = data.group_name && data.group_name !== 'null' ? data.group_name : '';
-        this.linkModal.required_permission = data.required_permission && data.required_permission !== 'null' ? data.required_permission : '';
-        this.linkModal.is_visible = data.is_visible !== undefined ? Boolean(data.is_visible) : true;
-    },
-
-    closeLinkModal() {
-        window.Modal.close(this.linkModal);
     }
 });

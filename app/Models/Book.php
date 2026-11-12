@@ -16,7 +16,7 @@ class Book extends Model
     ];
 
     /**
-     * The grid layout assigned to this book.
+     * The grid assigned to this book.
      */
     public function grid(): BelongsTo
     {
@@ -24,9 +24,9 @@ class Book extends Model
     }
 
     /**
-     * The modules assigned to this book's layout blocks.
+     * The modules assigned to this book's grid modules.
      */
-    public function module(): BelongsToMany
+    public function modules(): BelongsToMany
     {
         return $this->belongsToMany(Module::class, 'book_modules', 'book_id', 'module_id')
             ->withPivot([
@@ -35,13 +35,29 @@ class Book extends Model
                 'module_sort_order',
                 'book_config',
                 'access_clearance',
-                'is_visible'
+                'is_visible',
             ])
             ->withCasts([
                 'book_config' => 'array',
-                'is_visible' => 'boolean',
+                'is_visible'  => 'boolean',
             ])
             ->orderByPivot('module_sort_order', 'asc')
             ->withTimestamps();
+    }
+
+    /**
+     * Singular alias for modules.
+     */
+    public function module(): BelongsToMany
+    {
+        return $this->modules();
+    }
+
+    /**
+     * Only the visible modules assigned to this book's grid modules.
+     */
+    public function visibleModules(): BelongsToMany
+    {
+        return $this->modules()->wherePivot('is_visible', true);
     }
 }

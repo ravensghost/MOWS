@@ -1,9 +1,10 @@
 @extends('layouts.app')
 
 @php
-    $studlyType = \Illuminate\Support\Str::studly($type);
-    $formKey = 'public_label_' . $studlyType . 'Form';
-    $formTitle = ucfirst($type) . ' Form';
+    $activeMode = $metaMode ?? 'application';
+    $studlyMode = \Illuminate\Support\Str::studly($activeMode);
+    $formKey = 'public_label_' . $studlyMode . 'Form';
+    $formTitle = ucfirst($activeMode) . ' Form';
 @endphp
 
 @section('title', lexicon($formKey, $formTitle))
@@ -19,7 +20,7 @@
             <!-- Form Panel -->
             <x-accordion-panel :title="lexicon($formKey, $formTitle)" :expanded="true">
                 <form method="POST"
-                      action="/form/submit/{{ $type }}"
+                      action="/form/submit/{{ $activeMode }}"
                       x-data="ajaxForm"
                       x-ref="dynamicForm"
                       @submit.prevent="submit"

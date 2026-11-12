@@ -12,7 +12,7 @@ class Volume extends Model
     protected $guarded = [];
 
     /**
-     * Canonical relationship to the parent Shelf (formerly Bookcase).
+     * Canonical relationship to the parent Shelf.
      */
     public function shelf(): BelongsTo
     {
@@ -20,15 +20,7 @@ class Volume extends Model
     }
 
     /**
-     * Legacy alias for shelf().
-     */
-    public function bookcase(): BelongsTo
-    {
-        return $this->shelf();
-    }
-
-    /**
-     * Canonical relationship to child Folios (formerly Chapters).
+     * Canonical relationship to child Folios.
      */
     public function folios(): HasMany
     {
@@ -36,27 +28,11 @@ class Volume extends Model
     }
 
     /**
-     * Legacy alias for folios().
-     */
-    public function chapters(): HasMany
-    {
-        return $this->folios();
-    }
-
-    /**
-     * Canonical relationship to the PublicationState (formerly Status).
+     * Canonical relationship to the PublicationState.
      */
     public function publicationState(): BelongsTo
     {
         return $this->belongsTo(PublicationState::class, 'publication_state_id');
-    }
-
-    /**
-     * Legacy alias for publicationState().
-     */
-    public function status(): BelongsTo
-    {
-        return $this->publicationState();
     }
 
     /**

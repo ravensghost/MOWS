@@ -5,14 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use App\Models\Position;
+use App\Models\Assignment;
 
 class AssignmentController extends Controller
 {
     /**
-     * Clear cached roster and manifest position data.
+     * Clear cached roster and manifest assignment data.
      */
-    private function clearPositionCaches(): void
+    private function clearAssignmentCaches(): void
     {
         Cache::forget('widget_roster_sections');
         Cache::forget('widget_manifest_sections');
@@ -23,71 +23,71 @@ class AssignmentController extends Controller
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
 
         $validated = $request->validate([
-            'name'        => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'capacity'    => 'nullable|integer|min:1|max:999',
-            'is_open'     => 'nullable|boolean',
-            'is_visible'  => 'nullable|boolean',
+            'assignment_title'       => 'required|string|max:255',
+            'assignment_description' => 'nullable|string',
+            'maximum_occupants'      => 'nullable|integer|min:1|max:999',
+            'is_recruitment_open'    => 'nullable|boolean',
+            'is_visible'             => 'nullable|boolean',
         ]);
 
-        $position = Position::create([
-            'section_id'  => $id,
-            'name'        => $validated['name'],
-            'description' => $validated['description'] ?? null,
-            'capacity'    => $validated['capacity'] ?? 1,
-            'is_open'     => $request->boolean('is_open', false),
-            'is_visible'  => $request->boolean('is_visible', false),
+        $assignment = Assignment::create([
+            'division_id'            => $id,
+            'assignment_title'       => $validated['assignment_title'],
+            'assignment_description' => $validated['assignment_description'] ?? null,
+            'maximum_occupants'      => $validated['maximum_occupants'] ?? 1,
+            'is_recruitment_open'    => $request->boolean('is_recruitment_open', false),
+            'is_visible'             => $request->boolean('is_visible', false),
         ]);
 
-        $this->clearPositionCaches();
+        $this->clearAssignmentCaches();
 
         return response()->json([
             'status'  => 'success',
             'success' => true,
-            'data'    => $position,
+            'data'    => $assignment,
             'message' => lexicon('msg_SectionsPositions_PositionCreated', 'Position created successfully.'),
         ]);
     }
 
-    public function update(Request $request, Position $position)
+    public function update(Request $request, Assignment $assignment)
     {
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
 
         $validated = $request->validate([
-            'section_id'  => 'required|exists:sections,id',
-            'name'        => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'capacity'    => 'nullable|integer|min:1|max:999',
-            'is_open'     => 'nullable|boolean',
-            'is_visible'  => 'nullable|boolean',
+            'division_id'            => 'required|exists:divisions,id',
+            'assignment_title'       => 'required|string|max:255',
+            'assignment_description' => 'nullable|string',
+            'maximum_occupants'      => 'nullable|integer|min:1|max:999',
+            'is_recruitment_open'    => 'nullable|boolean',
+            'is_visible'             => 'nullable|boolean',
         ]);
 
-        $position->update([
-            'section_id'  => $validated['section_id'],
-            'name'        => $validated['name'],
-            'description' => $validated['description'] ?? null,
-            'capacity'    => $validated['capacity'] ?? 1,
-            'is_open'     => $request->boolean('is_open', false),
-            'is_visible'  => $request->boolean('is_visible', false),
+        $assignment->update([
+            'division_id'            => $validated['division_id'],
+            'assignment_title'       => $validated['assignment_title'],
+            'assignment_description' => $validated['assignment_description'] ?? null,
+            'maximum_occupants'      => $validated['maximum_occupants'] ?? 1,
+            'is_recruitment_open'    => $request->boolean('is_recruitment_open', false),
+            'is_visible'             => $request->boolean('is_visible', false),
         ]);
 
-        $this->clearPositionCaches();
+        $this->clearAssignmentCaches();
 
         return response()->json([
             'status'  => 'success',
             'success' => true,
-            'data'    => $position,
+            'data'    => $assignment,
             'message' => lexicon('msg_SectionsPositions_PositionUpdated', 'Position updated successfully.'),
         ]);
     }
 
-    public function destroy(Position $position)
+    public function destroy(Assignment $assignment)
     {
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
 
-        $position->delete();
+        $assignment->delete();
 
-        $this->clearPositionCaches();
+        $this->clearAssignmentCaches();
 
         return response()->json([
             'status'  => 'success',

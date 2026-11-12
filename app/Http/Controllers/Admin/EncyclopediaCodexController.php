@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\WikiArticle;
+use App\Models\EncyclopediaCodex;
 use App\Models\Page;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Stevebauman\Purify\Facades\Purify;
 
 class EncyclopediaCodexController extends Controller
@@ -18,14 +19,16 @@ class EncyclopediaCodexController extends Controller
             lexicon('msg_Wiki_Unauthorised', 'Unauthorised access to the Encyclopedia Codex.')
         );
 
-        $systemPage = Page::where('slug', 'admin/wiki')
+        $systemPage = Page::where('page_url', 'admin/wiki')
             ->where('is_published', true)
             ->with(['layout.blocks', 'widgets' => function ($query) {
                 $query->orderBy('page_widget.sort_order');
             }])
             ->firstOrFail();
 
-        $articles = WikiArticle::orderBy('category')->orderBy('title')->get();
+        $articles = EncyclopediaCodex::orderBy('article_category')
+            ->orderBy('article_title')
+            ->get();
 
         return view('admin.wiki', compact('systemPage', 'articles'));
     }
@@ -39,16 +42,16 @@ class EncyclopediaCodexController extends Controller
         );
 
         $validated = $request->validate([
-            'title'      => 'required|string|max:255',
-            'category'   => 'required|string|max:255',
-            'content'    => 'required|string',
-            'is_visible' => 'boolean',
+            'article_title'    => 'required|string|max:255',
+            'article_category' => 'required|string|max:255',
+            'article_text'     => 'required|string',
+            'is_visible'       => 'boolean',
         ]);
 
-        $validated['content'] = Purify::clean($validated['content']);
-        $validated['slug'] = \Illuminate\Support\Str::slug($validated['title']);
+        $validated['article_text'] = Purify::clean($validated['article_text']);
+        $validated['article_url']  = Str::slug($validated['article_title']);
 
-        WikiArticle::create($validated);
+        EncyclopediaCodex::create($validated);
 
         return response()->json([
             'status'  => 'success',
@@ -56,7 +59,7 @@ class EncyclopediaCodexController extends Controller
         ]);
     }
 
-    public function update(Request $request, WikiArticle $wikiArticle)
+    public function update(Request $request, EncyclopediaCodex $encyclopediaCodex)
     {
         abort_unless(
             auth()->user()?->can('manage_wiki'),
@@ -65,14 +68,16 @@ class EncyclopediaCodexController extends Controller
         );
 
         $validated = $request->validate([
-            'title'      => 'required|string|max:255',
-            'category'   => 'required|string|max:255',
-            'content'    => 'required|string',
-            'is_visible' => 'boolean',
+            'article_title'    => 'required|string|max:255',
+            'article_category' => 'required|string|max:255',
+            'article_text'     => 'required|string',
+            'is_visible'       => 'boolean',
         ]);
 
-        $validated['content'] = Purify::clean($validated['content']);
-        $wikiArticle->update($validated);
+        $validated['article_text'] = Purify::clean($validated['article_text']);
+        $validated['article_url']  = Str::slug($validated['article_title']);
+
+        $encyclopediaCodex->update($validated);
 
         return response()->json([
             'status'  => 'success',
@@ -80,7 +85,7 @@ class EncyclopediaCodexController extends Controller
         ]);
     }
 
-    public function destroy(WikiArticle $wikiArticle)
+    public function destroy(EncyclopediaCodex $encyclopediaCodex)
     {
         abort_unless(
             auth()->user()?->can('manage_wiki'),
@@ -88,7 +93,7 @@ class EncyclopediaCodexController extends Controller
             lexicon('msg_Wiki_Unauthorised', 'Unauthorised access to the Encyclopedia Codex.')
         );
 
-        $wikiArticle->delete();
+        $encyclopediaCodex->delete();
 
         return response()->json([
             'status'  => 'success',

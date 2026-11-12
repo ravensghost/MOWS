@@ -5,10 +5,10 @@
 @section('content')
 <div x-data="publicationManager" 
      @ajax-success.window="refreshDOM($event.detail)"
-     @open-status-modal.window="openStatusModal($event.detail)"
-     @open-shelf-modal.window="openShelfModal($event.detail)"
-     @open-volume-modal.window="openVolumeModal($event.detail)"
-     @open-move-folio-modal.window="openMoveFolioModal($event.detail)">
+     @open-status-modal.window="openModal($event.detail.mode, $event.detail, 'status')"
+     @open-shelf-modal.window="openModal($event.detail.mode, $event.detail, 'shelf')"
+     @open-volume-modal.window="openModal($event.detail.mode, $event.detail, 'volume')"
+     @open-move-folio-modal.window="openModal('edit', $event.detail, 'move')">
 
     <x-admin-grid-wrapper :page="$systemPage">
         
@@ -29,7 +29,7 @@
                     <x-button type="button" 
                               variant="success" 
                               class="p-btn-sm text-sm flex flex-row items-center gap-xs" 
-                              @click="openShelfModal({ mode: 'create' })"
+                              @click="openModal('create', {}, 'shelf')"
                               x-tooltip="'{{ addslashes(lexicon('tooltip_Story_AddShelf', 'Create a new shelf to organise volumes')) }}'"
                               aria-label="{{ lexicon('tooltip_Story_AddShelf', 'Create a new shelf to organise volumes') }}">
                         <i class="bi bi-plus-lg"></i>
@@ -55,7 +55,7 @@
 
                 {{-- Shelves & Nested Volumes --}}
                 <div id="shelves-wrapper" x-ref="shelvesWrapper">
-                    <div class="flex flex-col gap-lg" id="sortable-shelves" x-data="sortableHelper('/admin/bookcases/reorder', 'shelf_sort_order')">
+                    <div class="flex flex-col gap-lg" id="sortable-shelves" x-data="sortableHelper('/admin/shelves/reorder', 'shelf_sort_order')">
                         @forelse($shelves as $shelf)
                             <div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col overflow-hidden w-full" 
                                  data-id="{{ $shelf->id }}" 
@@ -78,7 +78,7 @@
                                         <x-button type="button" 
                                                   variant="success" 
                                                   class="p-btn-sm text-xs flex flex-row items-center gap-xs" 
-                                                  @click.stop="openVolumeModal({ mode: 'create', shelf_id: '{{ $shelf->id }}' })"
+                                                  @click.stop="openModal('create', { shelf_id: '{{ $shelf->id }}' }, 'volume')"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Story_AddVolume', 'Add a new volume to this shelf')) }}'"
                                                   aria-label="{{ lexicon('tooltip_Story_AddVolume', 'Add a new volume to this shelf') }}">
                                             <i class="bi bi-plus-lg"></i>
@@ -90,7 +90,7 @@
                                         <x-button type="button" 
                                                   variant="text" 
                                                   class="text-warning hover-text-h text-sm flex flex-row items-center gap-xs" 
-                                                  @click="openShelfModal({{ json_encode(['mode' => 'edit', 'id' => $shelf->id, 'shelf_title' => $shelf->shelf_title]) }})"
+                                                  @click="openModal('edit', {{ json_encode(['id' => $shelf->id, 'shelf_title' => $shelf->shelf_title]) }}, 'shelf')"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Story_EditShelf', 'Rename this shelf')) }}'"
                                                   aria-label="{{ lexicon('tooltip_Story_EditShelf', 'Rename this shelf') }}">
                                             <i class="bi bi-pencil"></i>
@@ -99,7 +99,7 @@
                                         <x-button type="button" 
                                                   variant="text" 
                                                   class="text-danger hover-text-h text-sm flex flex-row items-center gap-xs" 
-                                                  x-data="deleteAction('/admin/bookcases/{{ $shelf->id }}', 'DELETE', '{{ addslashes($shelf->shelf_title) }}')" 
+                                                  x-data="deleteAction('/admin/shelves/{{ $shelf->id }}', 'DELETE', '{{ addslashes($shelf->shelf_title) }}')" 
                                                   @click.prevent="confirmDelete()"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Story_DeleteShelf', 'Delete this shelf')) }}'"
                                                   aria-label="{{ lexicon('tooltip_Story_DeleteShelf', 'Delete this shelf') }}">
@@ -113,9 +113,9 @@
                                      class="bg-panel-sub flex flex-col gap-md p-panel w-full box-border sortable-volumes" 
                                      id="sortable-volumes-{{ $shelf->id }}" 
                                      data-shelf-id="{{ $shelf->id }}"
-                                     x-data="sortableHelper('/admin/books/reorder', 'volume_sort_order')">
+                                     x-data="sortableHelper('/admin/volumes/reorder', 'volume_sort_order')">
                                     @forelse($shelf->volumes as $volume)
-                                        <x-story-book-panel :book="$volume" :isLoose="false" />
+                                        <x-volume-panel :volume="$volume" :isLoose="false" />
                                     @empty
                                         <div class="p-4 text-center text-muted italic">
                                             <span>{{ lexicon('msg_Story_NoVolumesInShelf', 'No volumes placed on this shelf.') }}</span>
@@ -135,9 +135,9 @@
                 <div id="loose-volumes-wrapper" x-ref="looseVolumesWrapper">
                     @if(count($looseVolumes) > 0)
                         <x-accordion-panel :title="lexicon('label_Story_LooseVolumes', 'Loose Volumes (Unassigned)')" :expanded="false">
-                            <div class="flex flex-col gap-md" id="sortable-loose-volumes" x-data="sortableHelper('/admin/books/reorder', 'volume_sort_order')">
+                            <div class="flex flex-col gap-md" id="sortable-loose-volumes" x-data="sortableHelper('/admin/volumes/reorder', 'volume_sort_order')">
                                 @foreach($looseVolumes as $volume)
-                                    <x-story-book-panel :book="$volume" :isLoose="true" />
+                                    <x-volume-panel :volume="$volume" :isLoose="true" />
                                 @endforeach
                             </div>
                         </x-accordion-panel>
@@ -151,7 +151,7 @@
                             <x-button type="button" 
                                       variant="success" 
                                       class="p-btn-sm text-sm flex flex-row items-center gap-xs" 
-                                      @click="openStatusModal({ mode: 'create' })"
+                                      @click="openModal('create', {}, 'status')"
                                       x-tooltip="'{{ addslashes(lexicon('tooltip_Story_AddStatus', 'Create a new publication state')) }}'"
                                       aria-label="{{ lexicon('tooltip_Story_AddStatus', 'Create a new publication state') }}">
                                 <i class="bi bi-plus-lg"></i>
@@ -179,7 +179,7 @@
                                             <x-button type="button" 
                                                       variant="text" 
                                                       class="text-warning hover-text-h text-xs flex flex-row items-center gap-xs" 
-                                                      @click="openStatusModal({{ json_encode(['mode' => 'edit', 'id' => $status->id, 'state_title' => $status->state_title]) }})"
+                                                      @click="openModal('edit', {{ json_encode(['id' => $status->id, 'state_title' => $status->state_title]) }}, 'status')"
                                                       x-tooltip="'{{ addslashes(lexicon('tooltip_Story_EditStatus', 'Edit publication state')) }}'"
                                                       aria-label="{{ lexicon('tooltip_Story_EditStatus', 'Edit publication state') }}">
                                                 <i class="bi bi-pencil"></i>
@@ -440,8 +440,8 @@
                 </form>
             </x-modal>
 
-            {{-- MODAL 5: End-of-Book Service Record Review Modal --}}
-            @include('admin.bookreview')
+            {{-- MODAL 5: End-of-Volume Service Record Review Modal --}}
+            @include('admin.volume_reviews')
         </x-slot:bottom>
         
     </x-admin-grid-wrapper>

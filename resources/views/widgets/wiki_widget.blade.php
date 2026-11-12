@@ -4,7 +4,7 @@
     "description": "Displays lore articles, world-building notes, and guides with search and category filtering.",
     "icon": "bi-journal-richtext",
     "fields": {
-        "title": {
+        "article_title": {
             "type": "text",
             "label": "Encyclopedia Title (Leave blank to hide header)",
             "default": "Encyclopedia"
@@ -13,8 +13,11 @@
 })
 --}}
 @php
-    $articles = \App\Models\WikiArticle::where('is_visible', true)->orderBy('category')->orderBy('title')->get();
-    $categories = $articles->pluck('category')->unique();
+    $articles = \App\Models\EncyclopediaCodex::where('is_visible', true)
+        ->orderBy('article_category')
+        ->orderBy('article_title')
+        ->get();
+    $categories = $articles->pluck('article_category')->unique();
 @endphp
 
 <div class="w-full" x-data="{ search: '', selectedCategory: 'all' }">
@@ -34,14 +37,14 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-md">
         @foreach($articles as $article)
             <div class="bg-panel border-panel rounded-panel shadow-panel p-4 flex flex-col justify-between"
-                 x-show="(selectedCategory === 'all' || selectedCategory === '{{ $article->category }}') && (search === '' || '{{ strtolower($article->title) }}'.includes(search.toLowerCase()) || '{{ strtolower($article->content) }}'.includes(search.toLowerCase()))">
+                 x-show="(selectedCategory === 'all' || selectedCategory === '{{ $article->article_category }}') && (search === '' || '{{ strtolower(addslashes($article->article_title)) }}'.includes(search.toLowerCase()) || '{{ strtolower(addslashes(strip_tags($article->article_text))) }}'.includes(search.toLowerCase()))">
                 <div>
                     <div class="flex justify-between items-center mb-2">
-                        <h3 class="text-lg font-bold text-h">{{ $article->title }}</h3>
-                        <span class="text-xs px-2 py-0.5 bg-accent-muted text-accent rounded">{{ $article->category }}</span>
+                        <h3 class="text-lg font-bold text-h">{{ $article->article_title }}</h3>
+                        <span class="text-xs px-2 py-0.5 bg-accent-muted text-accent rounded">{{ $article->article_category }}</span>
                     </div>
                     <div class="text-sm text-body prose max-none">
-                        {!! $article->content !!}
+                        {!! $article->article_text !!}
                     </div>
                 </div>
             </div>

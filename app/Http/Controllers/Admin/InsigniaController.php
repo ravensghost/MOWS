@@ -29,35 +29,48 @@ class InsigniaController extends Controller
 
         $systemPage = Page::where('slug', 'admin/ranks')
             ->where('is_published', true)
-            ->with(['layout.blocks', 'widgets' => function ($query) {$query->orderBy('page_widget.insignia_sort_order');
+            ->with(['layout.blocks', 'widgets' => function ($query) {
+                $query->orderBy('page_widget.insignia_sort_order');
             }])
             ->firstOrFail();
 
-        $rankSets = InsigniaCatalogue::with(['insignia' => function ($q) {$q->orderBy('insignia_sort_order');
+        $rankSets = InsigniaCatalogue::with(['insignia' => function ($q) {
+            $q->orderBy('insignia_sort_order');
         }, 'divisions'])->get();
 
         $sections = Division::orderBy('division_sort_order')->get();
 
-        $skinSettings = Configuration::where('configuration_token', 'like', 'theme_%')->pluck('configuration_payload', 'configuration_token')->toArray();
-        $baseLayer =$skinSettings['theme_base'] ?? '#1a1a1a';
+        $skinSettings = Configuration::where('configuration_token', 'like', 'theme_%')
+            ->pluck('configuration_payload', 'configuration_token')
+            ->toArray();
+        $baseLayer = $skinSettings['theme_base'] ?? '#1a1a1a';
         $departmentColor = '#991b1b';
 
         $midShapes = [];
-        $topShapes = [];$cssPath = resource_path('css/ranks.css');
+        $topShapes = [];
+        $cssPath = resource_path('css/ranks.css');
 
         if (File::exists($cssPath)) {
             $cssContent = File::get($cssPath);
 
-            preg_match_all('/\.shape-mid-([a-zA-Z0-9\-]+)/', $cssContent,$midMatches);
-            preg_match_all('/\.shape-top-([a-zA-Z0-9\-]+)/', $cssContent,$topMatches);
+            preg_match_all('/\.shape-mid-([a-zA-Z0-9\-]+)/', $cssContent, $midMatches);
+            preg_match_all('/\.shape-top-([a-zA-Z0-9\-]+)/', $cssContent, $topMatches);
 
             if (!empty($midMatches[0])) {
-                foreach (array_unique($midMatches[0]) as $class) {$className = ltrim($class, '.');$parts = explode('-', $className);$label = ucfirst(end($parts));$midShapes[$className] =$label;
+                foreach (array_unique($midMatches[0]) as $class) {
+                    $className = ltrim($class, '.');
+                    $parts = explode('-', $className);
+                    $label = ucfirst(end($parts));
+                    $midShapes[$className] = $label;
                 }
             }
 
             if (!empty($topMatches[0])) {
-                foreach (array_unique($topMatches[0]) as $class) {$className = ltrim($class, '.');$parts = explode('-', $className);$label = ucfirst(end($parts));$topShapes[$className] =$label;
+                foreach (array_unique($topMatches[0]) as $class) {
+                    $className = ltrim($class, '.');
+                    $parts = explode('-', $className);
+                    $label = ucfirst(end($parts));
+                    $topShapes[$className] = $label;
                 }
             }
         }
@@ -76,9 +89,9 @@ class InsigniaController extends Controller
 
         if (File::exists($directory)) {
             $files = File::files($directory);
-            foreach ($files as$file) {
+            foreach ($files as $file) {
                 if (in_array(strtolower($file->getExtension()), ['png', 'svg', 'webp', 'jpg', 'jpeg'])) {
-                    $images[] =$file->getFilename();
+                    $images[] = $file->getFilename();
                 }
             }
         }
@@ -90,7 +103,7 @@ class InsigniaController extends Controller
     {
         abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
 
-        $validated =$request->validate([
+        $validated = $request->validate([
             'insignia_catalogue_id' => 'required|exists:insignia_catalogues,id',
             'insignia_title'        => 'required|string|max:255',
             'abbreviated_title'     => 'required|string|max:50',
@@ -107,7 +120,7 @@ class InsigniaController extends Controller
             'is_visible'            => 'nullable|boolean',
         ]);
 
-        $validated['is_visible'] =$request->boolean('is_visible', false);
+        $validated['is_visible'] = $request->boolean('is_visible', false);
         Insignia::create($validated);
 
         $this->clearRankCaches();
@@ -115,11 +128,11 @@ class InsigniaController extends Controller
         return response()->json(['status' => 'success', 'message' => lexicon('msg_Ranks_Created', 'Rank created successfully.')]);
     }
 
-    public function update(Request $request, Insignia$rank)
+    public function update(Request $request, Insignia $rank)
     {
         abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
 
-        $validated =$request->validate([
+        $validated = $request->validate([
             'insignia_catalogue_id' => 'required|exists:insignia_catalogues,id',
             'insignia_title'        => 'required|string|max:255',
             'abbreviated_title'     => 'required|string|max:50',
@@ -136,7 +149,7 @@ class InsigniaController extends Controller
             'is_visible'            => 'nullable|boolean',
         ]);
 
-        $validated['is_visible'] =$request->boolean('is_visible', false);
+        $validated['is_visible'] = $request->boolean('is_visible', false);
         $rank->update($validated);
 
         $this->clearRankCaches();
@@ -159,14 +172,14 @@ class InsigniaController extends Controller
     {
         abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
 
-        $validated =$request->validate([
+        $validated = $request->validate([
             'items'                       => 'required|array',
             'items.*.id'                  => 'required|exists:insignia,id',
             'items.*.insignia_sort_order' => 'required|integer',
         ]);
 
-        foreach ($validated['items'] as$item) {
-            Insignia::where('id', $item['id'])->update(['insignia_sort_order' =>$item['insignia_sort_order']]);
+        foreach ($validated['items'] as $item) {
+            Insignia::where('id', $item['id'])->update(['insignia_sort_order' => $item['insignia_sort_order']]);
         }
 
         $this->clearRankCaches();
@@ -271,7 +284,7 @@ class InsigniaController extends Controller
             'mode' => 'required|in:merge,replace',
         ]);
 
-        $path =$request->file('file')->getRealPath();
+        $path = $request->file('file')->getRealPath();
         $content = file_get_contents($path);
         $data = json_decode($content, true);
 
@@ -282,18 +295,19 @@ class InsigniaController extends Controller
             ], 422);
         }
 
-        DB::transaction(function () use ($data,$request) {
+        DB::transaction(function () use ($data, $request) {
             if ($request->input('mode') === 'replace') {
                 InsigniaCatalogue::query()->delete();
             }
 
-            foreach ($data['insignia_catalogues'] as $setData) {$rankSet = InsigniaCatalogue::updateOrCreate(
+            foreach ($data['insignia_catalogues'] as $setData) {
+                $rankSet = InsigniaCatalogue::updateOrCreate(
                     ['catalogue_title' => $setData['catalogue_title']],
                     ['is_visible' => $setData['is_visible'] ?? true]
                 );
 
                 if (!empty($setData['insignia']) && is_array($setData['insignia'])) {
-                    foreach ($setData['insignia'] as$rankData) {
+                    foreach ($setData['insignia'] as $rankData) {
                         Insignia::updateOrCreate(
                             [
                                 'insignia_catalogue_id' => $rankSet->id,
@@ -302,7 +316,8 @@ class InsigniaController extends Controller
                             [
                                 'abbreviated_title'    => $rankData['abbreviated_title'] ?? '',
                                 'insignia_description' => $rankData['insignia_description'] ?? null,
-                                'insignia_sort_order'  => $rankData['insignia_sort_order'] ?? 0, 'is_visible'           =>$rankData['is_visible'] ?? true,
+                                'insignia_sort_order'  => $rankData['insignia_sort_order'] ?? 0,
+                                'is_visible'           => $rankData['is_visible'] ?? true,
                                 'mid_layer_mode'       => $rankData['mid_layer_mode'] ?? 'css',
                                 'mid_layer_asset'      => $rankData['mid_layer_asset'] ?? null,
                                 'mid_layer_modifier'   => $rankData['mid_layer_modifier'] ?? null,

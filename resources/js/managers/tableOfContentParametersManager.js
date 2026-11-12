@@ -1,26 +1,16 @@
-// resources/js/managers/tableOfContentsManager.js
+// resources/js/managers/tableOfContentParametersManager.js
 export default () => ({
     // 1. State Properties Upfront
-    isOpen: false,
-    mode: 'create',
-    id: '',
-    action: '/admin/navigation',
-    method: 'POST',
-    parent_entry_id: '',
-    group_title: '',
-    group_sort_order: 0,
-    translation_code_key: '',
-    destination_url: '',
-    display_location: 'primary',
-    access_clearance: 'public',
-    required_permission: '',
-    window_target: '_self',
-    entry_sort_order: 0,
-    is_visible: true,
+    formMode: 'create',
+    parameterId: null,
+    parameter_mode: 'group',
+    parameter_value: '',
+    parameter_label: '',
+    parameter_sort_order: 0,
+    isSubmitting: false,
     searchQuery: '',
     searchHelperInstance: null,
     filteredIds: null,
-    isLoading: false,
 
     // 2. Lifecycle Hook
     init() {
@@ -33,7 +23,7 @@ export default () => ({
             try {
                 this.searchHelperInstance = window.Search.create(
                     '[data-search-item]',
-                    ['translation_code_key', 'destination_url', 'group_title', 'display_location'],
+                    ['parameter_mode', 'parameter_value', 'parameter_label'],
                     { threshold: 0.35 }
                 );
             } catch (e) {
@@ -50,56 +40,103 @@ export default () => ({
         });
     },
 
-    isItemVisible(id, childIds = []) {
+    isItemVisible(id) {
         if (!this.searchQuery.trim() || this.filteredIds === null) return true;
-        if (this.filteredIds.includes(Number(id))) return true;
-        return Array.isArray(childIds) && childIds.some(childId => this.filteredIds.includes(Number(childId)));
+        return this.filteredIds.includes(Number(id));
     },
 
-    // 4. Modal Handlers (Using window.Modal utility)
-    openModal(mode, data = {}) {
-        const baseUrl = '/admin/navigation';
-        if (mode === 'create') {
-            window.Modal.create(this, {
-                parent_entry_id: '',
-                group_title: '',
-                group_sort_order: 0,
-                translation_code_key: '',
-                destination_url: '',
-                display_location: 'primary',
-                access_clearance: 'public',
-                required_permission: '',
-                window_target: '_self',
-                entry_sort_order: 0,
-                is_visible: true
-            }, baseUrl);
-        } else {
-            window.Modal.edit(this, {
-                ...data,
-                parent_entry_id: data.parent_entry_id && data.parent_entry_id !== 'null' ? String(data.parent_entry_id) : '',
-                group_title: data.group_title && data.group_title !== 'null' ? data.group_title : '',
-                required_permission: data.required_permission && data.required_permission !== 'null' ? data.required_permission : '',
-                is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true
-            }, baseUrl);
+    // 4. Form & Parameter Actions
+    editParameter(parameter) {
+        this.formMode = 'edit';
+        this.parameterId = parameter.id;
+        this.parameter_mode = parameter.parameter_mode || 'group';
+        this.parameter_value = parameter.parameter_value || '';
+        this.parameter_label = parameter.parameter_label || '';
+        this.parameter_sort_order = parameter.parameter_sort_order ?? 0;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+
+    resetForm() {
+        this.formMode = 'create';
+        this.parameterId = null;
+        this.parameter_mode = 'group';
+        this.parameter_value = '';
+        this.parameter_label = '';
+        this.parameter_sort_order = 0;
+    },
+
+    async submitParameter() {
+        if (this.isSubmitting) return;
+        this.isSubmitting = true;
+
+        const isEdit = this.formMode === 'edit' && this.parameterId;
+        const endpoint = isEdit ? `/admin/navigation/options/${this.parameterId}` : '/admin/navigation/options';
+        const method = isEdit ? 'PUT' : 'POST';
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    _method: method,
+                    parameter_mode: this.parameter_mode,
+                    parameter_value: this.parameter_value,
+                    parameter_label: this.parameter_label,
+                    parameter_sort_order: this.parameter_sort_order
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                const errorTitle = this.$el.dataset.msgErrorTitle || 'Error';
+                const errorText = data.message || this.$el.dataset.msgValidationFailed || 'Validation failed.';
+                if (window.Swal) {
+                    window.Swal.fire({ icon: 'error', title: errorTitle, text: errorText });
+                }
+                return;
+            }
+
+            if (window.Swal) {
+                window.Swal.fire({
+                    icon: 'success',
+                    title: this.$el.dataset.msgSuccessTitle || 'Success!',
+                    text: data.message || this.$el.dataset.msgSuccessText || 'Option saved successfully.',
+                    timer: 1800,
+                    showConfirmButton: false
+                });
+            }
+
+            this.resetForm();
+            await this.refreshDOM();
+        } catch (error) {
+            if (window.Swal) {
+                window.Swal.fire({
+                    icon: 'error',
+                    title: this.$el.dataset.msgNetworkErrorTitle || 'Network Error',
+                    text: this.$el.dataset.msgNetworkErrorText || 'Could not connect to the server.'
+                });
+            }
+        } finally {
+            this.isSubmitting = false;
         }
-        this.isOpen = true;
-    },
-
-    closeModal() {
-        window.Modal.close(this);
     },
 
     // 5. DOM Refresh Handler (sanitize = false)
     async refreshDOM() {
         if (typeof window.updateDOM === 'function') {
-            await window.updateDOM(this.$refs, ['navTableContent', 'navModalDropdowns'], () => {
-                this.closeModal();
+            await window.updateDOM(this.$refs, ['parametersTableContent'], () => {
                 this.$nextTick(() => {
                     this.initSearch();
                 });
             }, false);
         } else {
-            this.closeModal();
             this.$nextTick(() => {
                 this.initSearch();
             });

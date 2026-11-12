@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\CandidatePetition;
-use App\Models\Persona;
+use App\Models\Assignment;
 use App\Models\Book;
-use App\Models\Position;
+use App\Models\CandidatePetition;
 use App\Models\Configuration;
+use App\Models\Persona;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -28,25 +28,25 @@ class CommandCentreController extends Controller
                 'layout.blocks',
                 'widgets' => function ($query) {
                     $query->orderBy('page_widget.sort_order');
-                }
+                },
             ])
             ->firstOrFail();
 
-        $positions = Position::where('is_open', true)
-            ->withCount(['characters' => function ($query) {
-                $query->where('status', 'active');
+        $assignments = Assignment::where('is_open', true)
+            ->withCount(['personae' => function ($query) {
+                $query->where('persona_status', 'active');
             }])->get();
 
-        $trueOpenSlots = $positions->sum(function ($position) {
-            return max(0, $position->capacity - $position->characters_count);
+        $trueOpenSlots = $assignments->sum(function ($assignment) {
+            return max(0, $assignment->assignment_capacity - $assignment->personae_count);
         });
 
         // Configurable inactivity threshold in days (defaults to 30 days)
         $inactivityThresholdDays = max(1, (int) (Configuration::where('configuration_token', 'inactivity_threshold_days')->value('configuration_payload') ?? 30));
 
-        // Eager-load users with their characters, attributes, and latest chapter post timestamp
-        $allUsers = User::with(['characters', 'attributes', 'roles'])
-            ->withMax('posts as last_post_at', 'created_at')
+        // Eager-load users with their personae, attributes, and latest folio timestamp
+        $allUsers = User::with(['personae', 'attributes', 'roles'])
+            ->withMax('folios as last_post_at', 'created_at')
             ->orderBy('name')
             ->get();
 
@@ -56,27 +56,27 @@ class CommandCentreController extends Controller
         $flaggedInactiveCount = 0;
 
         foreach ($allUsers as $user) {
-            $isOnLoa = $user->is_on_loa || $user->characters->whereIn('status', ['loa', 'eloa'])->isNotEmpty();
+            $isOnLoa = $user->is_on_loa || $user->personae->whereIn('persona_status', ['loa', 'eloa'])->isNotEmpty();
             $returnDate = $user->loa_return_date ? $user->loa_return_date->copy()->startOfDay() : null;
 
             $daysRemaining = $returnDate ? (int) $today->diffInDays($returnDate, false) : null;
             $isExpired = $daysRemaining !== null && $daysRemaining < 0;
 
             // Determine LOA vs ELOA badge classification
-            $hasEloaChar = $user->characters->where('status', 'eloa')->isNotEmpty();
-            $leaveType = ($hasEloaChar || ($daysRemaining !== null && $daysRemaining > 30)) ? 'ELOA' : 'LOA';
+            $hasEloaPersona = $user->personae->where('persona_status', 'eloa')->isNotEmpty();
+            $leaveType = ($hasEloaPersona || ($daysRemaining !== null && $daysRemaining > 30)) ? 'ELOA' : 'LOA';
 
             if ($isOnLoa) {
                 $loaPlayers->push((object) [
-                    'id'              => $user->id,
-                    'name'            => $user->name,
-                    'email'           => $user->email,
-                    'leave_type'      => $leaveType,
-                    'return_date'     => $returnDate ? $returnDate->format('Y-m-d') : null,
-                    'return_display'  => $returnDate ? $returnDate->format('d M Y') : lexicon('label_common_NotSpecified', 'Not Specified'),
-                    'days_remaining'  => $daysRemaining,
-                    'is_expired'      => $isExpired,
-                    'character_names' => $user->characters->pluck('name')->implode(', ') ?: lexicon('label_common_None', 'None'),
+                    'id'             => $user->id,
+                    'name'           => $user->name,
+                    'email'          => $user->email,
+                    'leave_type'     => $leaveType,
+                    'return_date'    => $returnDate ? $returnDate->format('Y-m-d') : null,
+                    'return_display' => $returnDate ? $returnDate->format('d M Y') : lexicon('label_common_NotSpecified', 'Not Specified'),
+                    'days_remaining' => $daysRemaining,
+                    'is_expired'     => $isExpired,
+                    'persona_names'  => $user->personae->pluck('persona_name')->implode(', ') ?: lexicon('label_common_None', 'None'),
                 ]);
             }
 
@@ -97,7 +97,7 @@ class CommandCentreController extends Controller
                 'id'               => $user->id,
                 'name'             => $user->name,
                 'role'             => $user->role,
-                'character_names'  => $user->characters->pluck('name')->implode(', ') ?: 'Unassigned',
+                'persona_names'    => $user->personae->pluck('persona_name')->implode(', ') ?: 'Unassigned',
                 'is_on_loa'        => $isOnLoa,
                 'leave_type'       => $isOnLoa ? $leaveType : 'ACTIVE',
                 'return_date'      => $returnDate ? $returnDate->format('Y-m-d') : '',
@@ -120,7 +120,7 @@ class CommandCentreController extends Controller
             return ($p->is_inactive ? 100000 : 0) + $p->days_since_login;
         })->values();
 
-        // Aggregated monthly writing metrics scoreboard query (Migrated to author_ledgers & folios)
+        // Aggregated monthly writing metrics scoreboard query (author_ledgers & folios)
         $currentMonthMetrics = DB::table('author_ledgers')
             ->join('folios', 'folios.id', '=', 'author_ledgers.folio_id')
             ->join('users', 'users.id', '=', 'author_ledgers.user_id')
@@ -128,11 +128,11 @@ class CommandCentreController extends Controller
             ->whereBetween('folios.created_at', [now()->startOfMonth(), now()->endOfMonth()])
             ->select(
                 'users.name as user_name',
-                'personae.name as character_name',
+                'personae.persona_name as persona_name',
                 DB::raw('COUNT(DISTINCT folios.id) as post_count'),
                 DB::raw('SUM(author_ledgers.contribution_word_count) as total_words')
             )
-            ->groupBy('users.id', 'users.name', 'personae.id', 'personae.name')
+            ->groupBy('users.id', 'users.name', 'personae.id', 'personae.persona_name')
             ->orderByDesc('total_words')
             ->get();
 
@@ -140,7 +140,7 @@ class CommandCentreController extends Controller
             'systemPage'              => $systemPage,
             'pendingApps'             => CandidatePetition::where('petition_status', 'Pending')->count(),
             'activeUsers'             => $allUsers->count(),
-            'totalCharacters'         => Persona::where('status', 'active')->count(),
+            'totalCharacters'         => Persona::where('persona_status', 'active')->count(),
             'openPositions'           => $trueOpenSlots,
             'loaPlayers'              => $loaPlayers,
             'loaCount'                => $loaPlayers->count(),

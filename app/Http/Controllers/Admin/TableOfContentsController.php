@@ -26,7 +26,7 @@ class TableOfContentsController extends Controller
             ])
             ->firstOrFail();
 
-        $links = TableOfContent::whereNull('parent_entry_id')
+        $entries = TableOfContent::whereNull('parent_entry_id')
             ->with('children')
             ->orderBy('display_location')
             ->orderBy('group_sort_order')
@@ -39,19 +39,21 @@ class TableOfContentsController extends Controller
             ->orderBy('translation_code_key')
             ->get();
 
-        $allOptions = TableOfContentParameter::orderBy('parameter_mode')
+        $allParameters = TableOfContentParameter::orderBy('parameter_mode')
             ->orderBy('parameter_sort_order')
             ->get();
 
-        $grouped = $allOptions->groupBy('parameter_mode');
+        $grouped = $allParameters->groupBy('parameter_mode');
 
         $permissions = Permission::orderBy('name')->get();
 
-        return view('admin.nav', [
+        return view('admin.table_of_contents', [
             'systemPage'        => $systemPage,
-            'links'             => $links,
+            'entries'           => $entries,
+            'links'             => $entries,
             'parentOptions'     => $parentOptions,
-            'allOptions'        => $allOptions,
+            'allParameters'     => $allParameters,
+            'allOptions'        => $allParameters,
             'groupOptions'      => $grouped->get('group', collect()),
             'locationOptions'   => $grouped->get('display_location', collect()),
             'visibilityOptions' => $grouped->get('access_clearance', collect()),
@@ -157,11 +159,15 @@ class TableOfContentsController extends Controller
             ])
             ->firstOrFail();
 
-        $options = TableOfContentParameter::orderBy('parameter_mode')
+        $parameters = TableOfContentParameter::orderBy('parameter_mode')
             ->orderBy('parameter_sort_order')
             ->get();
 
-        return view('admin.nav-options', compact('options', 'systemPage'));
+        return view('admin.table_of_content_parameters', [
+            'parameters' => $parameters,
+            'options'    => $parameters,
+            'systemPage' => $systemPage,
+        ]);
     }
 
     public function storeOption(Request $request)

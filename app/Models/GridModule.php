@@ -34,12 +34,4 @@ class GridModule extends Model
     {
         return $this->belongsTo(Grid::class, 'grid_id');
     }
-
-    /**
-     * Get the layout (grid) associated with the grid module.
-     */
-    public function layout(): BelongsTo
-    {
-        return $this->belongsTo(Grid::class, 'grid_id');
-    }
 }

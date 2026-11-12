@@ -45,20 +45,20 @@
                         @forelse($skins as $skin)
                             <tr class="border-b-table-row hover-bg-table-row">
                                 <td class="p-4 text-left font-bold text-p">
-                                    <span>{{ $skin->name }}</span>
+                                    <span>{{ $skin->binding_title }}</span>
                                 </td>
                                 <td class="p-4 text-left font-mono text-xs text-muted">
                                     <div class="flex flex-row items-center gap-xs">
-                                        <span>/skins/{{ $skin->folder_name }}</span>
+                                        <span>/skins/{{ $skin->directory_name }}</span>
                                         <button type="button"
                                                 class="bg-transparent text-muted border-none hover-text-accent cursor-pointer p-0 text-xs"
-                                                x-clipboard="'/skins/{{ addslashes($skin->folder_name) }}'"
+                                                x-clipboard="'/skins/{{ addslashes($skin->directory_name) }}'"
                                                 aria-label="{{ lexicon('tooltip_Themes_CopyPath', 'Copy skin directory path') }}"
                                                 x-tooltip="'{{ addslashes(lexicon('tooltip_Themes_CopyPath', 'Copy skin directory path')) }}'">
                                             <i class="bi bi-clipboard" aria-hidden="true"></i>
                                         </button>
                                     </div>
-                                    <span class="block mt-1">v{{ $skin->version ?? '1.0' }}</span>
+                                    <span class="block mt-1">v{{ $skin->package_version ?? '1.0' }}</span>
                                 </td>
                                 <td class="p-4 text-left">
                                     @if($skin->is_global_default)
@@ -136,13 +136,13 @@
                         </x-slot:top>
 
                         <div class="p-panel flex flex-col flex-grow bg-panel-sub border border-panel rounded-panel gap-xs">
-                            <textarea name="custom_head"
+                            <textarea name="custom_head_injection"
                                       aria-label="{{ lexicon('label_Themes_CustomHead', 'Custom <head> Injection (Fonts, CDNs, Meta)') }}"
                                       x-tooltip="'{{ addslashes(lexicon('tooltip_Themes_CustomHeadInput', 'Enter custom HTML link or meta tags for the active skin')) }}'"
                                       x-init="window.autosize && window.autosize($el)"
                                       class="bg-input text-input border-input rounded-input p-input outline-none w-full box-border focus-border-accent focus-shadow-accent font-mono text-sm"
                                       rows="3"
-                                      placeholder="{{ lexicon('label_Themes_CustomHeadPlaceholder', '<link href=\'https://fonts.googleapis.com/css2?family=Roboto&display=swap\' rel=\'stylesheet\'>') }}">{{ old('custom_head', $skins->where('is_global_default', 1)->first()->custom_head ?? '') }}</textarea>
+                                      placeholder="{{ lexicon('label_Themes_CustomHeadPlaceholder', '<link href=\'https://fonts.googleapis.com/css2?family=Roboto&display=swap\' rel=\'stylesheet\'>') }}">{{ old('custom_head_injection', $skins->where('is_global_default', 1)->first()->custom_head_injection ?? '') }}</textarea>
                             <span class="block text-xs text-muted border-l-2 border-accent pl-2">
                                 {{ lexicon('msg_Themes_CustomHeadHint', 'These tags will be injected directly into the master layout for the active skin. Do not include your core CSS files here.') }}
                             </span>

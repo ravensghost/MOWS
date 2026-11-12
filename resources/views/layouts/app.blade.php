@@ -11,7 +11,7 @@
     <title>@hasSection('title') @yield('title') - {{ config('app.name', 'MOWS') }} @else {{ config('app.name', 'MOWS') }} @endif</title>
 
     @php
-        $currentSkin = $activeSkin?->folder_name ?? ($skinSettings['active_skin'] ?? 'default');
+        $currentSkin = $activeSkin?->directory_name ?? ($skinSettings['active_skin'] ?? 'default');
         $themeCssPath = public_path('skins/' . $currentSkin . '/css/theme.css');
         $themeVersion = file_exists($themeCssPath) ? filemtime($themeCssPath) : time();
     @endphp
@@ -43,8 +43,8 @@
     ])
     
     <!-- Dynamic Skin Dependencies (Fonts, Icons, etc.) -->
-    @if(!empty($activeSkin?->custom_head))
-        {!! $activeSkin->custom_head !!}
+    @if(!empty($activeSkin?->custom_head_injection))
+        {!! $activeSkin->custom_head_injection !!}
     @endif
 </head>
 <body class="bg-body font-base text-p" data-swal-success="{{ lexicon('label_common_Success', 'Success!') }}">

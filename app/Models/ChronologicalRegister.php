@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -103,9 +102,6 @@ class ChronologicalRegister extends Model
         return $this->belongsTo(Distinction::class, 'distinction_id');
     }
 
-    /**
-     * Legacy alias for distinction.
-     */
     public function award(): BelongsTo
     {
         return $this->distinction();
@@ -121,9 +117,6 @@ class ChronologicalRegister extends Model
         return $this->belongsTo(Persona::class, 'persona_id');
     }
 
-    /**
-     * Legacy alias for persona.
-     */
     public function character(): BelongsTo
     {
         return $this->persona();
@@ -134,63 +127,8 @@ class ChronologicalRegister extends Model
         return $this->belongsTo(User::class, 'authorising_user_id');
     }
 
-    /**
-     * Legacy alias for authorisingUser.
-     */
     public function issuer(): BelongsTo
     {
         return $this->authorisingUser();
-    }
-
-    // -------------------------------------------------------------------------
-    // Legacy Column Accessors for Backwards Compatibility in Views
-    // -------------------------------------------------------------------------
-
-    protected function description(): Attribute
-    {
-        return Attribute::make(
-            get: fn() => $this->chronicle_text,
-            set: fn($value) => ['chronicle_text' => $value],
-        );
-    }
-
-    protected function eventType(): Attribute
-    {
-        return Attribute::make(
-            get: fn() => $this->register_event_mode,
-            set: fn($value) => ['register_event_mode' => $value],
-        );
-    }
-
-    protected function displayTarget(): Attribute
-    {
-        return Attribute::make(
-            get: fn() => $this->scope_target,
-            set: fn($value) => ['scope_target' => $value],
-        );
-    }
-
-    protected function awardId(): Attribute
-    {
-        return Attribute::make(
-            get: fn() => $this->distinction_id,
-            set: fn($value) => ['distinction_id' => $value],
-        );
-    }
-
-    protected function characterId(): Attribute
-    {
-        return Attribute::make(
-            get: fn() => $this->persona_id,
-            set: fn($value) => ['persona_id' => $value],
-        );
-    }
-
-    protected function issuedBy(): Attribute
-    {
-        return Attribute::make(
-            get: fn() => $this->authorising_user_id,
-            set: fn($value) => ['authorising_user_id' => $value],
-        );
     }
 }

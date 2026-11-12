@@ -1,14 +1,19 @@
 @props([
-    'book', // Represents the Volume instance in the Story Library Manager
+    'volume' => null,
+    'book' => null, // Fallback if passed via legacy prop
     'isLoose' => false,
 ])
 
+@php
+    $volumeItem = $volume ?? $book;
+@endphp
+
 <div class="bg-panel border {{ $isLoose ? 'border-danger' : 'border-panel' }} rounded-panel shadow-panel flex flex-col overflow-hidden w-full"
-     data-id="{{ $book->id }}"
-     x-data="{ bookExpanded: false }"
-     x-show="matchesVolume ? matchesVolume({{ json_encode($book->volume_title) }}, {{ json_encode($book->volume_synopsis ?? '') }}) : matchesBook({{ json_encode($book->volume_title) }}, {{ json_encode($book->volume_synopsis ?? '') }})">
+     data-id="{{ $volumeItem->id }}"
+     x-data="{ volumeExpanded: false }"
+     x-show="matchesVolume({{ json_encode($volumeItem->volume_title) }}, {{ json_encode($volumeItem->volume_synopsis ?? '') }})">
     
-    <div @click="if (!$event.target.closest('button')) bookExpanded = !bookExpanded" 
+    <div @click="if (!$event.target.closest('button')) volumeExpanded = !volumeExpanded" 
          class="p-3 w-full flex flex-row flex-wrap items-center justify-between gap-md text-left hover-bg-panel-hover border-b border-panel cursor-pointer select-none"
          x-tooltip="'{{ addslashes(lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel')) }}'"
          aria-label="{{ lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel') }}">
@@ -17,24 +22,24 @@
             <i class="bi bi-grip-vertical text-muted cursor-move"
                x-tooltip="'{{ addslashes(lexicon('tooltip_Story_DragReorderVolume', 'Drag to reorder volume')) }}'"
                aria-label="{{ lexicon('tooltip_Story_DragReorderVolume', 'Drag to reorder volume') }}"></i>
-            <span class="text-xs text-muted" x-text="bookExpanded ? '▼' : '▶'"></span>
+            <span class="text-xs text-muted" x-text="volumeExpanded ? '▼' : '▶'"></span>
             <i class="bi bi-journal-bookmark text-accent"></i>
-            <span class="text-lg font-bold text-p">{{ $book->volume_title }}</span>
+            <span class="text-lg font-bold text-p">{{ $volumeItem->volume_title }}</span>
             
             @if($isLoose)
                 <x-badge variant="warning">
-                    {{ lexicon('label_Story_NeedsBookcase', 'Needs Shelf') }}
+                    {{ lexicon('label_Story_NeedsShelf', 'Needs Shelf') }}
                 </x-badge>
             @endif
 
-            @if($book->publicationState)
-                <x-badge :variant="$book->publicationState->book_url ?? 'primary'">
-                    {{ $book->publicationState->state_title }}
+            @if($volumeItem->publicationState)
+                <x-badge :variant="$volumeItem->publicationState->book_url ?? 'primary'">
+                    {{ $volumeItem->publicationState->state_title }}
                 </x-badge>
             @endif
 
             <span class="text-xs text-muted">
-                ({{ count($book->folios) }} {{ lexicon('label_Story_ChaptersCount', 'Folios') }})
+                ({{ count($volumeItem->folios) }} {{ lexicon('label_Story_FoliosCount', 'Folios') }})
             </span>
         </div>
 
@@ -44,24 +49,24 @@
                       class="text-warning hover-text-h text-xs flex flex-row items-center gap-xs" 
                       @click="$dispatch('open-volume-modal', {{ json_encode([
                           'mode'                 => 'edit', 
-                          'id'                   => $book->id, 
-                          'volume_title'         => $book->volume_title, 
-                          'volume_synopsis'      => $book->volume_synopsis ?? '', 
-                          'publication_state_id' => $book->publication_state_id, 
-                          'ic_day'               => $book->ic_day, 
-                          'ic_time'              => $book->ic_time, 
-                          'shelf_id'             => $book->shelf_id ?? ''
+                          'id'                   => $volumeItem->id, 
+                          'volume_title'         => $volumeItem->volume_title, 
+                          'volume_synopsis'      => $volumeItem->volume_synopsis ?? '', 
+                          'publication_state_id' => $volumeItem->publication_state_id, 
+                          'ic_day'               => $volumeItem->ic_day, 
+                          'ic_time'              => $volumeItem->ic_time, 
+                          'shelf_id'             => $volumeItem->shelf_id ?? ''
                       ]) }})"
                       x-tooltip="'{{ addslashes(lexicon('tooltip_Story_EditVolume', 'Edit volume details')) }}'"
                       aria-label="{{ lexicon('tooltip_Story_EditVolume', 'Edit volume details') }}">
                 <i class="bi bi-pencil"></i>
-                <span>{{ lexicon('btn_Story_EditBook', 'Edit Volume') }}</span>
+                <span>{{ lexicon('btn_Story_EditVolume', 'Edit Volume') }}</span>
             </x-button>
 
             <x-button type="button" 
                       variant="text" 
                       class="text-danger hover-text-h text-xs flex flex-row items-center gap-xs" 
-                      x-data="deleteAction('/admin/books/{{ $book->id }}', 'DELETE', '{{ addslashes($book->volume_title) }}')" 
+                      x-data="deleteAction('/admin/volumes/{{ $volumeItem->id }}', 'DELETE', '{{ addslashes($volumeItem->volume_title) }}')" 
                       @click.prevent="confirmDelete()"
                       x-tooltip="'{{ addslashes(lexicon('tooltip_Story_DeleteVolume', 'Delete this volume')) }}'"
                       aria-label="{{ lexicon('tooltip_Story_DeleteVolume', 'Delete this volume') }}">
@@ -71,18 +76,18 @@
         </div>
     </div>
 
-    <div x-show="bookExpanded" x-collapse x-cloak class="bg-panel p-panel flex flex-col gap-sm">
-        @if(!empty($book->volume_synopsis))
+    <div x-show="volumeExpanded" x-collapse x-cloak class="bg-panel p-panel flex flex-col gap-sm">
+        @if(!empty($volumeItem->volume_synopsis))
             <p class="text-sm text-muted italic m-0 pb-2 border-b border-panel">
-                {{ $book->volume_synopsis }}
+                {{ $volumeItem->volume_synopsis }}
             </p>
         @endif
 
         <div class="flex flex-col gap-xs sortable-folios"
-             id="sortable-folios-{{ $book->id }}"
-             data-volume-id="{{ $book->id }}"
-             x-data="sortableHelper('/admin/chapters/reorder', 'folio_sort_order')">
-            @forelse($book->folios as $folio)
+             id="sortable-folios-{{ $volumeItem->id }}"
+             data-volume-id="{{ $volumeItem->id }}"
+             x-data="sortableHelper('/admin/folios/reorder', 'folio_sort_order')">
+            @forelse($volumeItem->folios as $folio)
                 <div class="bg-panel-sub border border-panel rounded-input p-2 flex flex-row flex-wrap items-center justify-between gap-sm"
                      data-id="{{ $folio->id }}">
                     <div class="flex flex-row flex-wrap items-center gap-sm text-sm">
@@ -102,7 +107,7 @@
                                   class="text-accent hover-text-h text-xs flex flex-row items-center gap-xs"
                                   @click="$dispatch('open-move-folio-modal', {{ json_encode([
                                       'id'        => $folio->id,
-                                      'volume_id' => $book->id
+                                      'volume_id' => $volumeItem->id
                                   ]) }})"
                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Story_MoveFolio', 'Move this folio to another volume')) }}'"
                                   aria-label="{{ lexicon('tooltip_Story_MoveFolio', 'Move this folio to another volume') }}">

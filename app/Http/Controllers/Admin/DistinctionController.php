@@ -17,28 +17,31 @@ class DistinctionController extends Controller
         abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorised action.');
 
         $systemPage = Book::with(['grid.gridModules', 'module'])
-            ->where('slug', 'admin/awards')
+            ->whereIn('slug', ['admin/distinctions', 'admin/awards'])
             ->where('is_published', true)
             ->firstOrFail();
 
         $distinctions = Distinction::with('catalogue')->orderBy('distinction_title')->get();
-        $categories = DistinctionCatalogue::orderBy('catalogue_title')->get();
+        $catalogues = DistinctionCatalogue::orderBy('catalogue_title')->get();
 
-        $cssPath = resource_path('css/awards.css');
+        $cssPath = File::exists(resource_path('css/distinctions.css'))
+            ? resource_path('css/distinctions.css')
+            : resource_path('css/awards.css');
+
         $midShapes = [];
         $topShapes = [];
 
         if (File::exists($cssPath)) {
             $cssContent = File::get($cssPath);
 
-            preg_match_all('/\.award-ml-([a-zA-Z0-9_-]+)/', $cssContent, $mlMatches);
+            preg_match_all('/\.(?:distinction|award)-ml-([a-zA-Z0-9_-]+)/', $cssContent, $mlMatches);
             if (!empty($mlMatches[1])) {
                 foreach (array_unique($mlMatches[1]) as $shape) {
                     $midShapes[$shape] = str_replace('-', ' ', ucwords($shape));
                 }
             }
 
-            preg_match_all('/\.award-tl-([a-zA-Z0-9_-]+)/', $cssContent, $tlMatches);
+            preg_match_all('/\.(?:distinction|award)-tl-([a-zA-Z0-9_-]+)/', $cssContent, $tlMatches);
             if (!empty($tlMatches[1])) {
                 foreach (array_unique($tlMatches[1]) as $shape) {
                     $topShapes[$shape] = str_replace('-', ' ', ucwords($shape));
@@ -46,7 +49,14 @@ class DistinctionController extends Controller
             }
         }
 
-        return view('admin.awards', compact('distinctions', 'systemPage', 'midShapes', 'topShapes', 'categories'));
+        return view('admin.distinctions', [
+            'distinctions' => $distinctions,
+            'systemPage'   => $systemPage,
+            'midShapes'    => $midShapes,
+            'topShapes'    => $topShapes,
+            'catalogues'   => $catalogues,
+            'categories'   => $catalogues,
+        ]);
     }
 
     public function store(Request $request)
@@ -139,7 +149,11 @@ class DistinctionController extends Controller
 
         $activeSkinArray = Cache::get('active_skin_default_array');
         $activeSkin = $activeSkinArray['folder_name'] ?? 'default';
-        $path = public_path("skins/{$activeSkin}/images/awards");
+
+        $distinctionsPath = public_path("skins/{$activeSkin}/images/distinctions");
+        $path = File::exists($distinctionsPath)
+            ? $distinctionsPath
+            : public_path("skins/{$activeSkin}/images/awards");
 
         if (!File::exists($path)) {
             return response()->json(['images' => []]);

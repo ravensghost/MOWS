@@ -1,4 +1,4 @@
-// resources/js/managers/PublicationManager.js
+// resources/js/managers/publicationManager.js
 export default () => ({
     searchQuery: '',
     searchHelperInstance: null,
@@ -9,7 +9,7 @@ export default () => ({
         mode: 'create',
         id: '',
         shelf_title: '',
-        action: '/admin/bookcases',
+        action: '/admin/shelves',
         method: 'POST'
     },
 
@@ -23,7 +23,7 @@ export default () => ({
         ic_day: '',
         ic_time: '',
         shelf_id: '',
-        action: '/admin/books',
+        action: '/admin/volumes',
         method: 'POST'
     },
 
@@ -87,48 +87,53 @@ export default () => ({
         return String(title).toLowerCase().includes(q) || String(synopsis).toLowerCase().includes(q);
     },
 
-    openShelfModal(detail = {}) {
-        detail.mode === 'edit'
-            ? window.Modal.edit(this.shelfModal, detail, '/admin/bookcases')
-            : window.Modal.create(this.shelfModal, { shelf_title: '' }, '/admin/bookcases');
-    },
-
-    openStatusModal(detail = {}) {
-        detail.mode === 'edit'
-            ? window.Modal.edit(this.statusModal, detail, '/admin/statuses')
-            : window.Modal.create(this.statusModal, { state_title: '' }, '/admin/statuses');
-    },
-
-    openVolumeModal(detail = {}) {
-        if (detail.mode === 'edit') {
-            window.Modal.edit(this.volumeModal, {
-                ...detail,
-                publication_state_id: String(detail.publication_state_id ?? ''),
-                shelf_id: String(detail.shelf_id ?? '')
-            }, '/admin/books');
-        } else {
-            window.Modal.create(this.volumeModal, {
-                volume_title: '',
-                volume_synopsis: '',
-                publication_state_id: '',
-                ic_day: '',
-                ic_time: '',
-                shelf_id: String(detail.shelf_id ?? '')
-            }, '/admin/books');
+    openModal(mode = 'create', data = {}, type = 'shelf') {
+        if (type === 'shelf') {
+            mode === 'edit'
+                ? window.Modal.edit(this.shelfModal, data, '/admin/shelves')
+                : window.Modal.create(this.shelfModal, { shelf_title: '' }, '/admin/shelves');
+            return;
         }
 
-        this.$nextTick(() => {
-            if (this.$refs.volumeSynopsisTextarea && window.Autosize) {
-                window.Autosize.update(this.$refs.volumeSynopsisTextarea);
-            }
-        });
-    },
+        if (type === 'status') {
+            mode === 'edit'
+                ? window.Modal.edit(this.statusModal, data, '/admin/statuses')
+                : window.Modal.create(this.statusModal, { state_title: '' }, '/admin/statuses');
+            return;
+        }
 
-    openMoveFolioModal(detail = {}) {
-        this.moveModal.folio_id = detail.id || '';
-        this.moveModal.volume_id = String(detail.volume_id ?? '');
-        this.moveModal.action = `/admin/chapters/${this.moveModal.folio_id}/move`;
-        this.moveModal.open = true;
+        if (type === 'volume') {
+            if (mode === 'edit') {
+                window.Modal.edit(this.volumeModal, {
+                    ...data,
+                    publication_state_id: String(data.publication_state_id ?? ''),
+                    shelf_id: String(data.shelf_id ?? '')
+                }, '/admin/volumes');
+            } else {
+                window.Modal.create(this.volumeModal, {
+                    volume_title: '',
+                    volume_synopsis: '',
+                    publication_state_id: '',
+                    ic_day: '',
+                    ic_time: '',
+                    shelf_id: String(data.shelf_id ?? '')
+                }, '/admin/volumes');
+            }
+
+            this.$nextTick(() => {
+                if (this.$refs.volumeSynopsisTextarea && window.Autosize) {
+                    window.Autosize.update(this.$refs.volumeSynopsisTextarea);
+                }
+            });
+            return;
+        }
+
+        if (type === 'move') {
+            this.moveModal.folio_id = data.id || '';
+            this.moveModal.volume_id = String(data.volume_id ?? '');
+            this.moveModal.action = `/admin/folios/${this.moveModal.folio_id}/move`;
+            this.moveModal.open = true;
+        }
     },
 
     async refreshDOM(responseData = {}) {
@@ -142,10 +147,10 @@ export default () => ({
             this.filterLibrary();
 
             if (responseData?.trigger_review && responseData?.data) {
-                window.dispatchEvent(new CustomEvent('open-book-review', {
+                window.dispatchEvent(new CustomEvent('open-volume-review', {
                     detail: {
-                        bookId: responseData.data.id,
-                        bookTitle: responseData.data.volume_title
+                        volumeId: responseData.data.id,
+                        volumeTitle: responseData.data.volume_title
                     }
                 }));
             }

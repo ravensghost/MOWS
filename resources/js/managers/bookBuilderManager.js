@@ -1,27 +1,27 @@
 // resources/js/managers/bookBuilderManager.js
-export default (initialLayouts = [], availableWidgets = [], widgetRegistry = {}) => ({
-    availableLayouts: initialLayouts,
-    widgetData: Object.keys(widgetRegistry).length > 0 ? widgetRegistry : availableWidgets,
+export default (initialGrids = [], availableModules = [], moduleRegistry = {}) => ({
+    availableGrids: initialGrids,
+    moduleData: Object.keys(moduleRegistry).length > 0 ? moduleRegistry : availableModules,
     isSyncing: false,
 
-    async syncWidgets() {
+    async syncModules() {
         this.isSyncing = true;
 
         if (window.Swal && typeof window.Swal.loading === 'function') {
-            window.Swal.loading('Scanning Widgets...', 'Please wait while the registry is updated.');
+            window.Swal.loading('Scanning Modules...', 'Please wait while the registry is updated.');
         }
 
         try {
-            const { ok, data } = await window.Fetch.post('/admin/widgets/sync', {}, {
+            const { ok, data } = await window.Fetch.post('/admin/modules/sync', {}, {
                 loading: false,
                 showError: false
             });
 
             if (ok && data && data.status === 'success') {
-                this.widgetData = data.data;
+                this.moduleData = data.data;
 
                 if (window.Swal && typeof window.Swal.toast === 'function') {
-                    window.Swal.toast('success', data.message || 'Widgets synchronized successfully.');
+                    window.Swal.toast('success', data.message || 'Modules synchronised successfully.');
                 }
             } else {
                 window.Swal.error('Error', data?.message || 'Synchronisation failed.');
@@ -34,173 +34,205 @@ export default (initialLayouts = [], availableWidgets = [], widgetRegistry = {})
     },
 
     modals: {
-        page: {
-            open: false, mode: 'create', id: '', title: '', slug: '', layout_id: '', is_published: true,
-            formAction: '', method: '', widgetBlocks: {}, selectedWidgets: {}, selectedVisible: {}, sortOrders: {},
-            requiredPermissions: {},
-            instanceOptions: {},
-            configuringWidgetId: null
+        book: {
+            open: false,
+            mode: 'create',
+            id: '',
+            book_title: '',
+            book_url: '',
+            grid_id: '',
+            is_published: true,
+            formAction: '',
+            method: '',
+            gridModules: {},
+            selectedModules: {},
+            selectedVisible: {},
+            moduleSortOrders: {},
+            accessClearances: {},
+            bookConfigs: {},
+            configuringModuleId: null
         },
-        layout: {
-            open: false, mode: 'create', id: '', name: '', description: '', blocks: [],
-            formAction: '', method: ''
+        grid: {
+            open: false,
+            mode: 'create',
+            id: '',
+            grid_title: '',
+            grid_synopsis: '',
+            grid_modules: [],
+            formAction: '',
+            method: ''
         },
-        widget: {
-            open: false, mode: 'create', id: '', name: '', widgetKey: '', options: '', dynamicValues: [],
-            action: '/admin/widgets', method: 'POST'
+        module: {
+            open: false,
+            mode: 'create',
+            id: '',
+            module_title: '',
+            module_token: '',
+            module_default_settings: '',
+            dynamicValues: [],
+            action: '/admin/modules',
+            method: 'POST'
         }
     },
 
     async refreshDOM() {
-        this.modals.page.open = false;
-        this.modals.layout.open = false;
-        this.modals.widget.open = false;
+        this.modals.book.open = false;
+        this.modals.grid.open = false;
+        this.modals.module.open = false;
 
         if (typeof window.updateDOM === 'function') {
-            await window.updateDOM(this.$refs, ['pagesTableContent', 'layoutsTableContent', 'widgetsTableContent'], (doc) => {
+            await window.updateDOM(this.$refs, ['booksTableContent', 'gridsTableContent', 'modulesTableContent'], (doc) => {
                 const freshDataEl = doc?.getElementById('pb-fresh-data');
                 if (freshDataEl) {
-                    this.availableLayouts = JSON.parse(freshDataEl.getAttribute('data-layouts') || '[]');
-                    this.widgetData = JSON.parse(freshDataEl.getAttribute('data-widgets') || '{}');
+                    this.availableGrids = JSON.parse(freshDataEl.getAttribute('data-grids') || '[]');
+                    this.moduleData = JSON.parse(freshDataEl.getAttribute('data-modules') || '{}');
                 }
             }, false);
         }
     },
 
-    // --- Page Logic ---
-    openPageModal(mode, data = {}) {
-        this.modals.page.mode = mode;
-        this.modals.page.id = data.id || '';
-        this.modals.page.title = data.title || '';
-        this.modals.page.slug = data.slug || '';
-        this.modals.page.layout_id = data.layout_id || '';
-        this.modals.page.is_published = mode === 'edit' ? (data.is_published || false) : true;
-        this.modals.page.formAction = mode === 'edit' ? `/admin/pages/${data.id}` : '/admin/pages';
-        this.modals.page.method = mode === 'edit' ? 'PUT' : 'POST';
+    openModal(mode, data = {}, type = 'book') {
+        if (type === 'book') {
+            this.modals.book.mode = mode;
+            this.modals.book.id = data.id || '';
+            this.modals.book.book_title = data.book_title || '';
+            this.modals.book.book_url = data.book_url || '';
+            this.modals.book.grid_id = data.grid_id || '';
+            this.modals.book.is_published = mode === 'edit' ? Boolean(data.is_published) : true;
+            this.modals.book.formAction = mode === 'edit' ? `/admin/books/${data.id}` : '/admin/books';
+            this.modals.book.method = mode === 'edit' ? 'PUT' : 'POST';
 
-        this.modals.page.widgetBlocks = {};
-        this.modals.page.selectedWidgets = {};
-        this.modals.page.selectedVisible = {};
-        this.modals.page.sortOrders = {};
-        this.modals.page.requiredPermissions = {};
-        this.modals.page.instanceOptions = {};
+            this.modals.book.gridModules = {};
+            this.modals.book.selectedModules = {};
+            this.modals.book.selectedVisible = {};
+            this.modals.book.moduleSortOrders = {};
+            this.modals.book.accessClearances = {};
+            this.modals.book.bookConfigs = {};
 
-        if (data.widgets) {
-            data.widgets.forEach(w => {
-                this.modals.page.selectedWidgets[w.id] = true;
-                this.modals.page.selectedVisible[w.id] = w.is_visible !== undefined ? Boolean(w.is_visible) : true;
-                this.modals.page.sortOrders[w.id] = w.sort_order;
-                this.modals.page.widgetBlocks[w.id] = w.layout_block_id;
-                this.modals.page.requiredPermissions[w.id] = w.required_permission || '';
+            if (Array.isArray(data.modules)) {
+                data.modules.forEach(m => {
+                    const pivot = m.pivot || m;
+                    this.modals.book.selectedModules[m.id] = true;
+                    this.modals.book.selectedVisible[m.id] = pivot.is_visible !== undefined ? Boolean(pivot.is_visible) : true;
+                    this.modals.book.moduleSortOrders[m.id] = pivot.module_sort_order ?? 0;
+                    this.modals.book.gridModules[m.id] = pivot.grid_module_id ?? '';
+                    this.modals.book.accessClearances[m.id] = pivot.access_clearance || '';
 
-                let opts = w.instance_options || {};
-                if (typeof opts === 'string') {
-                    try { opts = JSON.parse(opts); } catch (e) { opts = {}; }
-                }
-                if (Array.isArray(opts) || typeof opts !== 'object') {
-                    opts = {};
-                }
-                this.modals.page.instanceOptions[w.id] = opts;
-            });
+                    let cfg = pivot.book_config || {};
+                    if (typeof cfg === 'string') {
+                        try { cfg = JSON.parse(cfg); } catch (e) { cfg = {}; }
+                    }
+                    if (Array.isArray(cfg) || typeof cfg !== 'object' || cfg === null) {
+                        cfg = {};
+                    }
+                    this.modals.book.bookConfigs[m.id] = cfg;
+                });
+            }
+
+            this.modals.book.open = true;
+            return;
         }
 
-        this.modals.page.open = true;
-    },
-
-    getActiveBlocks() {
-        const layoutId = parseInt(this.modals.page.layout_id, 10);
-        if (!layoutId) return [];
-        const layout = this.availableLayouts.find(l => l.id === layoutId);
-        return layout && layout.blocks ? layout.blocks : [];
-    },
-
-    // --- Layout Logic ---
-    openLayoutModal(mode, data = {}) {
-        this.modals.layout.mode = mode;
-        this.modals.layout.id = data.id || '';
-        this.modals.layout.name = data.name || '';
-        this.modals.layout.description = data.description || '';
-        this.modals.layout.blocks = data.blocks ? JSON.parse(JSON.stringify(data.blocks)) : [{ id: '', name: 'content', col_span: 12, row_span: 1 }];
-        this.modals.layout.formAction = mode === 'edit' ? `/admin/layouts/${data.id}` : '/admin/layouts';
-        this.modals.layout.method = mode === 'edit' ? 'PUT' : 'POST';
-        this.modals.layout.open = true;
-    },
-
-    addLayoutBlock() {
-        this.modals.layout.blocks.push({ id: '', name: '', col_span: 12, row_span: 1 });
-    },
-
-    removeLayoutBlock(index) {
-        this.modals.layout.blocks.splice(index, 1);
-    },
-
-    openConfigModal(widgetId, widgetKey) {
-        this.modals.page.configuringWidgetId = widgetId;
-        this.modals.widget.widgetKey = widgetKey;
-
-        if (!this.modals.page.instanceOptions[widgetId]) {
-            this.modals.page.instanceOptions[widgetId] = {};
+        if (type === 'grid') {
+            this.modals.grid.mode = mode;
+            this.modals.grid.id = data.id || '';
+            this.modals.grid.grid_title = data.grid_title || '';
+            this.modals.grid.grid_synopsis = data.grid_synopsis || '';
+            this.modals.grid.grid_modules = data.grid_modules
+                ? JSON.parse(JSON.stringify(data.grid_modules))
+                : [{ id: '', grid_module_title: 'content', column_span: 12, row_span: 1 }];
+            this.modals.grid.formAction = mode === 'edit' ? `/admin/grids/${data.id}` : '/admin/grids';
+            this.modals.grid.method = mode === 'edit' ? 'PUT' : 'POST';
+            this.modals.grid.open = true;
+            return;
         }
 
-        const fields = this.currentWidgetFields;
+        if (type === 'module') {
+            this.modals.module.mode = mode;
+            this.modals.module.id = data.id || '';
+            this.modals.module.module_title = data.module_title || '';
+            this.modals.module.module_token = data.module_token || '';
+
+            let rawSettings = data.module_default_settings || '';
+            if (typeof rawSettings === 'object' && rawSettings !== null) {
+                try { rawSettings = JSON.stringify(rawSettings, null, 2); } catch (e) { rawSettings = ''; }
+            }
+            this.modals.module.module_default_settings = rawSettings;
+
+            this.modals.module.action = mode === 'edit' ? `/admin/modules/${data.id}` : '/admin/modules';
+            this.modals.module.method = mode === 'edit' ? 'PUT' : 'POST';
+
+            if (mode === 'create') {
+                this.initModuleSettings();
+            }
+
+            this.modals.module.open = true;
+        }
+    },
+
+    getActiveGridModules() {
+        const gridId = parseInt(this.modals.book.grid_id, 10);
+        if (!gridId) return [];
+        const grid = this.availableGrids.find(g => g.id === gridId);
+        return grid && grid.grid_modules ? grid.grid_modules : [];
+    },
+
+    addGridModule() {
+        this.modals.grid.grid_modules.push({ id: '', grid_module_title: '', column_span: 12, row_span: 1 });
+    },
+
+    removeGridModule(index) {
+        this.modals.grid.grid_modules.splice(index, 1);
+    },
+
+    openConfigModal(moduleId, moduleToken) {
+        this.modals.book.configuringModuleId = moduleId;
+        this.modals.module.module_token = moduleToken;
+
+        if (!this.modals.book.bookConfigs[moduleId]) {
+            this.modals.book.bookConfigs[moduleId] = {};
+        }
+
+        const fields = this.currentModuleFields;
         for (let key in fields) {
-            if (this.modals.page.instanceOptions[widgetId][key] === undefined) {
-                this.modals.page.instanceOptions[widgetId][key] = fields[key].default || '';
+            if (this.modals.book.bookConfigs[moduleId][key] === undefined) {
+                this.modals.book.bookConfigs[moduleId][key] = fields[key].default || '';
             }
         }
 
-        if (this.modals.widget.options && this.modals.widget.options[widgetId]) {
-            this.modals.page.instanceOptions[widgetId] = {
-                ...this.modals.page.instanceOptions[widgetId],
-                ...this.modals.widget.options[widgetId]
+        if (
+            this.modals.module.module_default_settings &&
+            typeof this.modals.module.module_default_settings === 'object' &&
+            this.modals.module.module_default_settings[moduleId]
+        ) {
+            this.modals.book.bookConfigs[moduleId] = {
+                ...this.modals.book.bookConfigs[moduleId],
+                ...this.modals.module.module_default_settings[moduleId]
             };
         }
 
-        this.modals.widget.open = true;
+        this.modals.module.open = true;
     },
 
-    // --- Widget Logic ---
-    get currentWidgetFields() {
-        if (!this.modals.widget.widgetKey || !this.widgetData) return {};
-        let data = this.widgetData[this.modals.widget.widgetKey];
+    get currentModuleFields() {
+        if (!this.modals.module.module_token || !this.moduleData) return {};
+        let data = this.moduleData[this.modals.module.module_token];
         if (!data) {
-            const searchKey = this.modals.widget.widgetKey.toLowerCase().replace('widget_', '');
-            const foundKey = Object.keys(this.widgetData).find(k =>
-                k.toLowerCase() === this.modals.widget.widgetKey.toLowerCase() ||
-                k.toLowerCase().replace('widget_', '') === searchKey
+            const searchKey = this.modals.module.module_token.toLowerCase().replace('module_', '').replace('widget_', '');
+            const foundKey = Object.keys(this.moduleData).find(k =>
+                k.toLowerCase() === this.modals.module.module_token.toLowerCase() ||
+                k.toLowerCase().replace('module_', '').replace('widget_', '') === searchKey
             );
-            if (foundKey) data = this.widgetData[foundKey];
+            if (foundKey) data = this.moduleData[foundKey];
         }
         return data && data.fields ? data.fields : {};
     },
 
-    initWidgetOptions() {
-        const fields = this.currentWidgetFields;
-        this.modals.widget.options = {};
+    initModuleSettings() {
+        const fields = this.currentModuleFields;
+        this.modals.module.module_default_settings = {};
         for (let key in fields) {
-            this.modals.widget.options[key] = fields[key].default || '';
+            this.modals.module.module_default_settings[key] = fields[key].default || '';
         }
-    },
-
-    openWidgetModal(mode, data = {}) {
-        this.modals.widget.mode = mode;
-        this.modals.widget.id = data.id || '';
-        this.modals.widget.name = data.name || '';
-        this.modals.widget.widgetKey = data.widgetKey || '';
-
-        let rawOpts = data.options || '';
-        if (typeof rawOpts === 'object') {
-            try { rawOpts = JSON.stringify(rawOpts, null, 2); } catch (e) { rawOpts = ''; }
-        }
-        this.modals.widget.options = rawOpts;
-
-        this.modals.widget.action = mode === 'edit' ? `/admin/widgets/${data.id}` : '/admin/widgets';
-        this.modals.widget.method = mode === 'edit' ? 'PUT' : 'POST';
-
-        if (mode === 'create') {
-            this.initWidgetOptions();
-        }
-
-        this.modals.widget.open = true;
     }
 });

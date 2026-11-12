@@ -11,7 +11,7 @@
     @forelse($storyPosts ?? [] as $folio)
         @php
             $isMature = ($folio->content_tier_l >= 3 || $folio->content_tier_s >= 3 || $folio->content_tier_v >= 3);
-            $bypassMode = \App\Models\Configuration::where('configuration_token', 'content_shield_bypass')->value('configuration_payload') ?? 'locked';
+            $bypassMode = \App\Models\Configuration::where('configuration_token', 'content_shield_bypass')->pluck('configuration_payload')->first() ?? 'locked';
             $userBypassed = auth()->check() && $bypassMode === 'user_bypass' && auth()->user()->content_shield_bypass;
             $showGate = $isMature && !$userBypassed;
         @endphp

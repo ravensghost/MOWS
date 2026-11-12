@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Assignment;
 use App\Models\Book;
 use App\Models\ChronologicalRegister;
 use App\Models\Distinction;
 use App\Models\Insignia;
 use App\Models\Persona;
-use App\Models\Position;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -25,10 +25,10 @@ class ChronologicalRegisterController extends Controller
 
         $awards = Distinction::with('catalogue')->orderBy('distinction_title')->get();
         $users = User::orderBy('name')->get();
-        $characters = Persona::with(['user', 'rank', 'position'])->orderBy('persona_name')->get();
+        $characters = Persona::with(['user', 'insignia', 'assignment'])->orderBy('persona_name')->get();
 
-        $ranks = Insignia::orderBy('sort_order', 'desc')->get();
-        $positions = Position::with('section')->orderBy('name')->get();
+        $ranks = Insignia::orderBy('insignia_sort_order', 'desc')->get();
+        $positions = Assignment::with('division')->orderBy('assignment_title')->get();
         $eventTypeGroups = ChronologicalRegister::eventTypeGroups();
 
         $recentRecords = ChronologicalRegister::select('chronological_registers.*')

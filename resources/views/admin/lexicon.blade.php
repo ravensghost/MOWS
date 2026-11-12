@@ -51,7 +51,7 @@
 
             <!-- Alpine-Driven Language Tabs Bar -->
             <div id="lexicon-tabs-header" class="bg-panel-header rounded-t flex flex-row flex-wrap items-center p-2 gap-sm" x-ref="lexiconTabsHeader">
-                @foreach($locales as $code =>$label)
+                @foreach($locales as $code => $label)
                     <button type="button"
                             class="font-bold text-sm bg-transparent border-none hover-bg-panel-hover py-1 px-2 cursor-pointer transition-btn rounded-input"
                             x-bind:class="activeTab === '{{ $code }}' ? 'text-p border-b-accent bg-panel-header' : 'text-muted border-b-2-transparent'"
@@ -66,7 +66,7 @@
 
             <!-- Dynamic Active Language Toolbar -->
             <div id="lexicon-active-toolbar" class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col gap-md overflow-hidden rounded-t-none border-t-0 mb-lg" x-ref="lexiconActiveToolbar" x-cloak>
-                @foreach($locales as $code =>$label)
+                @foreach($locales as $code => $label)
                     <div x-show="activeTab === '{{ $code }}'" x-cloak class="bg-panel-header text-h border-b border-panel p-panel-header font-bold border-b-0 flex flex-row flex-wrap gap-md items-center justify-between p-3">
                         <div class="flex flex-row items-center gap-sm">
                             <span class="font-bold text-h">{{ $label }}</span>
@@ -83,7 +83,7 @@
                                     <i class="bi bi-pencil"></i> {{ lexicon('btn_common_Edit', 'Edit') }}
                                 </x-button>
 
-                                @if($code === 'gb' || $code ===$activeSkin)
+                                @if($code === 'gb' || $code === $activeSkin)
                                     <x-button type="button"
                                               variant="text"
                                               class="text-danger hover-danger text-sm px-2"
@@ -116,7 +116,7 @@
                               id="lexicon_search"
                               type="text"
                               :label="lexicon('label_Lexicon_SearchTerms', 'Filter Lexicon Terms')"
-                              :placeholder="lexicon('label_Lexicon_SearchPlaceholder', 'Search by code key, master group, subgroup, or translation...')"
+                              :placeholder="lexicon('label_Lexicon_SearchPlaceholder', 'Search by semantic token, prefix group, group title, or translation...')"
                               :tooltip="lexicon('tooltip_Lexicon_SearchInput', 'Instantaneously filter lexicon terms using fuzzy search')"
                               xModel="searchQuery" />
             </div>
@@ -125,18 +125,18 @@
         <x-slot:middle>
             <div id="lexicon-table-content" x-ref="lexiconTableContent" class="flex flex-col gap-md">
 
-                @forelse($groupedTerms as $master =>$subgroups)
-                    <div x-show="masterVisible('{{ addslashes($master) }}')" class="mb-2">
-                        <x-accordion-panel :title="$master" :expanded="false">
+                @forelse($groupedTerms as $prefixGroup => $groups)
+                    <div x-show="masterVisible('{{ addslashes($prefixGroup) }}')" class="mb-2">
+                        <x-accordion-panel :title="$prefixGroup" :expanded="false">
                             <x-slot:top>
                                 @can('manage_lexicon')
                                     <x-button type="button"
                                               variant="text"
                                               class="text-danger hover-danger flex-shrink-0 text-sm"
-                                              x-data="deleteAction(`/admin/lexicon/group/{{ $master }}`, 'DELETE', 'Group {{ addslashes($master) }}')"
+                                              x-data="deleteAction(`/admin/lexicon/group/{{ $prefixGroup }}`, 'DELETE', 'Group {{ addslashes($prefixGroup) }}')"
                                               @click.stop="confirmDelete"
-                                              aria-label="{{ lexicon('tooltip_Lexicon_DeleteGroup', 'Delete entire master group') }}"
-                                              x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_DeleteGroup', 'Delete entire master group')) }}'">
+                                              aria-label="{{ lexicon('tooltip_Lexicon_DeleteGroup', 'Delete entire prefix group') }}"
+                                              x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_DeleteGroup', 'Delete entire prefix group')) }}'">
                                         <i class="bi bi-trash"></i> {{ lexicon('btn_common_Delete', 'Delete') }}
                                     </x-button>
                                 @endcan
@@ -144,16 +144,16 @@
 
                             <x-table class="border-t-0 rounded-none shadow-none">
                                 <x-slot:headers>
-                                    <th class="p-4 text-left w-48">{{ lexicon('label_Lexicon_Subgroup', 'Subgroup') }}</th>
-                                    <th class="p-4 text-left">{{ lexicon('label_Lexicon_Term', 'Term (Code Key)') }}</th>
+                                    <th class="p-4 text-left w-48">{{ lexicon('label_Lexicon_Subgroup', 'Group Title') }}</th>
+                                    <th class="p-4 text-left">{{ lexicon('label_Lexicon_Term', 'Semantic Token') }}</th>
                                     <th class="p-4 text-left">{{ lexicon('label_Lexicon_Translation', 'Translation') }}</th>
                                     <th class="p-4 text-right w-48">{{ lexicon('label_common_Actions', 'Actions') }}</th>
                                 </x-slot:headers>
 
-                                @foreach($subgroups as $sub =>$subTerms)
-                                    <tbody x-data="{ subExpanded: false }" x-show="subgroupVisible('{{ addslashes($master) }}', '{{ addslashes($sub) }}')">
+                                @foreach($groups as $groupTitle => $groupEntries)
+                                    <tbody x-data="{ subExpanded: false }" x-show="subgroupVisible('{{ addslashes($prefixGroup) }}', '{{ addslashes($groupTitle) }}')">
 
-                                        <!-- Clickable Subgroup Header Row -->
+                                        <!-- Clickable Group Header Row -->
                                         <tr class="bg-panel-sub border-b-table-row hover-bg-panel-hover cursor-pointer"
                                             @click="subExpanded = !subExpanded"
                                             aria-label="{{ lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel') }}"
@@ -162,17 +162,17 @@
                                                 <div class="flex flex-row items-center justify-between">
                                                     <div class="flex flex-row items-center gap-sm">
                                                         <span class="text-xs text-muted" x-text="(subExpanded || searchQuery.trim() !== '') ? '▼' : '▶'"></span>
-                                                        <span>{{ $sub }}</span>
-                                                        <x-badge type="primary">{{ count($subTerms) }} {{ lexicon('label_Lexicon_TermsCount', 'terms') }}</x-badge>
+                                                        <span>{{ $groupTitle }}</span>
+                                                        <x-badge type="primary">{{ count($groupEntries) }} {{ lexicon('label_Lexicon_TermsCount', 'entries') }}</x-badge>
                                                     </div>
                                                     @can('manage_lexicon')
                                                         <x-button type="button"
                                                                   variant="text"
                                                                   class="text-danger hover-danger text-xs px-2"
-                                                                  x-data="deleteAction(`/admin/lexicon/group/{{ $master }}/{{ $sub }}`, 'DELETE', 'Subgroup {{ addslashes($sub) }}')"
+                                                                  x-data="deleteAction(`/admin/lexicon/group/{{ $prefixGroup }}/{{ $groupTitle }}`, 'DELETE', 'Group {{ addslashes($groupTitle) }}')"
                                                                   @click.stop="confirmDelete"
-                                                                  aria-label="{{ lexicon('tooltip_Lexicon_DeleteSubgroup', 'Delete this subgroup and its terms') }}"
-                                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_DeleteSubgroup', 'Delete this subgroup and its terms')) }}'">
+                                                                  aria-label="{{ lexicon('tooltip_Lexicon_DeleteSubgroup', 'Delete this group and its entries') }}"
+                                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_DeleteSubgroup', 'Delete this group and its entries')) }}'">
                                                             <i class="bi bi-trash"></i>
                                                         </x-button>
                                                     @endcan
@@ -180,25 +180,25 @@
                                             </td>
                                         </tr>
 
-                                        <!-- Translation Terms -->
-                                        @foreach($subTerms as $term)
-                                            <tr x-show="(subExpanded || searchQuery.trim() !== '') && termVisible({{ $term->id }})"
+                                        <!-- Translation Entries -->
+                                        @foreach($groupEntries as $entry)
+                                            <tr x-show="(subExpanded || searchQuery.trim() !== '') && termVisible({{ $entry->id }})"
                                                 data-term-row
-                                                data-id="{{ $term->id }}"
-                                                data-master="{{ $master }}"
-                                                data-sub="{{ $sub }}"
-                                                data-key="{{ $term->code_key }}"
-                                                data-translations="{{ json_encode($term->translations ?? []) }}"
+                                                data-id="{{ $entry->id }}"
+                                                data-master="{{ $prefixGroup }}"
+                                                data-sub="{{ $groupTitle }}"
+                                                data-key="{{ $entry->semantic_token }}"
+                                                data-translation-payloads="{{ json_encode($entry->translation_payloads ?? []) }}"
                                                 class="border-b-table-row hover-bg-table-row"
                                                 x-cloak>
-                                                <td class="p-4 font-bold text-muted pl-8">↳ {{ $sub }}</td>
+                                                <td class="p-4 font-bold text-muted pl-8">↳ {{ $groupTitle }}</td>
                                                 <td class="p-4 font-mono text-accent text-sm">
                                                     <div class="flex flex-row items-center gap-xs">
-                                                        <span>{{ $term->code_key }}</span>
+                                                        <span>{{ $entry->semantic_token }}</span>
                                                         <x-button type="button"
                                                                   variant="text"
                                                                   class="text-xs text-muted hover-text-accent"
-                                                                  x-clipboard="'{{ addslashes($term->code_key) }}'"
+                                                                  x-clipboard="'{{ addslashes($entry->semantic_token) }}'"
                                                                   aria-label="{{ lexicon('tooltip_common_CopyToken', 'Copy token name to clipboard') }}"
                                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_common_CopyToken', 'Copy token name to clipboard')) }}'">
                                                             <i class="bi bi-clipboard"></i>
@@ -206,9 +206,9 @@
                                                     </div>
                                                 </td>
                                                 <td class="p-4 text-p">
-                                                    @foreach($locales as $code =>$label)
+                                                    @foreach($locales as $code => $label)
                                                         <span x-show="activeTab === '{{ $code }}'" x-cloak>
-                                                            {{ $term->translations[$code] ?? '' }}
+                                                            {{ $entry->translation_payloads[$code] ?? '' }}
                                                         </span>
                                                     @endforeach
                                                 </td>
@@ -217,19 +217,19 @@
                                                         <x-button type="button"
                                                                   variant="text"
                                                                   class="text-warning hover-warning"
-                                                                  @click="openTermModal('edit', {{ $term->id }}, '{{ addslashes($term->code_key) }}', '{{ addslashes($term->master_group) }}', '{{ addslashes($term->subgroup) }}', {{ json_encode($term->translations ?? []) }})"
-                                                                  aria-label="{{ lexicon('tooltip_Lexicon_EditTerm', 'Edit lexicon term and translations') }}"
-                                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_EditTerm', 'Edit lexicon term and translations')) }}'">
+                                                                  @click="openTermModal('edit', {{ $entry->id }}, '{{ addslashes($entry->semantic_token) }}', '{{ addslashes($entry->prefix_group_title) }}', '{{ addslashes($entry->group_title) }}', {{ json_encode($entry->translation_payloads ?? []) }})"
+                                                                  aria-label="{{ lexicon('tooltip_Lexicon_EditTerm', 'Edit lexicon entry and translations') }}"
+                                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_EditTerm', 'Edit lexicon entry and translations')) }}'">
                                                             <i class="bi bi-pencil"></i> {{ lexicon('btn_common_Edit', 'Edit') }}
                                                         </x-button>
 
                                                         <x-button type="button"
                                                                   variant="text"
                                                                   class="text-danger hover-danger flex-shrink-0"
-                                                                  x-data="deleteAction(`/admin/lexicon/term/{{ $term->id }}`, 'DELETE', 'Term {{ addslashes($term->code_key) }}')"
+                                                                  x-data="deleteAction(`/admin/lexicon/term/{{ $entry->id }}`, 'DELETE', 'Entry {{ addslashes($entry->semantic_token) }}')"
                                                                   @click="confirmDelete"
-                                                                  aria-label="{{ lexicon('tooltip_Lexicon_DeleteTerm', 'Delete lexicon term') }}"
-                                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_DeleteTerm', 'Delete lexicon term')) }}'">
+                                                                  aria-label="{{ lexicon('tooltip_Lexicon_DeleteTerm', 'Delete lexicon entry') }}"
+                                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_DeleteTerm', 'Delete lexicon entry')) }}'">
                                                             <i class="bi bi-trash"></i> {{ lexicon('btn_common_Delete', 'Delete') }}
                                                         </x-button>
                                                     @endcan
@@ -243,7 +243,7 @@
                     </div>
                 @empty
                     <div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col gap-md overflow-hidden p-6 text-center text-muted italic">
-                        <span>{{ lexicon('msg_Lexicon_NoTermsFound', 'No lexicon terms discovered yet.') }}</span>
+                        <span>{{ lexicon('msg_Lexicon_NoTermsFound', 'No lexicon entries discovered yet.') }}</span>
                     </div>
                 @endforelse
             </div>
@@ -252,7 +252,7 @@
         <x-slot:bottom>
 
             <!-- ============================================== -->
-            <!-- MODAL: TERM EDIT                               -->
+            <!-- MODAL: ENTRY EDIT                              -->
             <!-- ============================================== -->
             <x-modal show="modals.term.open" maxWidth="max-w-4xl">
                 <x-slot:top>
@@ -266,46 +266,46 @@
                     <input type="hidden" name="id" :value="modals.term.id">
 
                     <div class="grid grid-cols-1 gap-sm w-full lg-grid-cols-3">
-                        <x-form-input name="master_group"
-                                      id="term_master_group"
+                        <x-form-input name="prefix_group_title"
+                                      id="term_prefix_group_title"
                                       type="text"
-                                      :label="lexicon('label_Lexicon_MasterGroup', 'Master Group')"
+                                      :label="lexicon('label_Lexicon_MasterGroup', 'Prefix Group Title')"
                                       :tooltip="lexicon('tooltip_Lexicon_MasterGroupInput', 'Primary category grouping (e.g. admin_label, label)')"
-                                      xModel="modals.term.master_group"
+                                      xModel="modals.term.prefix_group_title"
                                       readonly
                                       :required="true" />
 
-                        <x-form-input name="subgroup"
-                                      id="term_subgroup"
+                        <x-form-input name="group_title"
+                                      id="term_group_title"
                                       type="text"
-                                      :label="lexicon('label_Lexicon_Subgroup', 'Subgroup')"
+                                      :label="lexicon('label_Lexicon_Subgroup', 'Group Title')"
                                       :tooltip="lexicon('tooltip_Lexicon_SubgroupInput', 'Secondary feature namespace (e.g. Lexicon, Navigation)')"
-                                      xModel="modals.term.subgroup"
+                                      xModel="modals.term.group_title"
                                       readonly
                                       :required="true" />
 
-                        <x-form-input name="code_key"
-                                      id="term_code_key"
+                        <x-form-input name="semantic_token"
+                                      id="term_semantic_token"
                                       type="text"
-                                      :label="lexicon('label_Lexicon_CodeKey', 'Exact Code Key')"
-                                      :tooltip="lexicon('tooltip_Lexicon_CodeKeyInput', 'Unique 3-part code key identifier')"
-                                      xModel="modals.term.code_key"
+                                      :label="lexicon('label_Lexicon_CodeKey', 'Semantic Token')"
+                                      :tooltip="lexicon('tooltip_Lexicon_CodeKeyInput', 'Unique semantic token identifier')"
+                                      xModel="modals.term.semantic_token"
                                       readonly
                                       :required="true" />
                     </div>
 
                     <div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col gap-md overflow-hidden mt-4">
                         <div class="bg-panel-header text-h border-b border-panel p-panel-header font-bold text-sm p-3">
-                            <span>{{ lexicon('label_Lexicon_Translations', 'Translations') }}</span>
+                            <span>{{ lexicon('label_Lexicon_Translations', 'Translation Payloads') }}</span>
                         </div>
                         <div class="p-4 grid grid-cols-1 gap-sm w-full md-grid-cols-2 gap-md">
-                            @foreach($locales as $code =>$label)
-                                <x-form-input name="translations[{{ $code }}]"
-                                              id="translation_{{ $code }}"
+                            @foreach($locales as $code => $label)
+                                <x-form-input name="translation_payloads[{{ $code }}]"
+                                              id="translation_payload_{{ $code }}"
                                               type="text"
                                               :label="$label . ' (' . strtoupper($code) . ')'"
                                               :tooltip="lexicon('tooltip_Lexicon_TranslationInput', 'Translated string for this locale')"
-                                              xModel="modals.term.translations['{{ $code }}']" />
+                                              xModel="modals.term.translation_payloads['{{ $code }}']" />
                             @endforeach
                         </div>
                     </div>

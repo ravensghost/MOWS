@@ -20,15 +20,15 @@ use App\Models\Configuration;
 
 class PortalController extends Controller
 {
-    public function showBook($slug = '/')
+    public function showBook($bookUrl = '/')
     {
-        $slug = $slug === '/' ? '/' : ltrim($slug, '/');
+        $bookUrl = $bookUrl === '/' ? '/' : ltrim($bookUrl, '/');
 
-        $systemPage = Book::where('book_url', $slug)
+        $systemPage = Book::where('book_url', $bookUrl)
             ->where('is_published', true)
             ->with([
                 'grid.gridModules',
-                'module' => function ($query) {
+                'modules' => function ($query) {
                     $query->wherePivot('is_visible', true)
                         ->orderBy('module_sort_order');
                 }
@@ -36,7 +36,7 @@ class PortalController extends Controller
             ->firstOrFail();
 
         $user = auth()->user();
-        $systemPage->setRelation('module', ($systemPage->module ?? collect())->filter(function ($widget) use ($user) {
+        $filteredModules = ($systemPage->modules ?? collect())->filter(function ($widget) use ($user) {
             if (! ($widget->pivot->is_visible ?? true)) {
                 return false;
             }
@@ -45,7 +45,11 @@ class PortalController extends Controller
                 return true;
             }
             return $user ? $user->can($required) : false;
-        })->values());
+        })->values();
+
+        $systemPage->setRelation('modules', $filteredModules);
+        $systemPage->setRelation('module', $filteredModules);
+        $systemPage->setRelation('widgets', $filteredModules);
 
         $lookupUrl = $systemPage->book_url === '/' ? '/' : '/' . ltrim($systemPage->book_url, '/');
 
@@ -67,7 +71,7 @@ class PortalController extends Controller
             'storyPosts' => null,
         ];
 
-        $widgetKeys = $systemPage->module->pluck('module_token')->toArray();
+        $widgetKeys = $filteredModules->pluck('module_token')->toArray();
 
         if (in_array('news', $widgetKeys) || in_array('widget_news', $widgetKeys)) {
             $data['newsItems'] = Bulletin::with('author')
@@ -93,7 +97,7 @@ class PortalController extends Controller
             ->where('is_published', true)
             ->with([
                 'grid.gridModules',
-                'module' => function ($query) {
+                'modules' => function ($query) {
                     $query->wherePivot('is_visible', true)
                         ->orderBy('module_sort_order');
                 }
@@ -101,7 +105,7 @@ class PortalController extends Controller
             ->firstOrFail();
 
         $user = auth()->user();
-        $systemPage->setRelation('module', ($systemPage->module ?? collect())->filter(function ($module) use ($user) {
+        $filteredModules = ($systemPage->modules ?? collect())->filter(function ($module) use ($user) {
             if (! ($module->pivot->is_visible ?? true)) {
                 return false;
             }
@@ -110,41 +114,31 @@ class PortalController extends Controller
                 return true;
             }
             return $user ? $user->can($required) : false;
-        })->values());
+        })->values();
+
+        $systemPage->setRelation('modules', $filteredModules);
+        $systemPage->setRelation('module', $filteredModules);
+        $systemPage->setRelation('widgets', $filteredModules);
 
         $persona->load([
             'user',
             'insignia' => function ($query) {
                 $query->where('is_visible', true)->with([
-                    'rankSet' => function ($q) {
-                        $q->where('is_visible', true);
-                    }
-                ]);
-            },
-            'rank' => function ($query) {
-                $query->where('is_visible', true)->with([
-                    'rankSet' => function ($q) {
+                    'insigniaGroup' => function ($q) {
                         $q->where('is_visible', true);
                     }
                 ]);
             },
             'assignment' => function ($query) {
                 $query->where('is_visible', true)->with([
-                    'section' => function ($q) {
+                    'division' => function ($q) {
                         $q->where('is_visible', true);
                     }
                 ]);
             },
-            'position' => function ($query) {
-                $query->where('is_visible', true)->with([
-                    'section' => function ($q) {
-                        $q->where('is_visible', true);
-                    }
-                ]);
-            },
-            'application.answers.formField',
-            'serviceRecords.award',
-            'serviceRecords.issuer',
+            'candidatePetition.answers.formField',
+            'chronologicalRegisters.citation',
+            'chronologicalRegisters.issuer',
             'attributes',
         ]);
 

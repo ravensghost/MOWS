@@ -2,7 +2,7 @@
 @section('title', lexicon('admin_label_NavOptions', 'Navigation Options'))
 
 @section('content')
-<div x-data="navOptionsManager"
+<div x-data="tableOfContentParametersManager"
      @ajax-success.window="refreshDOM()"
      data-msg-success-title="{{ lexicon('msg_common_Success', 'Success!') }}"
      data-msg-success-text="{{ lexicon('msg_Navigation_OptionSaved', 'Option saved successfully.') }}"
@@ -29,7 +29,7 @@
                 <div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col gap-md overflow-hidden p-4 mb-lg">
                     <div class="mb-3 border-b pb-2 flex flex-row flex-wrap gap-md items-center justify-between">
                         <span class="text-sm font-bold text-accent"
-                              x-text="formMode === 'create' ? '{{ addslashes(lexicon('label_Navigation_AddNewOption', '+ Add New Option')) }}' : '{{ addslashes(lexicon('label_Navigation_EditingOption', 'Editing Option:')) }} ' + optValue"></span>
+                              x-text="formMode === 'create' ? '{{ addslashes(lexicon('label_Navigation_AddNewOption', '+ Add New Option')) }}' : '{{ addslashes(lexicon('label_Navigation_EditingOption', 'Editing Option:')) }} ' + parameter_value"></span>
                         <x-button type="button"
                                   variant="text"
                                   class="text-xs text-muted hover-text-h"
@@ -41,7 +41,7 @@
                         </x-button>
                     </div>
 
-                    <form @submit.prevent="submitOption()" class="flex flex-col gap-md">
+                    <form @submit.prevent="submitParameter()" class="flex flex-col gap-md">
                         <div class="grid grid-cols-1 gap-sm w-full lg-grid-cols-4">
                             <div class="flex flex-col gap-xs">
                                 <label for="parameter_mode" class="text-xs font-bold text-input-muted">
@@ -50,7 +50,7 @@
                                 </label>
                                 <select id="parameter_mode"
                                         name="parameter_mode"
-                                        x-model="optType"
+                                        x-model="parameter_mode"
                                         class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent"
                                         aria-label="{{ lexicon('label_Navigation_OptionType', 'Type') }}"
                                         x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_OptionTypeSelect', 'Select the category of dropdown option')) }}'"
@@ -67,7 +67,7 @@
                                           :label="lexicon('label_Navigation_OptionValue', 'Value (Database Key)')"
                                           :placeholder="lexicon('label_Navigation_OptionValuePlaceholder', 'e.g. primary, Lore')"
                                           :tooltip="lexicon('tooltip_Navigation_OptionValueInput', 'Internal database key stored on navigation links')"
-                                          xModel="optValue"
+                                          xModel="parameter_value"
                                           :required="true" />
 
                             <x-form-input name="parameter_label"
@@ -76,14 +76,14 @@
                                           :label="lexicon('label_Navigation_OptionLabelKey', 'Label (Lexicon Key)')"
                                           :placeholder="lexicon('label_Navigation_OptionLabelPlaceholder', 'e.g. label_nav_group_lore')"
                                           :tooltip="lexicon('tooltip_Navigation_OptionLabelInput', 'Lexicon code key used to translate this option')"
-                                          xModel="optLabel" />
+                                          xModel="parameter_label" />
 
                             <x-form-input name="parameter_sort_order"
                                           id="parameter_sort_order"
                                           type="number"
                                           :label="lexicon('label_common_SortOrder', 'Sort Order')"
                                           :tooltip="lexicon('tooltip_Navigation_OptionSortOrder', 'Numeric display order in dropdown menus')"
-                                          xModel="optSortOrder" />
+                                          xModel="parameter_sort_order" />
                         </div>
 
                         <div class="flex flex-row flex-wrap items-center justify-end pt-2">
@@ -100,18 +100,18 @@
                 </div>
             @endcan
 
-            <!-- AJAX Swappable Options Table -->
+            <!-- AJAX Swappable Parameters Table -->
             <x-accordion-panel :title="lexicon('label_Navigation_RegisteredOptions', 'Registered Dropdown Options')" :expanded="true">
                 <div class="mb-2">
-                    <x-form-input name="opt_search"
-                                  id="opt_search"
+                    <x-form-input name="param_search"
+                                  id="param_search"
                                   :label="lexicon('label_Navigation_FilterOptions', 'Filter Dropdown Options')"
                                   :placeholder="lexicon('label_Navigation_FilterOptionsPlaceholder', 'Search options by type, value, or lexicon key...')"
                                   :tooltip="lexicon('tooltip_Navigation_FilterOptionsInput', 'Instantaneously filter dropdown options using fuzzy search')"
                                   xModel="searchQuery" />
                 </div>
 
-                <x-table x-ref="optionsTableContent" class="border-t-0">
+                <x-table x-ref="parametersTableContent" class="border-t-0">
                     <x-slot:headers>
                         <th class="p-3">{{ lexicon('label_Navigation_OptionType', 'Type') }}</th>
                         <th class="p-3">{{ lexicon('label_Navigation_OptionValueShort', 'Value') }}</th>
@@ -120,29 +120,29 @@
                         <th class="p-3 text-right">{{ lexicon('label_common_Actions', 'Actions') }}</th>
                     </x-slot:headers>
 
-                    @forelse($options as $option)
-                        <tr data-opt-search-item
-                            data-id="{{ $option->id }}"
-                            data-type="{{ $option->parameter_mode }}"
-                            data-value="{{ $option->parameter_value }}"
-                            data-label="{{ $option->parameter_label ?? '' }}"
-                            x-show="isOptionVisible({{ $option->id }})"
+                    @forelse($parameters ?? $options as $parameter)
+                        <tr data-search-item
+                            data-id="{{ $parameter->id }}"
+                            data-parameter-mode="{{ $parameter->parameter_mode }}"
+                            data-parameter-value="{{ $parameter->parameter_value }}"
+                            data-parameter-label="{{ $parameter->parameter_label ?? '' }}"
+                            x-show="isItemVisible({{ $parameter->id }})"
                             class="border-b-table-row hover-bg-table-row">
                             <td class="p-3">
-                                <x-badge variant="{{ $option->parameter_mode === 'group' ? 'primary' : ($option->parameter_mode === 'display_location' ? 'success' : 'warning') }}"
+                                <x-badge variant="{{ $parameter->parameter_mode === 'group' ? 'primary' : ($parameter->parameter_mode === 'display_location' ? 'success' : 'warning') }}"
                                          x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_OptionCategoryBadge', 'Option category type')) }}'">
-                                    {{ ucfirst(str_replace('_', ' ', $option->parameter_mode)) }}
+                                    {{ ucfirst(str_replace('_', ' ', $parameter->parameter_mode)) }}
                                 </x-badge>
                             </td>
-                            <td class="p-3 font-bold">{{ $option->parameter_value }}</td>
+                            <td class="p-3 font-bold">{{ $parameter->parameter_value }}</td>
                             <td class="p-3 text-muted text-xs font-mono">
-                                @if($option->parameter_label)
+                                @if($parameter->parameter_label)
                                     <div class="flex flex-row items-center gap-xs">
-                                        <span>{{ $option->parameter_label }}</span>
+                                        <span>{{ $parameter->parameter_label }}</span>
                                         <x-button type="button"
                                                   variant="text"
                                                   class="text-xs text-muted hover-text-accent"
-                                                  x-clipboard="'{{ addslashes($option->parameter_label) }}'"
+                                                  x-clipboard="'{{ addslashes($parameter->parameter_label) }}'"
                                                   aria-label="{{ lexicon('tooltip_common_CopyToken', 'Copy token name to clipboard') }}"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_common_CopyToken', 'Copy token name to clipboard')) }}'">
                                             <i class="bi bi-clipboard"></i>
@@ -152,14 +152,14 @@
                                     <span>—</span>
                                 @endif
                             </td>
-                            <td class="p-3">{{ $option->parameter_sort_order }}</td>
+                            <td class="p-3">{{ $parameter->parameter_sort_order }}</td>
                             <td class="p-3 text-right">
                                 @can('manage_navigation')
                                     <div class="flex flex-row flex-wrap gap-sm items-center justify-end">
                                         <x-button type="button"
                                                   variant="text"
                                                   class="text-warning hover-warning text-xs"
-                                                  @click="editOption({{ json_encode($option) }})"
+                                                  @click="editParameter({{ json_encode($parameter) }})"
                                                   aria-label="{{ lexicon('tooltip_Navigation_EditOption', 'Edit this dropdown option') }}"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_EditOption', 'Edit this dropdown option')) }}'">
                                             <i class="bi bi-pencil"></i> {{ lexicon('btn_common_Edit', 'Edit') }}
@@ -168,9 +168,9 @@
                                                   variant="text"
                                                   class="text-danger hover-danger text-xs"
                                                   x-data="deleteAction(
-                                                      '/admin/navigation/options/{{ $option->id }}',
+                                                      '/admin/navigation/options/{{ $parameter->id }}',
                                                       'DELETE',
-                                                      '{{ addslashes($option->parameter_value) }}',
+                                                      '{{ addslashes($parameter->parameter_value) }}',
                                                       '{{ addslashes(lexicon('msg_Navigation_ConfirmDeleteOption', 'Are you sure you want to delete this dropdown option?')) }}'
                                                   )"
                                                   @click="confirmDelete()"

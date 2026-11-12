@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\CandidatePetition;
 use App\Models\CouncilEvaluation;
+use Illuminate\Http\Request;
 
 class CouncilEvaluationController extends Controller
 {
@@ -13,15 +13,15 @@ class CouncilEvaluationController extends Controller
     {
         $user = auth()->user();
 
-        if (!$user) {
-            abort(403, lexicon('msg_Applications_Unauthorised', 'Unauthorised access to Application Management.'));
+        if (! $user) {
+            abort(403, lexicon('msg_Applications_Unauthorised', 'Unauthorised access to Petition Management.'));
         }
 
         if ($user->role === 'webmaster' || (method_exists($user, 'hasRole') && $user->hasRole('webmaster')) || $user->can('applications_vote') || $user->can('manage_applications')) {
             return;
         }
 
-        abort(403, lexicon('msg_Applications_Unauthorised', 'Unauthorised access to Application Management.'));
+        abort(403, lexicon('msg_Applications_Unauthorised', 'Unauthorised access to Petition Management.'));
     }
 
     public function store(Request $request, $petitionId)
@@ -35,7 +35,7 @@ class CouncilEvaluationController extends Controller
 
         $petition = CandidatePetition::findOrFail($petitionId);
 
-        if (strtolower($petition->status) !== 'pending') {
+        if (strtolower($petition->petition_status) !== 'pending') {
             if ($request->wantsJson()) {
                 return response()->json(['status' => 'error', 'message' => 'This candidate petition is no longer pending.'], 422);
             }

@@ -19,9 +19,4 @@ class PublicationState extends Model
     {
         return $this->hasMany(Volume::class, 'publication_state_id');
     }
-
-    public function books(): HasMany
-    {
-        return $this->hasMany(Volume::class, 'publication_state_id');
-    }
 }

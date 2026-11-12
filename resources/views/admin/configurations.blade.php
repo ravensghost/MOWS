@@ -17,32 +17,32 @@
     $notConfiguredText = lexicon('msg_setting_NotConfigured', 'Not Configured');
 
     $settingsSearchCatalog = [
-        ['key' => 'approval_review_mode', 'group' => 'general', 'label' => lexicon('label_settings_ApprovalReviewMode', 'Application Review Mode')],
-        ['key' => 'rejection_protocol', 'group' => 'general', 'label' => lexicon('label_settings_RejectionProtocol', 'Rejection Protocol')],
-        ['key' => 'global_lexicon_setting', 'group' => 'general', 'label' => lexicon('label_settings_GlobalLanguage', 'Global Site Language')],
-        ['key' => 'theme_governance', 'group' => 'general', 'label' => lexicon('label_setting_ThemeGovernance', 'Theme & Skin Governance')],
-        ['key' => 'character_limit_enforced', 'group' => 'mechanics', 'label' => lexicon('label_setting_CharacterLimitEnforced', 'Enforce Character Limit')],
-        ['key' => 'pc_limit', 'group' => 'mechanics', 'label' => lexicon('label_setting_PcLimit', 'Primary Character (PC) Limit')],
-        ['key' => 'sc_limit', 'group' => 'mechanics', 'label' => lexicon('label_setting_ScLimit', 'Secondary Character (SC) Limit')],
-        ['key' => 'universe_time_system', 'group' => 'mechanics', 'label' => lexicon('label_setting_UniverseTimeSystem', 'Universe Time System')],
-        ['key' => 'content_shield_bypass', 'group' => 'mechanics', 'label' => lexicon('label_setting_ContentShield', 'Mature Content Shield')],
-        ['key' => 'ai_mode', 'group' => 'ai', 'label' => lexicon('label_setting_AIHosting', 'AI Hosting Environment')],
-        ['key' => 'ai_provider', 'group' => 'ai', 'label' => lexicon('label_setting_AIProvider', 'Cloud AI Provider')],
-        ['key' => 'ai_model', 'group' => 'ai', 'label' => lexicon('label_setting_AIModel', 'Target AI Model')],
-        ['key' => 'ai_api_key', 'group' => 'ai', 'label' => lexicon('label_setting_AI_API_Key', 'API Key')],
-        ['key' => 'game_setting', 'group' => 'general', 'label' => lexicon('label_setting_GameSetting', 'Game Setting / Franchise')],
-        ['key' => 'lore_context', 'group' => 'general', 'label' => lexicon('label_setting_LoreContext', 'Lore & Era Context')],
-        ['key' => 'draft_autosave_interval', 'group' => 'mechanics', 'label' => lexicon('label_setting_DraftAutoSaveInterval', 'Draft Auto-Save Interval (ms)')],
-        ['key' => 'discord_webhook_chapters', 'group' => 'notifications', 'label' => lexicon('label_setting_DiscordChapters', 'Discord Webhook: Chapters')],
-        ['key' => 'discord_webhook_news', 'group' => 'notifications', 'label' => lexicon('label_setting_DiscordNews', 'Discord Webhook: News Stories')],
-        ['key' => 'discord_webhook_alerts', 'group' => 'notifications', 'label' => lexicon('label_setting_DiscordAlerts', 'Discord Webhook: Writer Alerts & Tags')],
-        ['key' => 'mail_mailer', 'group' => 'notifications', 'label' => lexicon('label_setting_MailMailer', 'Email Transport Driver')],
-        ['key' => 'mail_from_name', 'group' => 'notifications', 'label' => lexicon('label_setting_MailFromName', 'Email Sender Name')],
-        ['key' => 'email_subject_prefix', 'group' => 'notifications', 'label' => lexicon('label_setting_EmailSubjectPrefix', 'Email Subject Line Prefix')],
-        ['key' => 'notifications_discord_enabled', 'group' => 'notifications', 'label' => lexicon('label_setting_EnableDiscord', 'Enable Discord Notifications')],
-        ['key' => 'notifications_email_enabled', 'group' => 'notifications', 'label' => lexicon('label_setting_EnableEmail', 'Enable Email Notifications')],
-        ['key' => 'notifications_pm_enabled', 'group' => 'notifications', 'label' => lexicon('label_setting_EnablePm', 'Enable Automated On-Site PM Alerts')],
-        ['key' => 'inactivity_threshold_days', 'group' => 'mechanics', 'label' => lexicon('label_setting_InactivityThreshold', 'Player Inactivity Threshold (Days)')],
+        ['configuration_token' => 'approval_review_mode', 'group' => 'general', 'label' => lexicon('label_settings_ApprovalReviewMode', 'Application Review Mode')],
+        ['configuration_token' => 'rejection_protocol', 'group' => 'general', 'label' => lexicon('label_settings_RejectionProtocol', 'Rejection Protocol')],
+        ['configuration_token' => 'global_lexicon_setting', 'group' => 'general', 'label' => lexicon('label_settings_GlobalLanguage', 'Global Site Language')],
+        ['configuration_token' => 'theme_governance', 'group' => 'general', 'label' => lexicon('label_setting_ThemeGovernance', 'Theme & Skin Governance')],
+        ['configuration_token' => 'character_limit_enforced', 'group' => 'mechanics', 'label' => lexicon('label_setting_CharacterLimitEnforced', 'Enforce Character Limit')],
+        ['configuration_token' => 'pc_limit', 'group' => 'mechanics', 'label' => lexicon('label_setting_PcLimit', 'Primary Character (PC) Limit')],
+        ['configuration_token' => 'sc_limit', 'group' => 'mechanics', 'label' => lexicon('label_setting_ScLimit', 'Secondary Character (SC) Limit')],
+        ['configuration_token' => 'universe_time_system', 'group' => 'mechanics', 'label' => lexicon('label_setting_UniverseTimeSystem', 'Universe Time System')],
+        ['configuration_token' => 'content_shield_bypass', 'group' => 'mechanics', 'label' => lexicon('label_setting_ContentShield', 'Mature Content Shield')],
+        ['configuration_token' => 'ai_mode', 'group' => 'ai', 'label' => lexicon('label_setting_AIHosting', 'AI Hosting Environment')],
+        ['configuration_token' => 'ai_provider', 'group' => 'ai', 'label' => lexicon('label_setting_AIProvider', 'Cloud AI Provider')],
+        ['configuration_token' => 'ai_model', 'group' => 'ai', 'label' => lexicon('label_setting_AIModel', 'Target AI Model')],
+        ['configuration_token' => 'ai_api_key', 'group' => 'ai', 'label' => lexicon('label_setting_AI_API_Key', 'API Key')],
+        ['configuration_token' => 'game_setting', 'group' => 'general', 'label' => lexicon('label_setting_GameSetting', 'Game Setting / Franchise')],
+        ['configuration_token' => 'lore_context', 'group' => 'general', 'label' => lexicon('label_setting_LoreContext', 'Lore & Era Context')],
+        ['configuration_token' => 'draft_autosave_interval', 'group' => 'mechanics', 'label' => lexicon('label_setting_DraftAutoSaveInterval', 'Draft Auto-Save Interval (ms)')],
+        ['configuration_token' => 'discord_webhook_chapters', 'group' => 'notifications', 'label' => lexicon('label_setting_DiscordChapters', 'Discord Webhook: Chapters')],
+        ['configuration_token' => 'discord_webhook_news', 'group' => 'notifications', 'label' => lexicon('label_setting_DiscordNews', 'Discord Webhook: News Stories')],
+        ['configuration_token' => 'discord_webhook_alerts', 'group' => 'notifications', 'label' => lexicon('label_setting_DiscordAlerts', 'Discord Webhook: Writer Alerts & Tags')],
+        ['configuration_token' => 'mail_mailer', 'group' => 'notifications', 'label' => lexicon('label_setting_MailMailer', 'Email Transport Driver')],
+        ['configuration_token' => 'mail_from_name', 'group' => 'notifications', 'label' => lexicon('label_setting_MailFromName', 'Email Sender Name')],
+        ['configuration_token' => 'email_subject_prefix', 'group' => 'notifications', 'label' => lexicon('label_setting_EmailSubjectPrefix', 'Email Subject Line Prefix')],
+        ['configuration_token' => 'notifications_discord_enabled', 'group' => 'notifications', 'label' => lexicon('label_setting_EnableDiscord', 'Enable Discord Notifications')],
+        ['configuration_token' => 'notifications_email_enabled', 'group' => 'notifications', 'label' => lexicon('label_setting_EnableEmail', 'Enable Email Notifications')],
+        ['configuration_token' => 'notifications_pm_enabled', 'group' => 'notifications', 'label' => lexicon('label_setting_EnablePm', 'Enable Automated On-Site PM Alerts')],
+        ['configuration_token' => 'inactivity_threshold_days', 'group' => 'mechanics', 'label' => lexicon('label_setting_InactivityThreshold', 'Player Inactivity Threshold (Days)')],
     ];
 @endphp
 
@@ -65,7 +65,7 @@
                     <x-form-input name="settings_search"
                                   id="settings-search-input"
                                   :label="lexicon('label_setting_FilterSettings', 'Filter Global Settings')"
-                                  :placeholder="lexicon('label_setting_FilterPlaceholder', 'Search configuration settings by name or keyword...')"
+                                  :placeholder="lexicon('label_setting_FilterPlaceholder', 'Search configuration settings by name or token...')"
                                   :tooltip="lexicon('tooltip_setting_FilterInput', 'Instantaneously filter global configuration settings using fuzzy search')"
                                   xModel="searchQuery"
                                   @input="filterSettings()" />
@@ -76,7 +76,7 @@
                     <x-table id="main-settings-table" x-ref="mainSettingsTable" :bareBody="true">
                         <x-slot:headers>
                             <th class="p-4 text-left">{{ lexicon('label_setting_name', 'Setting') }}</th>
-                            <th class="p-4 text-left">{{ lexicon('label_setting_value', 'Current Value') }}</th>
+                            <th class="p-4 text-left">{{ lexicon('label_setting_payload', 'Current Payload') }}</th>
                             <th class="p-4 text-right">{{ lexicon('label_common_Actions', 'Actions') }}</th>
                         </x-slot:headers>
                         
@@ -416,7 +416,7 @@
         </x-slot:middle>
 
         <x-slot:bottom>
-            {{-- MODAL 1: CENTRALISED SETTINGS MODAL --}}
+            {{-- MODAL 1: CENTRALISED CONFIGURATIONS MODAL --}}
             <x-modal show="modal.open" maxWidth="max-w-lg">
                 <x-slot:top>
                     <span x-text="`{{ addslashes(lexicon('btn_common_Edit', 'Edit')) }} ${modal.title}`"></span>
@@ -429,13 +429,13 @@
                         
                         <template x-if="modal.type === 'select'">
                             <select id="central-setting-input"
-                                    :name="'settings[' + modal.key + ']'" 
-                                    x-model="modal.value" 
+                                    :name="'settings[' + modal.configuration_token + ']'" 
+                                    x-model="modal.configuration_payload" 
                                     x-ref="modalSelect"
                                     :aria-label="modal.title"
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent">
-                                <template x-for="(label, val) in modal.options" :key="val">
-                                    <option :value="val" x-text="label" :selected="String(val) === String(modal.value)"></option>
+                                <template x-for="(label, optCode) in modal.options">
+                                    <option :value="optCode" x-text="label" :selected="String(optCode) === String(modal.configuration_payload)"></option>
                                 </template>
                             </select>
                         </template>
@@ -443,10 +443,10 @@
                         <template x-if="['text', 'url', 'password'].includes(modal.type)">
                             <input id="central-setting-input"
                                    :type="modal.type" 
-                                   :name="'settings[' + modal.key + ']'" 
-                                   x-model="modal.value" 
+                                   :name="'settings[' + modal.configuration_token + ']'" 
+                                   x-model="modal.configuration_payload" 
                                    :aria-label="modal.title"
-                                   x-tooltip="'{{ addslashes(lexicon('tooltip_setting_EnterSettingValue', 'Enter the new configuration value')) }}'"
+                                   x-tooltip="'{{ addslashes(lexicon('tooltip_setting_EnterSettingPayload', 'Enter the new configuration payload')) }}'"
                                    class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent">
                         </template>
                     </div>
@@ -515,14 +515,14 @@
                                           id="ts-prefix-input"
                                           :label="lexicon('label_setting_PrefixString', 'Prefix String')"
                                           :placeholder="lexicon('label_setting_PlaceholderPrefix', 'e.g. Stardate ')"
-                                          :tooltip="lexicon('tooltip_setting_PrefixInput', 'Text prepended before the calculated date value')"
+                                          :tooltip="lexicon('tooltip_setting_PrefixInput', 'Text prepended before the calculated date figure')"
                                           xModel="tsModal.data.date_prefix" />
                         
                             <x-form-input name="date_suffix"
                                           id="ts-suffix-input"
                                           :label="lexicon('label_setting_SuffixString', 'Suffix String')"
                                           :placeholder="lexicon('label_setting_PlaceholderSuffix', 'e.g.  AD')"
-                                          :tooltip="lexicon('tooltip_setting_SuffixInput', 'Text appended after the calculated date value')"
+                                          :tooltip="lexicon('tooltip_setting_SuffixInput', 'Text appended after the calculated date figure')"
                                           xModel="tsModal.data.date_suffix" />
                         
                             <x-form-input name="base_earth_year"
@@ -543,11 +543,11 @@
                         
                             <div x-show="tsModal.data.calculation_algorithm === 'fractional'" x-cloak>
                                 <x-form-input name="base_system_value"
-                                              id="ts-base-system-value-input"
+                                              id="ts-base-system-num-input"
                                               type="number"
-                                              :label="lexicon('label_setting_BaseSystemValue', 'Base System Value')"
+                                              :label="lexicon('label_setting_BaseSystemNum', 'Base System Number')"
                                               placeholder="100000"
-                                              :tooltip="lexicon('tooltip_setting_BaseSystemValueInput', 'Starting stardate or fractional base number')"
+                                              :tooltip="lexicon('tooltip_setting_BaseSystemNumInput', 'Starting stardate or fractional base number')"
                                               xModel="tsModal.data.base_system_value" />
                             </div>
                         
