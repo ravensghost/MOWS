@@ -31,3 +31,4 @@ Homestead.yaml
 /app/console/Commands
 /.claude
 /codebase
+/audit
