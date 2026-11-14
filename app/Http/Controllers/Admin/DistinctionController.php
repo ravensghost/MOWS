@@ -17,34 +17,28 @@ class DistinctionController extends Controller
         abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorised action.');
 
         $systemPage = Book::with(['grid.gridModules', 'module'])
-            ->whereIn('slug', ['admin/distinctions', 'admin/awards'])
+            ->where('slug', 'admin/distinctions')
             ->where('is_published', true)
             ->firstOrFail();
 
-        $distinctions = Distinction::with('catalogue')->orderBy('distinction_title')->get();
-        $catalogues = DistinctionCatalogue::orderBy('catalogue_title')->get();
+        $distinctions = Distinction::with('catalogue')->orderBy('distinction_title')->get();$catalogues = DistinctionCatalogue::orderBy('catalogue_title')->get();
 
-        $cssPath = File::exists(resource_path('css/distinctions.css'))
-            ? resource_path('css/distinctions.css')
-            : resource_path('css/awards.css');
+        $cssPath = resource_path('css/distinctions.css');
 
-        $midShapes = [];
-        $topShapes = [];
+        $midShapes = [];$topShapes = [];
 
         if (File::exists($cssPath)) {
             $cssContent = File::get($cssPath);
 
-            preg_match_all('/\.(?:distinction|award)-ml-([a-zA-Z0-9_-]+)/', $cssContent, $mlMatches);
+            preg_match_all('/\.distinction-ml-([a-zA-Z0-9_-]+)/', $cssContent,$mlMatches);
             if (!empty($mlMatches[1])) {
-                foreach (array_unique($mlMatches[1]) as $shape) {
-                    $midShapes[$shape] = str_replace('-', ' ', ucwords($shape));
+                foreach (array_unique($mlMatches[1]) as $shape) {$midShapes[$shape] = str_replace('-', ' ', ucwords($shape));
                 }
             }
 
-            preg_match_all('/\.(?:distinction|award)-tl-([a-zA-Z0-9_-]+)/', $cssContent, $tlMatches);
+            preg_match_all('/\.distinction-tl-([a-zA-Z0-9_-]+)/', $cssContent,$tlMatches);
             if (!empty($tlMatches[1])) {
-                foreach (array_unique($tlMatches[1]) as $shape) {
-                    $topShapes[$shape] = str_replace('-', ' ', ucwords($shape));
+                foreach (array_unique($tlMatches[1]) as $shape) {$topShapes[$shape] = str_replace('-', ' ', ucwords($shape));
                 }
             }
         }
@@ -73,7 +67,7 @@ class DistinctionController extends Controller
             'top_layer_modifier'       => $request->top_layer_modifier ?: null,
         ]);
 
-        $validated = $request->validate([
+        $validated =$request->validate([
             'distinction_title'        => 'required|string|max:255',
             'distinction_description'  => 'nullable|string',
             'scope_target'             => 'required|in:BOTH,IC,OOC',
@@ -87,15 +81,17 @@ class DistinctionController extends Controller
             'top_layer_modifier'       => 'nullable|string|max:255',
         ]);
 
-        Distinction::create($validated);
+        $distinction = Distinction::create($validated);
 
         return response()->json([
-            'status'  => 'success',
-            'message' => lexicon('msg_distinction_created', 'Distinction created successfully!'),
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_distinction_created', 'Distinction created successfully!'),
+            'data'     => $distinction,
+            'redirect' => null,
+        ], 200);
     }
 
-    public function update(Request $request, Distinction $distinction)
+    public function update(Request $request, Distinction$distinction)
     {
         abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorised action.');
 
@@ -109,7 +105,7 @@ class DistinctionController extends Controller
             'top_layer_modifier'       => $request->top_layer_modifier ?: null,
         ]);
 
-        $validated = $request->validate([
+        $validated =$request->validate([
             'distinction_title'        => 'required|string|max:255',
             'distinction_description'  => 'nullable|string',
             'scope_target'             => 'required|in:BOTH,IC,OOC',
@@ -126,9 +122,11 @@ class DistinctionController extends Controller
         $distinction->update($validated);
 
         return response()->json([
-            'status'  => 'success',
-            'message' => lexicon('msg_distinction_updated', 'Distinction updated successfully!'),
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_distinction_updated', 'Distinction updated successfully!'),
+            'data'     => $distinction,
+            'redirect' => null,
+        ], 200);
     }
 
     public function destroy(Distinction $distinction)
@@ -138,9 +136,11 @@ class DistinctionController extends Controller
         $distinction->delete();
 
         return response()->json([
-            'status'  => 'success',
-            'message' => lexicon('msg_distinction_deleted', 'Distinction deleted successfully!'),
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_distinction_deleted', 'Distinction deleted successfully!'),
+            'data'     => null,
+            'redirect' => null,
+        ], 200);
     }
 
     public function images(Request $request)
@@ -148,22 +148,18 @@ class DistinctionController extends Controller
         abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorised action.');
 
         $activeSkinArray = Cache::get('active_skin_default_array');
-        $activeSkin = $activeSkinArray['folder_name'] ?? 'default';
+        $activeSkin =$activeSkinArray['folder_name'] ?? 'default';
 
-        $distinctionsPath = public_path("skins/{$activeSkin}/images/distinctions");
-        $path = File::exists($distinctionsPath)
-            ? $distinctionsPath
-            : public_path("skins/{$activeSkin}/images/awards");
+        $path = public_path("skins/{$activeSkin}/images/distinctions");
 
         if (!File::exists($path)) {
             return response()->json(['images' => []]);
         }
 
-        $files = File::files($path);
-        $images = [];
+        $files = File::files($path);$images = [];
 
-        foreach ($files as $file) {
-            $images[] = $file->getFilename();
+        foreach ($files as$file) {
+            $images[] =$file->getFilename();
         }
 
         sort($images);

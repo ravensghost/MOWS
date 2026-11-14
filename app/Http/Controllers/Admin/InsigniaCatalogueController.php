@@ -27,17 +27,22 @@ class InsigniaCatalogueController extends Controller
             'is_visible'      => 'nullable|boolean',
         ]);
 
-        InsigniaCatalogue::create([
+        $catalogue = InsigniaCatalogue::create([
             'catalogue_title' => $request->input('catalogue_title'),
             'is_visible'      => $request->boolean('is_visible', true),
         ]);
 
         $this->clearRankCaches();
 
-        return response()->json(['status' => 'success', 'success' => true]);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_RankSets_Created', 'Rank set created successfully.'),
+            'data'     => $catalogue,
+            'redirect' => null,
+        ], 200);
     }
 
-    public function update(Request $request, InsigniaCatalogue $rankSet)
+    public function update(Request $request, InsigniaCatalogue$rankSet)
     {
         abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
 
@@ -47,13 +52,18 @@ class InsigniaCatalogueController extends Controller
         ]);
 
         $rankSet->update([
-            'catalogue_title' => $request->input('catalogue_title', $rankSet->catalogue_title),
-            'is_visible'      => $request->boolean('is_visible', $rankSet->is_visible),
+            'catalogue_title' => $request->input('catalogue_title',$rankSet->catalogue_title),
+            'is_visible'      => $request->boolean('is_visible',$rankSet->is_visible),
         ]);
 
         $this->clearRankCaches();
 
-        return response()->json(['status' => 'success', 'success' => true]);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_RankSets_Updated', 'Rank set updated successfully.'),
+            'data'     => $rankSet,
+            'redirect' => null,
+        ], 200);
     }
 
     public function destroy(InsigniaCatalogue $rankSet)
@@ -64,21 +74,31 @@ class InsigniaCatalogueController extends Controller
 
         $this->clearRankCaches();
 
-        return response()->json(['status' => 'success', 'success' => true]);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_RankSets_Deleted', 'Rank set deleted successfully.'),
+            'data'     => null,
+            'redirect' => null,
+        ], 200);
     }
 
-    public function assignSections(Request $request, InsigniaCatalogue $rankSet)
+    public function assignSections(Request $request, InsigniaCatalogue$rankSet)
     {
         abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
 
         Division::where('insignia_catalogue_id', $rankSet->id)->update(['insignia_catalogue_id' => null]);
 
         if ($request->has('divisions') && is_array($request->input('divisions'))) {
-            Division::whereIn('id', $request->input('divisions'))->update(['insignia_catalogue_id' => $rankSet->id]);
+            Division::whereIn('id', $request->input('divisions'))->update(['insignia_catalogue_id' =>$rankSet->id]);
         }
 
         $this->clearRankCaches();
 
-        return response()->json(['status' => 'success', 'success' => true]);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_RankSets_SectionsAssigned', 'Organisational sections assigned successfully.'),
+            'data'     => $rankSet->load('divisions'),
+            'redirect' => null,
+        ], 200);
     }
 }

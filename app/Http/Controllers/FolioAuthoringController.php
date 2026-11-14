@@ -50,11 +50,6 @@ class FolioAuthoringController extends Controller
         ));
     }
 
-    public function createChapter()
-    {
-        return $this->createFolio();
-    }
-
     public function editFolio(Folio $folio)
     {
         if (! $folio->isAccessibleBy(auth()->user())) {
@@ -78,11 +73,6 @@ class FolioAuthoringController extends Controller
             'folio_status'      => $folio->folio_status,
             'character_ids'     => $folio->personae->pluck('id')->map(fn($id) => (string)$id)->values(),
         ]);
-    }
-
-    public function editChapter(Folio $folio)
-    {
-        return $this->editFolio($folio);
     }
 
     public function storeFolio(Request $request)
@@ -208,14 +198,7 @@ class FolioAuthoringController extends Controller
             );
         }
 
-        return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_WriteChapter_SavedSuccess', 'Folio successfully saved!'),
-            'data'     => $primaryFolio,
-            'redirect' => '/dashboard',
-            'success'  => true,
-            'folio_id' => $primaryFolio?->id,
-        ], 200);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_WriteChapter_SavedSuccess', 'Folio successfully saved!'), 'data' => $primaryFolio, 'redirect' => '/dashboard'], 200);
     }
 
     public function autoSave(Request $request, ?Folio $folio = null)
@@ -281,15 +264,7 @@ class FolioAuthoringController extends Controller
             $folio->personae()->sync($resolvedCharacterIds);
         }
 
-        return response()->json([
-            'status'    => 'success',
-            'message'   => lexicon('msg_WriteChapter_AutoSaved', 'Draft auto-saved successfully.'),
-            'data'      => $folio,
-            'redirect'  => null,
-            'success'   => true,
-            'folio_id'  => $folio->id,
-            'timestamp' => now()->toTimeString(),
-        ], 200);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_WriteChapter_AutoSaved', 'Draft auto-saved successfully.'), 'data' => $folio, 'redirect' => null], 200);
     }
 
     protected function resolveCharacterIds(array $rawCharacterIds): array
@@ -337,11 +312,6 @@ class FolioAuthoringController extends Controller
 
         $folio->update(['locked_by_user_id' => $userId, 'locked_at' => now()]);
 
-        return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_WriteChapter_LockAcquired', 'Folio lock acquired.'),
-            'data'     => $folio,
-            'redirect' => null,
-        ], 200);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_WriteChapter_LockAcquired', 'Folio lock acquired.'), 'data' => $folio, 'redirect' => null], 200);
     }
 }

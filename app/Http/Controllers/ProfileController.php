@@ -10,19 +10,23 @@ class ProfileController extends Controller
 {
     public function update(Request $request)
     {
-        $user = $request->user();
+        $user =$request->user();
 
-        $validated = $request->validate([
-            'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'twitter_handle'  => ['nullable', 'string', 'max:255'],
-            'facebook_handle' => ['nullable', 'string', 'max:255'],
+        $validated =$request->validate([
+            'name'                  => ['required', 'string', 'max:255'],
+            'email'                 => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'twitter_handle'        => ['nullable', 'string', 'max:255'],
+            'facebook_handle'       => ['nullable', 'string', 'max:255'],
+            'content_shield_bypass' => ['nullable', 'boolean'],
         ]);
+
+        if (array_key_exists('content_shield_bypass', $validated)) {
+            $validated['content_shield_bypass'] = (bool)$validated['content_shield_bypass'];
+        }
 
         $user->fill($validated);
 
-        if ($user->isDirty('email')) {
-            $user->email_verified_at = null;
+        if ($user->isDirty('email')) {$user->email_verified_at = null;
         }
 
         $user->save();
@@ -31,9 +35,11 @@ class ProfileController extends Controller
 
         if ($request->wantsJson()) {
             return response()->json([
-                'status'  => 'success',
-                'message' => $message,
-            ]);
+                'status'   => 'success',
+                'message'  => $message,
+                'data'     => $user,
+                'redirect' => null,
+            ], 200);
         }
 
         return back()->with('status', $message);
@@ -45,21 +51,21 @@ class ProfileController extends Controller
             'password' => ['required', 'current_password'],
         ]);
 
-        $user = $request->user();
+        $user =$request->user();
 
         Auth::logout();
 
         $user->delete();
 
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        $request->session()->invalidate();$request->session()->regenerateToken();
 
         if ($request->wantsJson()) {
             return response()->json([
                 'status'   => 'success',
-                'redirect' => url('/'),
                 'message'  => lexicon('msg_Dashboard_AccountDeleted', 'Your account has been permanently deleted.'),
-            ]);
+                'data'     => null,
+                'redirect' => url('/'),
+            ], 200);
         }
 
         return redirect('/');

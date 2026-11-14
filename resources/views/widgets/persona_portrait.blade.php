@@ -17,41 +17,36 @@
         ? $options['title']
         : lexicon('label_PersonaPortrait_DefaultTitle', 'Persona Portraits');
 
-    $targetPersona = $persona ?? $character ?? null;
+    $targetPersona = $persona ?? null;
     $user = auth()->user();
 
-    $canEditAvatar = $targetPersona &&$user && (
-        (int) $user->id === (int) $targetPersona->user_id \vert{}\vert{}$user->hasRole('webmaster') ||
-        $user->can('manage_roster_assignments') \vert{}\vert{}$user->can('manage_users')
+    $canEditAvatar = $targetPersona && $user && (
+        (int) $user->id === (int) $targetPersona->user_id ||
+        $user->hasRole('webmaster') ||
+        $user->can('manage_roster_assignments') ||
+        $user->can('manage_users')
     );
 
     $primaryUrl = null;
     $galleryItems = [];
 
-    if ($targetPersona) {$avatarFile = $targetPersona->portrait_image ?? $targetPersona->avatar ?? null;
+    if ($targetPersona) {
+        $avatarFile = $targetPersona->primary_portrait_url;
         if (!empty($avatarFile)) {
             $primaryUrl = \Illuminate\Support\Str::startsWith($avatarFile, ['http://', 'https://', '/'])
                 ? $avatarFile
                 : asset('images/characters/' . $avatarFile);
         }
 
-        $metadataCollection = collect();
-        if (method_exists($targetPersona, 'metadata')) {
-            $metadataCollection =$targetPersona->relationLoaded('metadata')
-                ? $targetPersona->metadata
-                : $targetPersona->metadata()->get();
-        } elseif (method_exists($targetPersona, 'attributes')) {
-            $metadataCollection =$targetPersona->relationLoaded('attributes')
-                ? $targetPersona->attributes
-                : $targetPersona->attributes()->get();
-        }
+        $metadataCollection = $targetPersona->relationLoaded('attributes')
+            ? $targetPersona->attributes
+            : $targetPersona->attributes()->get();
 
-        $galleryItems =$metadataCollection
-            ->filter(function ($meta) {$key = $meta->metadata_key ?? $meta->key ?? '';
-                return $key === 'gallery_image';
-            })
+        $galleryItems = $metadataCollection
+            ->where('attribute_key', 'gallery_image')
             ->values()
-            ->map(function ($meta) {$val = $meta->metadata_value ?? $meta->value ?? '';
+            ->map(function ($meta) {
+                $val = $meta->attribute_value;
                 return [
                     'id'       => $meta->id,
                     'filename' => $val,
@@ -63,14 +58,14 @@
             ->all();
     }
 
-    $personaDisplayName =$targetPersona?->persona_name ?? $targetPersona?->persona_designation ?? $targetPersona?->name ?? '';
+    $personaDisplayName = $targetPersona?->persona_name ?? '';
     $galleryGroup = $targetPersona ? 'persona-portraits-' . $targetPersona->id : 'persona-portraits';
 @endphp
 
 @if($targetPersona)
 <div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col overflow-hidden w-full mb-6"
-     x-data="characterAvatarManager(@js($primaryUrl), @js($galleryItems), @js($personaDisplayName), @js($galleryGroup), '{{ route('bio.avatar.primary', $targetPersona) }}', '{{ route('bio.avatar.delete',$targetPersona) }}')"
-     @upload-completed.window="if ($event.detail && $event.detail.portraits) { syncPortraits($event.detail.portraits); }">
+     x-data="characterAvatarManager(@js($primaryUrl), @js($galleryItems), @js($personaDisplayName), @js($galleryGroup), '{{ route('bio.avatar.primary', $targetPersona) }}', '{{ route('bio.avatar.delete', $targetPersona) }}')"
+     @upload-completed.window="if ($event.detail && $event.detail.data) { syncPortraits($event.detail.data); }">
 
     <!-- Widget Header -->
     <div class="bg-panel-header text-h border-b-panel p-panel-header font-bold flex flex-row flex-wrap items-center justify-between gap-sm">
@@ -196,7 +191,7 @@
                                     <span class="text-xs text-muted">{{ lexicon('msg_PersonaPortrait_PrimaryNote', 'Displayed at the top of the biography and personae table.') }}</span>
                                 </div>
                             </div>
-                            <form action="{{ route('bio.avatar.delete', $targetPersona) }}" method="POST" x-data="ajaxForm" @submit.prevent="submit" @ajax-success.window="syncPortraits($event.detail.portraits)">
+                            <form action="{{ route('bio.avatar.delete', $targetPersona) }}" method="POST" x-data="ajaxForm" @submit.prevent="submit" @ajax-success.window="if ($event.detail && $event.detail.data) { syncPortraits($event.detail.data); }">
                                 @csrf
                                 @method('DELETE')
                                 <input type="hidden" name="type" value="primary">
@@ -227,7 +222,7 @@
                                          :alt="personaName"
                                          class="w-14 h-14 object-cover rounded-input border border-panel block">
                                     <div class="flex flex-row items-center gap-xs">
-                                        <form action="{{ route('bio.avatar.primary', $targetPersona) }}" method="POST" x-data="ajaxForm" @submit.prevent="submit" @ajax-success.window="syncPortraits($event.detail.portraits)">
+                                        <form action="{{ route('bio.avatar.primary', $targetPersona) }}" method="POST" x-data="ajaxForm" @submit.prevent="submit" @ajax-success.window="if ($event.detail && $event.detail.data) { syncPortraits($event.detail.data); }">
                                             @csrf
                                             <input type="hidden" name="attribute_id" :value="item.id">
                                             <x-button variant="primary" class="text-xs" type="submit" x-tooltip="'Promote to primary persona portrait'">
@@ -235,7 +230,7 @@
                                                 <span>{{ lexicon('btn_PersonaPortrait_SetPrimary', 'Make Primary') }}</span>
                                             </x-button>
                                         </form>
-                                        <form action="{{ route('bio.avatar.delete', $targetPersona) }}" method="POST" x-data="ajaxForm" @submit.prevent="submit" @ajax-success.window="syncPortraits($event.detail.portraits)">
+                                        <form action="{{ route('bio.avatar.delete', $targetPersona) }}" method="POST" x-data="ajaxForm" @submit.prevent="submit" @ajax-success.window="if ($event.detail && $event.detail.data) { syncPortraits($event.detail.data); }">
                                             @csrf
                                             @method('DELETE')
                                             <input type="hidden" name="type" value="gallery">

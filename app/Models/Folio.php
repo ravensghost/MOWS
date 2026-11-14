@@ -70,47 +70,6 @@ class Folio extends Model
 
     /*
     |--------------------------------------------------------------------------
-    | Legacy & Blueprint Compatibility Aliases
-    |--------------------------------------------------------------------------
-    */
-
-    public function book(): BelongsTo
-    {
-        return $this->volume();
-    }
-
-    public function authorUser(): BelongsTo
-    {
-        return $this->author();
-    }
-
-    public function activeCharacter(): BelongsTo
-    {
-        return $this->activePersona();
-    }
-
-    public function characters(): BelongsToMany
-    {
-        return $this->personae();
-    }
-
-    public function charactersPresent(): BelongsToMany
-    {
-        return $this->personae();
-    }
-
-    public function versions(): HasMany
-    {
-        return $this->revisions();
-    }
-
-    public function contributions(): HasMany
-    {
-        return $this->authorLedgers();
-    }
-
-    /*
-    |--------------------------------------------------------------------------
     | Access Control Helpers
     |--------------------------------------------------------------------------
     */

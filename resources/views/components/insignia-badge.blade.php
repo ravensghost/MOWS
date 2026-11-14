@@ -1,7 +1,7 @@
 @props([
     'rankSet' => '',
     'baseLayer' => '#1a1a1aFF',
-    'departmentColor' => '#ffffffFF',
+    'departmentColour' => '#ffffffFF',
     'midLayerMode' => 'css',
     'midLayerAsset' => null,
     'midLayerModifier' => '',
@@ -24,7 +24,7 @@
          x-tooltip="'{{ addslashes($badgeTooltip) }}'"
          aria-label="{{ $badgeTooltip }}"
      @endif
-     style="--badge-dept: {{ $reactive ? '${modals.insignia.set_color || defaultDeptColor}' : $departmentColor }}; --badge-base: {{ $baseLayer }}; --badge-mid-color: {{ $reactive ? '${modals.insignia.mid_layer_hue || baseLayer}' : ($midLayerHue ?: $baseLayer) }}; --badge-top-color: {{ $reactive ? '${modals.insignia.top_layer_hue || baseLayer}' : ($topLayerHue ?: $baseLayer) }};"
+     style="--badge-dept: {{ $reactive ? '${modals.insignia.set_color || defaultDeptColor}' : $departmentColour }}; --badge-base: {{ $baseLayer }}; --badge-mid-color: {{ $reactive ? '${modals.insignia.mid_layer_hue || baseLayer}' : ($midLayerHue ?: $baseLayer) }}; --badge-top-color: {{ $reactive ? '${modals.insignia.top_layer_hue || baseLayer}' : ($topLayerHue ?: $baseLayer) }};"
      @if($reactive)
          :style="`--badge-dept: ${modals.insignia.set_color || defaultDeptColor}; --badge-base: ${baseLayer}; --badge-mid-color: ${modals.insignia.mid_layer_hue || baseLayer}; --badge-top-color: ${modals.insignia.top_layer_hue || baseLayer};`"
      @endif>
@@ -57,7 +57,7 @@
              alt="{{ lexicon('label_ranks_TopLayerAlt', 'Top Rank Layer') }}">
     @else
         <!-- Static Mode (Index Roster Cards) -->
-        @if($midLayerMode === 'image' &&$midLayerAsset)
+        @if($midLayerMode === 'image' && $midLayerAsset)
             <img src="/images/ranks/{{ rawurlencode($rankSet) }}/{{ rawurlencode($midLayerAsset) }}" 
                  x-show="!midImgError"
                  x-on:error="midImgError = true"
@@ -67,7 +67,7 @@
             <div class="layer-shaped absolute top-0 left-0 w-full h-full z-10 block {{ $midLayerModifier }}"></div>
         @endif
            
-        @if($topLayerMode === 'image' &&$topLayerAsset)
+        @if($topLayerMode === 'image' && $topLayerAsset)
             <img src="/images/ranks/{{ rawurlencode($rankSet) }}/{{ rawurlencode($topLayerAsset) }}" 
                  x-show="!topImgError"
                  x-on:error="topImgError = true" 

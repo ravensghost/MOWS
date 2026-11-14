@@ -120,7 +120,7 @@
                         <th class="p-3 text-right">{{ lexicon('label_common_Actions', 'Actions') }}</th>
                     </x-slot:headers>
 
-                    @forelse($parameters ?? $options as $parameter)
+                    @forelse($parameters as $parameter)
                         <tr data-search-item
                             data-id="{{ $parameter->id }}"
                             data-parameter-mode="{{ $parameter->parameter_mode }}"

@@ -50,12 +50,12 @@ class PersonaAssignmentController extends Controller
             }
 
             ChronologicalRegister::create([
-                'user_id'              => $persona->user_id,
-                'persona_id'           => $persona->id,
-                'register_event_mode'  => 'promotion',
-                'chronicle_text'       => "{$actionText} {$newInsignia->insignia_title}.{$reasonSuffix}",
-                'authorising_user_id'  => auth()->id(),
-                'scope_target'         => 'IC',
+                'user_id'             => $persona->user_id,
+                'persona_id'          => $persona->id,
+                'register_event_mode' => 'promotion',
+                'chronicle_text'      => "{$actionText} {$newInsignia->insignia_title}.{$reasonSuffix}",
+                'authorising_user_id' => auth()->id(),
+                'scope_target'        => 'IC',
             ]);
         }
 
@@ -70,23 +70,18 @@ class PersonaAssignmentController extends Controller
                 : 'Unassigned';
 
             ChronologicalRegister::create([
-                'user_id'              => $persona->user_id,
-                'persona_id'           => $persona->id,
-                'register_event_mode'  => 'transfer',
-                'chronicle_text'       => "Transferred from {$oldPosLabel} to {$newPosLabel}.{$reasonSuffix}",
-                'authorising_user_id'  => auth()->id(),
-                'scope_target'         => 'IC',
+                'user_id'             => $persona->user_id,
+                'persona_id'          => $persona->id,
+                'register_event_mode' => 'transfer',
+                'chronicle_text'      => "Transferred from {$oldPosLabel} to {$newPosLabel}.{$reasonSuffix}",
+                'authorising_user_id' => auth()->id(),
+                'scope_target'        => 'IC',
             ]);
         }
 
         Cache::forget('widget_roster_sections');
+        Cache::forget('widget_personae_table_sections');
 
-        $message = "Character '{$persona->persona_name}' successfully reassigned.";
-
-        if ($request->wantsJson()) {
-            return response()->json(['status' => 'success', 'success' => true, 'message' => $message]);
-        }
-
-        return back()->with('status', $message);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_Roster_PersonaReassigned', "Persona '{$persona->persona_name}' successfully reassigned."), 'data' => $persona, 'redirect' => null], 200);
     }
 }

@@ -48,7 +48,7 @@
                     <th class="p-3 text-right">{{ lexicon('label_common_Actions', 'Actions') }}</th>
                 </x-slot:headers>
 
-                @forelse($entries ?? $links as$entry)
+                @forelse($entries as $entry)
                     <!-- TOP LEVEL PARENT ROW -->
                     <tr id="entry-row-{{ $entry->id }}"
                         data-search-item
@@ -139,7 +139,7 @@
                     </tr>
 
                     <!-- NESTED CHILD ROWS -->
-                    @foreach($entry->children as$child)
+                    @foreach($entry->children as $child)
                         <tr id="entry-row-{{ $child->id }}"
                             data-search-item
                             data-id="{{ $child->id }}"
@@ -148,7 +148,7 @@
                             data-destination-url="{{ $child->destination_url }}"
                             data-group-title="{{ $child->group_title ?? '' }}"
                             data-display-location="{{ $child->display_location }}"
-                            x-show="isItemVisible({{ $child->id }}, [{{$entry->id }}])"
+                            x-show="isItemVisible({{ $child->id }}, [{{ $entry->id }}])"
                             class="border-b-table-row hover-bg-table-row">
                             <td class="p-3 pl-6 text-muted">↳ {{ $child->entry_sort_order }}</td>
                             <td class="p-3 text-muted">{{ $child->group_title ?? '—' }}</td>
@@ -277,8 +277,8 @@
                                             aria-label="{{ lexicon('label_nav_ParentLink', 'Parent Entry (Optional Dropdown)') }}"
                                             x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_ParentLink', 'Assign under a top-level main nav link to create a dropdown item')) }}'">
                                         <option value="">— {{ lexicon('label_common_None', 'Top Level') }} —</option>
-                                        @foreach($parentOptions as$parent)
-                                            <option value="{{ $parent->id }}">{{ lexicon($parent->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '',$parent->translation_code_key))) }}</option>
+                                        @foreach($parentOptions as $parent)
+                                            <option value="{{ $parent->id }}">{{ lexicon($parent->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $parent->translation_code_key))) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -298,8 +298,8 @@
                                             aria-label="{{ lexicon('label_nav_group', 'Group Title') }}"
                                             x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_GroupName', 'Assign this link to a collapsible drawer group')) }}'">
                                         <option value="">— {{ lexicon('label_common_None', 'None') }} —</option>
-                                        @foreach($groupOptions as$opt)
-                                            <option value="{{ $opt->parameter_value }}" data-sort-order="{{ $opt->parameter_sort_order }}">{{ lexicon($opt->parameter_label,$opt->parameter_value) }}</option>
+                                        @foreach($groupOptions as $opt)
+                                            <option value="{{ $opt->parameter_value }}" data-sort-order="{{ $opt->parameter_sort_order }}">{{ lexicon($opt->parameter_label, $opt->parameter_value) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -345,8 +345,8 @@
                                             class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent"
                                             aria-label="{{ lexicon('label_nav_location', 'Display Location') }}"
                                             x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_Location', 'Display in the Main Nav bar or Context Drawer')) }}'">
-                                        @foreach($locationOptions as$opt)
-                                            <option value="{{ $opt->parameter_value }}">{{ lexicon($opt->parameter_label,$opt->parameter_value) }}</option>
+                                        @foreach($locationOptions as $opt)
+                                            <option value="{{ $opt->parameter_value }}">{{ lexicon($opt->parameter_label, $opt->parameter_value) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -359,8 +359,8 @@
                                             class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent"
                                             aria-label="{{ lexicon('label_vis_title', 'Access Clearance') }}"
                                             x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_Visibility', 'Minimum user access clearance required to view this link')) }}'">
-                                        @foreach($visibilityOptions as$opt)
-                                            <option value="{{ $opt->parameter_value }}">{{ lexicon($opt->parameter_label,$opt->parameter_value) }}</option>
+                                        @foreach($visibilityOptions as $opt)
+                                            <option value="{{ $opt->parameter_value }}">{{ lexicon($opt->parameter_label, $opt->parameter_value) }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -388,7 +388,7 @@
                                         aria-label="{{ lexicon('label_PageBuilder_RequiredPermission', 'Required Permission') }}"
                                         x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_RequiredPermission', 'Restrict this link to users holding a specific permission')) }}'">
                                     <option value="">— {{ lexicon('label_Roles_NoneVisibilityBased', 'None (Public / Access Clearance Based)') }} —</option>
-                                    @foreach($permissions as$perm)
+                                    @foreach($permissions as $perm)
                                         <option value="{{ $perm->name }}">{{ $perm->name }}</option>
                                     @endforeach
                                 </select>

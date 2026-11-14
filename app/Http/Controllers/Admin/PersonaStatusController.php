@@ -23,6 +23,7 @@ class PersonaStatusController extends Controller
         $persona->save();
 
         Cache::forget('widget_roster_sections');
+        Cache::forget('widget_personae_table_sections');
 
         $statusLabels = [
             'active'        => 'Active Duty',
@@ -43,6 +44,6 @@ class PersonaStatusController extends Controller
             'scope_target'        => 'BOTH',
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Character status updated and logged in chronological register!']);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_PersonaStatus_Updated', 'Persona status updated and logged in chronological register!'), 'data' => $persona, 'redirect' => null], 200);
     }
 }

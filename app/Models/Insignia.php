@@ -34,9 +34,4 @@ class Insignia extends Model
     {
         return $this->belongsTo(InsigniaCatalogue::class, 'insignia_catalogue_id');
     }
-
-    public function rankSet(): BelongsTo
-    {
-        return $this->belongsTo(InsigniaCatalogue::class, 'insignia_catalogue_id');
-    }
 }

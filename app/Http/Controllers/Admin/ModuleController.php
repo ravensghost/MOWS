@@ -23,14 +23,19 @@ class ModuleController extends Controller
         $widgetPath = resource_path('views/widgets');
 
         if (!File::exists($widgetPath)) {
-            return response()->json(['status' => 'error', 'message' => 'Widget directory not found.'], 404);
+            return response()->json([
+                'status'   => 'error',
+                'message'  => lexicon('msg_Module_DirectoryNotFound', 'Widget directory not found.'),
+                'data'     => null,
+                'redirect' => null,
+            ], 404);
         }
 
         $widgetFiles = File::files($widgetPath);
         $discoveredWidgets = [];$syncedCount = 0;
         $schemaChanges = [
             'tables_created' => [],
-            'columns_added' => [],
+            'columns_added'  => [],
         ];
 
         DB::transaction(function () use ($widgetFiles, &$discoveredWidgets, &$syncedCount, &$schemaChanges) {
@@ -54,7 +59,7 @@ class ModuleController extends Controller
                         Module::updateOrCreate(
                             ['module_token' => $moduleToken],
                             [
-                                'module_title' => $manifest['module_title'] ?? Str::title(str_replace('_', ' ', $moduleToken)),
+                                'module_title'            => $manifest['module_title'] ?? Str::title(str_replace('_', ' ', $moduleToken)),
                                 'module_default_settings' => $defaultSettings,
                             ]
                         );
@@ -85,11 +90,12 @@ class ModuleController extends Controller
         }
 
         return response()->json([
-            'status' => 'success',
-            'message' => "Successfully synchronised {$syncedCount} modules{$schemaSummary}.",
-            'data' => $discoveredWidgets,
+            'status'         => 'success',
+            'message'        => lexicon('msg_Module_Synced', "Successfully synchronised {$syncedCount} modules{$schemaSummary}."),
+            'data'           => $discoveredWidgets,
             'schema_changes' => $schemaChanges,
-        ]);
+            'redirect'       => null,
+        ], 200);
     }
 
     /**
@@ -135,7 +141,7 @@ class ModuleController extends Controller
         // 2. Alter existing tables with additional columns declared by the module
         if (!empty($schema['alter']) && is_array($schema['alter'])) {
             foreach ($schema['alter'] as $tableName =>$columns) {
-                if (!$this->isValidIdentifier($tableName) || !is_array($columns)) {
+                if (!$this->isValidIdentifier($tableName) \vert{}\vert{} !is_array($columns)) {
                     continue;
                 }
 
@@ -215,6 +221,9 @@ class ModuleController extends Controller
         return (bool) preg_match('/^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/',$identifier);
     }
 
+    /**
+     * Store a newly created module template in storage.
+     */
     public function store(Request $request): JsonResponse
     {
         $request->validate([
@@ -228,18 +237,23 @@ class ModuleController extends Controller
             $settings['content'] = purify($settings['content']);
         }
 
-        Module::create([
+        $module = Module::create([
             'module_title'            => $request->module_title,
             'module_token'            => $request->module_token,
             'module_default_settings' => $settings,
         ]);
 
         return response()->json([
-            'success' => true,
-            'message' => 'Module template created successfully!',
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Module_Created', 'Module template created successfully!'),
+            'data'     => $module,
+            'redirect' => null,
+        ], 200);
     }
 
+    /**
+     * Update the specified module template in storage.
+     */
     public function update(Request $request,$id): JsonResponse
     {
         $request->validate([
@@ -261,18 +275,25 @@ class ModuleController extends Controller
         ]);
 
         return response()->json([
-            'success' => true,
-            'message' => 'Module template updated successfully!',
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Module_Updated', 'Module template updated successfully!'),
+            'data'     => $module,
+            'redirect' => null,
+        ], 200);
     }
 
+    /**
+     * Remove the specified module template from storage.
+     */
     public function destroy($id): JsonResponse
     {
-        Module::findOrFail($id)->delete();
+        $module = Module::findOrFail($id);$module->delete();
 
         return response()->json([
-            'success' => true,
-            'message' => 'Module template deleted successfully!',
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Module_Deleted', 'Module template deleted successfully!'),
+            'data'     => $module,
+            'redirect' => null,
+        ], 200);
     }
 }

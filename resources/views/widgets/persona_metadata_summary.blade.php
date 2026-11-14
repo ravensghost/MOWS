@@ -18,8 +18,8 @@
     $petition = null;
 
     if ($targetPersona) {
-        if ($targetPersona->relationLoaded('petition')) {
-            $petition = $targetPersona->petition;
+        if ($targetPersona->relationLoaded('candidatePetition')) {
+            $petition = $targetPersona->candidatePetition;
         } else {
             $petition = \App\Models\CandidatePetition::with('entries')
                 ->where('persona_id', $targetPersona->id)
@@ -92,7 +92,7 @@
     $notSpecified = lexicon('label_common_NotSpecified', 'Not Specified');
     $noData = lexicon('msg_common_NoData', 'No information provided.');
 
-    $personaName = $targetPersona?->persona_name ?? $petition?->proposed_persona_name ?? $getEntryValue(['Persona Name', 'Name']) ?? $notSpecified;
+    $personaName = $targetPersona?->persona_name ?? $petition?->proposed_persona_name ?? $getEntryValue(['Persona Name']) ?? $notSpecified;
     $insigniaName = $targetPersona?->insignia?->insignia_title ?? lexicon('label_Demographics_Unranked', 'Unranked');
     $assignmentName = $targetPersona?->assignment?->assignment_title ?? lexicon('label_Demographics_Unassigned', 'Unassigned');
 
@@ -156,7 +156,7 @@
                 @if($user)
                     <div class="bg-panel-sub border-panel rounded-panel p-3 flex flex-col gap-xs">
                         <span class="text-xs font-bold text-input-muted uppercase tracking-wider">{{ lexicon('label_Sidebar_Writer', 'Account Writer') }}</span>
-                        <span class="text-sm font-bold text-p">{{ $user->name }}</span>
+                        <span class="text-sm font-bold text-p">{{ $user->user_handle }}</span>
                     </div>
                 @endif
 

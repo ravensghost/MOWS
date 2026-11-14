@@ -7,6 +7,7 @@ use App\Models\Book;
 use App\Models\Grid;
 use App\Models\Metadata;
 use App\Models\Module;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
@@ -25,7 +26,7 @@ class BookController extends Controller
                 $query->orderBy('book_modules.module_sort_order');
             }
         ])
-            ->whereIn('book_url', ['admin/books', 'admin/pages'])
+            ->where('book_url', 'admin/books')
             ->where('is_published', true)
             ->firstOrFail();
 
@@ -58,7 +59,7 @@ class BookController extends Controller
                 $query->orderBy('book_modules.module_sort_order');
             }
         ])
-            ->whereIn('book_url', ['admin/books-grid-builder', 'admin/page-builder'])
+            ->where('book_url', 'admin/books-grid-builder')
             ->where('is_published', true)
             ->firstOrFail();
 
@@ -92,7 +93,7 @@ class BookController extends Controller
                 $query->orderBy('book_modules.module_sort_order');
             }
         ])
-            ->whereIn('book_url', ['admin/books-grid-builder', 'admin/page-builder'])
+            ->where('book_url', 'admin/books-grid-builder')
             ->where('is_published', true)
             ->firstOrFail();
 
@@ -117,13 +118,18 @@ class BookController extends Controller
     /**
      * Store a newly created book in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         $rawUrl = $request->filled('book_url') ? $request->book_url : $request->book_title;
         $bookUrl = $rawUrl === '/' ? '/' : collect(explode('/', $rawUrl))->map(fn($s) => Str::slug($s))->filter()->implode('/');
 
         if (Book::where('book_url', $bookUrl)->exists()) {
-            return response()->json(['message' => lexicon('msg_BookBuilder_UrlTaken', 'That URL is already taken.')], 422);
+            return response()->json([
+                'status'   => 'error',
+                'message'  => lexicon('msg_BookBuilder_UrlTaken', 'That URL is already taken.'),
+                'data'     => null,
+                'redirect' => null,
+            ], 422);
         }
 
         $book = Book::create([
@@ -135,19 +141,29 @@ class BookController extends Controller
 
         $this->syncBookModules($book, $request);
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Book_Created', 'Book created successfully.'),
+            'data'     => $book->load('modules'),
+            'redirect' => null,
+        ], 200);
     }
 
     /**
      * Update the specified book in storage.
      */
-    public function update(Request $request, Book $book)
+    public function update(Request $request, Book $book): JsonResponse
     {
         $rawUrl = $request->filled('book_url') ? $request->book_url : $request->book_title;
         $bookUrl = $rawUrl === '/' ? '/' : collect(explode('/', $rawUrl))->map(fn($s) => Str::slug($s))->filter()->implode('/');
 
         if (Book::where('book_url', $bookUrl)->where('id', '!=', $book->id)->exists()) {
-            return response()->json(['message' => lexicon('msg_BookBuilder_UrlTaken', 'That URL is already taken.')], 422);
+            return response()->json([
+                'status'   => 'error',
+                'message'  => lexicon('msg_BookBuilder_UrlTaken', 'That URL is already taken.'),
+                'data'     => null,
+                'redirect' => null,
+            ], 422);
         }
 
         $book->update([
@@ -159,17 +175,27 @@ class BookController extends Controller
 
         $this->syncBookModules($book, $request);
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Book_Updated', 'Book updated successfully.'),
+            'data'     => $book->load('modules'),
+            'redirect' => null,
+        ], 200);
     }
 
     /**
      * Remove the specified book from storage.
      */
-    public function destroy(Book $book)
+    public function destroy(Book $book): JsonResponse
     {
         $book->delete();
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Book_Deleted', 'Book deleted successfully.'),
+            'data'     => $book,
+            'redirect' => null,
+        ], 200);
     }
 
     /**

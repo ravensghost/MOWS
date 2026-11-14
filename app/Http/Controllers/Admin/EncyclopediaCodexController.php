@@ -51,12 +51,14 @@ class EncyclopediaCodexController extends Controller
         $validated['article_text'] = Purify::clean($validated['article_text']);
         $validated['article_url']  = Str::slug($validated['article_title']);
 
-        EncyclopediaCodex::create($validated);
+        $article = EncyclopediaCodex::create($validated);
 
         return response()->json([
-            'status'  => 'success',
-            'message' => lexicon('msg_Wiki_CreatedSuccess', 'Wiki article created successfully.')
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Wiki_CreatedSuccess', 'Wiki article created successfully.'),
+            'data'     => $article,
+            'redirect' => null,
+        ], 200);
     }
 
     public function update(Request $request, EncyclopediaCodex $encyclopediaCodex)
@@ -80,9 +82,11 @@ class EncyclopediaCodexController extends Controller
         $encyclopediaCodex->update($validated);
 
         return response()->json([
-            'status'  => 'success',
-            'message' => lexicon('msg_Wiki_UpdatedSuccess', 'Wiki article updated successfully.')
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Wiki_UpdatedSuccess', 'Wiki article updated successfully.'),
+            'data'     => $encyclopediaCodex,
+            'redirect' => null,
+        ], 200);
     }
 
     public function destroy(EncyclopediaCodex $encyclopediaCodex)
@@ -96,8 +100,10 @@ class EncyclopediaCodexController extends Controller
         $encyclopediaCodex->delete();
 
         return response()->json([
-            'status'  => 'success',
-            'message' => lexicon('msg_Wiki_DeletedSuccess', 'Wiki article deleted successfully.')
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Wiki_DeletedSuccess', 'Wiki article deleted successfully.'),
+            'data'     => null,
+            'redirect' => null,
+        ], 200);
     }
 }

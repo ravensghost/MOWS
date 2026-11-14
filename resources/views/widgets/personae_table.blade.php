@@ -73,18 +73,23 @@
                     @endphp
                     @forelse($assignedPersonae as $persona)
                         @php
-                            $personaName = $persona->persona_designation ?? '';
+                            $personaName = $persona->persona_name ?? '';
+                            $portraitUrl = !empty($persona->primary_portrait_url)
+                                ? (\Illuminate\Support\Str::startsWith($persona->primary_portrait_url, ['http://', 'https://', '/'])
+                                    ? $persona->primary_portrait_url
+                                    : asset('images/characters/' . $persona->primary_portrait_url))
+                                : null;
                         @endphp
-                        <div class="bg-panel border border-panel rounded-input shadow-panel overflow-hidden hover-bg-panel-hover flex flex-row flex-wrap items-center p-3 gap-md {{ strtolower($persona->persona_type ?? 'pc') === 'pc' ? 'border-pc shadow-pc' : (in_array(strtolower($persona->persona_type ?? ''), ['sc', 'snpc']) ? 'border-success shadow-success' : 'border-warning shadow-warning') }}">
+                        <div class="bg-panel border border-panel rounded-input shadow-panel overflow-hidden hover-bg-panel-hover flex flex-row flex-wrap items-center p-3 gap-md {{ strtolower($persona->persona_mode ?? 'pc') === 'pc' ? 'border-pc shadow-pc' : (in_array(strtolower($persona->persona_mode ?? ''), ['sc', 'snpc']) ? 'border-success shadow-success' : 'border-warning shadow-warning') }}">
                             
                             <div class="bg-panel-header rounded-input flex-shrink-0 flex items-center justify-center overflow-hidden w-16 h-16">
-                                @if(!empty($persona->portrait_image))
-                                    <a href="{{ asset('images/characters/'.$persona->portrait_image) }}" 
+                                @if($portraitUrl)
+                                    <a href="{{ $portraitUrl }}" 
                                        class="glightbox block w-full h-full"
                                        data-glightbox="title: {{ $personaName }}"
                                        aria-label="{{ $personaName }}"
                                        x-tooltip="'{{ addslashes($personaName) }}'">
-                                        <img src="{{ asset('images/characters/'.$persona->portrait_image) }}" alt="{{ $personaName }}" class="w-full h-full object-cover">
+                                        <img src="{{ $portraitUrl }}" alt="{{ $personaName }}" class="w-full h-full object-cover">
                                     </a>
                                 @else
                                     <i class="bi bi-person text-2xl text-muted" aria-hidden="true"></i>

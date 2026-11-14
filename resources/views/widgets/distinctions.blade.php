@@ -35,7 +35,7 @@
     $earnedDistinctions = \App\Models\ChronologicalRegister::with('distinction')
         ->where($targetColumn, $targetId)
         ->whereNotNull('distinction_id')
-        ->whereIn('register_event_mode', ['distinction', 'award'])
+        ->where('register_event_mode', 'distinction')
         ->orderBy('created_at', 'desc')
         ->get();
         

@@ -7,7 +7,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class UserAttribute extends Model
 {
-    protected $fillable = ['user_id', 'attribute_key', 'attribute_value'];
+    protected $table = 'user_attributes';
+
+    protected $fillable = [
+        'user_id',
+        'attribute_key',
+        'attribute_value',
+    ];
 
     public function user(): BelongsTo
     {

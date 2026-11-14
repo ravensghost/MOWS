@@ -7,6 +7,7 @@ use App\Models\Page;
 use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
@@ -37,9 +38,9 @@ class UserController extends Controller
         ]);
 
         if ($user->id === auth()->id()) {
-            return response()->json([
-                'message' => lexicon('msg_Users_CannotChangeOwnRole', 'You cannot change your own role.')
-            ], 422);
+            throw ValidationException::withMessages([
+                'role' => [lexicon('msg_Users_CannotChangeOwnRole', 'You cannot change your own role.')],
+            ]);
         }
 
         $roleName = $validated['role'];
@@ -48,11 +49,9 @@ class UserController extends Controller
             $user->syncRoles([$roleName]);
         }
 
-        return response()->json([
-            'status'  => 'success',
-            'success' => true,
-            'message' => lexicon('msg_Users_RoleUpdated', 'Role updated successfully.') . " ({$user->name})",
-        ]);
+        $user->load('roles');
+
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_Users_RoleUpdated', 'Role updated successfully.') . " ({$user->name})", 'data' => $user, 'redirect' => null], 200);
     }
 
     public function updateLoa(Request $request, User $user)
@@ -78,11 +77,9 @@ class UserController extends Controller
             auth()->id()
         );
 
-        return response()->json([
-            'status'  => 'success',
-            'success' => true,
-            'message' => "{$user->name}: {$statusLabel}.",
-        ]);
+        $user->load('attributes');
+
+        return response()->json(['status' => 'success', 'message' => "{$user->name}: {$statusLabel}.", 'data' => $user, 'redirect' => null], 200);
     }
 
     /**
@@ -137,10 +134,6 @@ class UserController extends Controller
             ? ' (' . implode(', ', $channelsDispatched) . ')'
             : ' (All notification channels currently disabled in Global Settings)';
 
-        return response()->json([
-            'status'  => 'success',
-            'success' => true,
-            'message' => "Check-in ping processed for {$user->name}{$channelSummary}.",
-        ]);
+        return response()->json(['status' => 'success', 'message' => "Check-in ping processed for {$user->name}{$channelSummary}.", 'data' => $user, 'redirect' => null], 200);
     }
 }

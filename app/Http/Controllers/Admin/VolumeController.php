@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Volume;
+use Illuminate\Http\Request;
 
 class VolumeController extends Controller
 {
@@ -25,10 +25,11 @@ class VolumeController extends Controller
         $volume = Volume::create($validated);
 
         return response()->json([
-            'status'  => 'success',
-            'data'    => $volume,
-            'message' => lexicon('msg_Story_VolumeCreated', 'Volume created successfully.')
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Story_VolumeCreated', 'Volume created successfully.'),
+            'data'     => $volume,
+            'redirect' => null,
+        ], 200);
     }
 
     public function update(Request $request, $id)
@@ -51,10 +52,11 @@ class VolumeController extends Controller
 
         return response()->json([
             'status'         => 'success',
+            'message'        => lexicon('msg_Story_VolumeUpdated', 'Volume updated successfully.'),
             'data'           => $volume,
             'trigger_review' => (!$wasCompleted && $isNowCompleted),
-            'message'        => lexicon('msg_Story_VolumeUpdated', 'Volume updated successfully.')
-        ]);
+            'redirect'       => null,
+        ], 200);
     }
 
     public function destroy($id)
@@ -63,10 +65,11 @@ class VolumeController extends Controller
         $volume->delete();
 
         return response()->json([
-            'status'  => 'success',
-            'data'    => null,
-            'message' => lexicon('msg_Story_VolumeDeleted', 'Volume deleted successfully.')
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Story_VolumeDeleted', 'Volume deleted successfully.'),
+            'data'     => null,
+            'redirect' => null,
+        ], 200);
     }
 
     public function reorder(Request $request)
@@ -84,9 +87,10 @@ class VolumeController extends Controller
         }
 
         return response()->json([
-            'status'  => 'success',
-            'data'    => null,
-            'message' => lexicon('msg_Story_VolumesReordered', 'Volumes reordered successfully.')
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Story_VolumesReordered', 'Volumes reordered successfully.'),
+            'data'     => null,
+            'redirect' => null,
+        ], 200);
     }
 }

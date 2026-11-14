@@ -20,7 +20,7 @@
         @forelse($draftChapters ?? [] as $draft)
             <div class="bg-panel-sub border border-panel rounded-panel p-3 flex flex-row flex-wrap justify-between items-center gap-md">
                 <div class="flex flex-col gap-xs">
-                    <span class="font-bold text-p block">{{ $draft->scene_location ?? $draft->title ?? lexicon('label_common_UntitledChapter', 'Untitled Folio') }}</span>
+                    <span class="font-bold text-p block">{{ $draft->scene_location ?? lexicon('label_common_UntitledChapter', 'Untitled Folio') }}</span>
                     <span class="text-xs text-muted block">{{ lexicon('label_common_LastUpdated', 'Updated') }} {{ $draft->updated_at->diffForHumans() }}</span>
                 </div>
                 <x-button variant="secondary" 

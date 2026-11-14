@@ -2,12 +2,12 @@
 @section('title', lexicon('admin_label_ranks', 'Rank Management'))
 
 @php
-    $defaultDeptColor =$departmentColor ?? '#ffffffFF';
-    $defaultBaseLayer =$baseLayer ?? '#1a1a1aFF';
+    $defaultDeptColour = $departmentColour ?? '#ffffffFF';
+    $defaultBaseLayer = $baseLayer ?? '#1a1a1aFF';
 @endphp
 
 @section('content')
-<div x-data="insigniaManager('{{ $defaultDeptColor }}', '{{$defaultBaseLayer }}')" 
+<div x-data="insigniaManager('{{ $defaultDeptColour }}', '{{ $defaultBaseLayer }}')" 
      x-init="initData()"
      @ajax-success.window="refreshDOM_US()">
 
@@ -93,15 +93,15 @@
             </x-page-header>
 
             <div x-ref="ranksList" class="flex flex-col gap-lg">
-                @forelse($rankSets as$set)
+                @forelse($rankSets as $set)
                     <div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col overflow-hidden">
                         <div class="bg-panel-header text-h border-b border-panel p-panel-header flex flex-row flex-wrap items-center justify-between gap-md">
                             <div class="flex flex-col gap-xs">
                                 <span class="text-xl font-bold text-h block">{{ $set->catalogue_title }}</span>
                                 <div class="flex flex-row flex-wrap items-center gap-xs text-xs text-muted">
                                     <span>{{ lexicon('label_ranks_AssignedTo', 'Assigned to:') }}</span>
-                                    @if($set->divisions &&$set->divisions->count() > 0)
-                                        @foreach($set->divisions as$assignedDivision)
+                                    @if($set->divisions && $set->divisions->count() > 0)
+                                        @foreach($set->divisions as $assignedDivision)
                                             <x-badge variant="primary">{{ $assignedDivision->division_title }}</x-badge>
                                         @endforeach
                                     @else
@@ -133,9 +133,9 @@
                         
                         <div class="p-panel grid grid-cols-1 md-grid-cols-2 lg-grid-cols-3 gap-md w-full"
                              x-data="sortableManager('/admin/ranks/reorder')">
-                            @forelse($set->insignia as$rank)
+                            @forelse($set->insignia as $rank)
                                 @php
-                                    $badgeColor =$set->divisions && $set->divisions->count() > 0 ? ($set->divisions->first()->division_hue ?? '#ffffffFF') : '#ffffffFF';
+                                    $badgeColour = $set->divisions && $set->divisions->count() > 0 ? ($set->divisions->first()->division_hue ?? '#ffffffFF') : '#ffffffFF';
                                 @endphp
                                 <div class="bg-panel-sub border border-panel rounded-panel p-4 flex flex-row flex-wrap items-center justify-between gap-md cursor-grab active:cursor-grabbing"
                                      data-id="{{ $rank->id }}">
@@ -143,7 +143,7 @@
                                         <x-insignia-badge 
                                             :rankSet="$set->catalogue_title" 
                                             :baseLayer="$defaultBaseLayer" 
-                                            :departmentColor="$badgeColor" 
+                                            :departmentColour="$badgeColour" 
                                             :midLayerMode="$rank->mid_layer_mode"
                                             :midLayerAsset="$rank->mid_layer_asset"
                                             :midLayerModifier="$rank->mid_layer_modifier"
@@ -152,10 +152,10 @@
                                             :topLayerAsset="$rank->top_layer_asset"
                                             :topLayerModifier="$rank->top_layer_modifier"
                                             :topLayerHue="$rank->top_layer_hue"
-                                            :tooltip="$rank->insignia_title . ' (' .$rank->abbreviated_title . ')'"
+                                            :tooltip="$rank->insignia_title . ' (' . $rank->abbreviated_title . ')'"
                                         />
                                         <div class="flex flex-col gap-xs">
-                                            <span class="font-bold text-p block">{{ $rank->insignia_title }} ({{$rank->abbreviated_title }})</span>
+                                            <span class="font-bold text-p block">{{ $rank->insignia_title }} ({{ $rank->abbreviated_title }})</span>
                                             <span class="text-xs text-muted block">{{ lexicon('label_common_SortOrder', 'Sort Order') }}: {{ $rank->insignia_sort_order }}</span>
                                         </div>
                                     </div>
@@ -169,7 +169,7 @@
                                                           id: {{ $rank->id }},
                                                           insignia_catalogue_id: {{ $set->id }},
                                                           catalogue_title: '{{ addslashes($set->catalogue_title) }}',
-                                                          set_color: '{{ $badgeColor }}',
+                                                          set_color: '{{ $badgeColour }}',
                                                           insignia_title: '{{ addslashes($rank->insignia_title) }}',
                                                           abbreviated_title: '{{ addslashes($rank->abbreviated_title) }}',
                                                           insignia_sort_order: {{ $rank->insignia_sort_order }},
@@ -266,7 +266,7 @@
                           data-loading-title="{{ addslashes(lexicon('msg_ranks_AssigningSections', 'Assigning Sections...')) }}">
                         @csrf
                         <div x-ref="assignSectionsList" class="bg-panel-sub border border-panel rounded-panel p-4 flex flex-col gap-sm max-h-64 overflow-y-auto">
-                            @foreach($sections as$section)
+                            @foreach($sections as $section)
                                 <div class="flex flex-row flex-wrap items-center gap-sm">
                                     <input type="checkbox" 
                                            name="divisions[]" 
@@ -333,9 +333,9 @@
                                         x-tooltip="'{{ addslashes(lexicon('tooltip_ranks_SelectRankSet', 'Select which rank set this rank belongs to')) }}'"
                                         :required="modal === 'rank-create'">
                                     <option value="">{{ lexicon('msg_ranks_SelectSet', 'Select a Set...') }}</option>
-                                    @foreach($rankSets as$set)
-                                        @php $setColor =$set->divisions && $set->divisions->count() > 0 ? ($set->divisions->first()->division_hue ?? '#ffffffFF') : '#ffffffFF'; @endphp
-                                        <option value="{{ $set->id }}" data-catalogue-title="{{ $set->catalogue_title }}" data-color="{{ $setColor }}">{{ $set->catalogue_title }}</option>
+                                    @foreach($rankSets as $set)
+                                        @php $setColour = $set->divisions && $set->divisions->count() > 0 ? ($set->divisions->first()->division_hue ?? '#ffffffFF') : '#ffffffFF'; @endphp
+                                        <option value="{{ $set->id }}" data-catalogue-title="{{ $set->catalogue_title }}" data-color="{{ $setColour }}">{{ $set->catalogue_title }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -420,7 +420,7 @@
                         </form>
 
                         <div class="lg-col-span-4 flex flex-col gap-md">
-                            <x-insignia-preview :baseLayer="$defaultBaseLayer" :departmentColor="$defaultDeptColor" />
+                            <x-insignia-preview :baseLayer="$defaultBaseLayer" :departmentColour="$defaultDeptColour" />
                         </div>
                     </div>
                 </x-modal>

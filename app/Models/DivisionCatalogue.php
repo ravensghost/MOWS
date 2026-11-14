@@ -12,15 +12,15 @@ class DivisionCatalogue extends Model
     protected $fillable = [
         'catalogue_title',
         'catalogue_description',
+        'is_visible',
+    ];
+
+    protected $casts = [
+        'is_visible' => 'boolean',
     ];
 
     public function divisions(): HasMany
     {
-        return $this->hasMany(Section::class, 'division_catalogue_id');
-    }
-
-    public function sections(): HasMany
-    {
-        return $this->divisions();
+        return $this->hasMany(Division::class, 'division_catalogue_id');
     }
 }

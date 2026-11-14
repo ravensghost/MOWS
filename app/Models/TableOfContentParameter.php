@@ -14,4 +14,8 @@ class TableOfContentParameter extends Model
         'parameter_label',
         'parameter_sort_order',
     ];
+
+    protected $casts = [
+        'parameter_sort_order' => 'integer',
+    ];
 }

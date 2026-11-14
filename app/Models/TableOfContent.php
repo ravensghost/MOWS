@@ -11,10 +11,25 @@ class TableOfContent extends Model
 {
     protected $table = 'table_of_contents';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'parent_entry_id',
+        'translation_code_key',
+        'destination_url',
+        'group_title',
+        'group_sort_order',
+        'display_location',
+        'access_clearance',
+        'required_permission',
+        'window_target',
+        'entry_sort_order',
+        'is_visible',
+    ];
 
     protected $casts = [
-        'is_visible' => 'boolean',
+        'parent_entry_id'  => 'integer',
+        'group_sort_order' => 'integer',
+        'entry_sort_order' => 'integer',
+        'is_visible'       => 'boolean',
     ];
 
     protected static function booted(): void

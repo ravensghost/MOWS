@@ -10,8 +10,8 @@ class ShelfController extends Controller
 {
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'shelf_title' => 'required|string|max:255'
+        $validated =$request->validate([
+            'shelf_title' => 'required|string|max:255',
         ]);
 
         $validated['shelf_sort_order'] = (Shelf::max('shelf_sort_order') ?? 0) + 1;
@@ -19,26 +19,28 @@ class ShelfController extends Controller
         $shelf = Shelf::create($validated);
 
         return response()->json([
-            'status' => 'success',
-            'data' => $shelf,
-            'message' => lexicon('msg_Story_ShelfCreated', 'Shelf created successfully.')
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Story_ShelfCreated', 'Shelf created successfully.'),
+            'data'     => $shelf,
+            'redirect' => null,
+        ], 200);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request,$id)
     {
-        $validated = $request->validate([
-            'shelf_title' => 'required|string|max:255'
+        $validated =$request->validate([
+            'shelf_title' => 'required|string|max:255',
         ]);
 
         $shelf = Shelf::findOrFail($id);
         $shelf->update($validated);
 
         return response()->json([
-            'status' => 'success',
-            'data' => $shelf,
-            'message' => lexicon('msg_Story_ShelfUpdated', 'Shelf updated successfully.')
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Story_ShelfUpdated', 'Shelf updated successfully.'),
+            'data'     => $shelf,
+            'redirect' => null,
+        ], 200);
     }
 
     public function destroy($id)
@@ -46,22 +48,26 @@ class ShelfController extends Controller
         Shelf::findOrFail($id)->delete();
 
         return response()->json([
-            'status' => 'success',
-            'data' => null,
-            'message' => lexicon('msg_Story_ShelfDeleted', 'Shelf deleted successfully.')
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Story_ShelfDeleted', 'Shelf deleted successfully.'),
+            'data'     => null,
+            'redirect' => null,
+        ], 200);
     }
 
     public function reorder(Request $request)
     {
-        foreach ($request->input('items', []) as $item) {
-            Shelf::where('id', $item['id'])->update(['shelf_sort_order' => $item['shelf_sort_order']]);
+        foreach ($request->input('items', []) as$item) {
+            Shelf::where('id', $item['id'])->update([
+                'shelf_sort_order' => $item['shelf_sort_order'],
+            ]);
         }
 
         return response()->json([
-            'status' => 'success',
-            'data' => null,
-            'message' => lexicon('msg_Story_ShelvesReordered', 'Shelves reordered successfully.')
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Story_ShelvesReordered', 'Shelves reordered successfully.'),
+            'data'     => null,
+            'redirect' => null,
+        ], 200);
     }
 }

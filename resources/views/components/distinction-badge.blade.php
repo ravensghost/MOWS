@@ -12,8 +12,8 @@
 ])
 
 @php
-    $resolvedMidClass = $midLayerModifier ? 'award-ml-' . $midLayerModifier : '';
-    $resolvedTopClass = $topLayerModifier ? 'award-tl-' . $topLayerModifier : '';
+    $resolvedMidClass = $midLayerModifier ? 'distinction-ml-' . $midLayerModifier : '';
+    $resolvedTopClass = $topLayerModifier ? 'distinction-tl-' . $topLayerModifier : '';
     $tooltipText = $distinctionDescription
         ? $distinctionDescription . ' (' . $distinctionTitle . ')'
         : $distinctionTitle;
@@ -26,7 +26,7 @@
      style="--badge-base: {{ $distinctionBaseColour }};">
   
     @if($midLayerMode === 'image' && $midLayerAsset)
-        <img src="/skins/{{ $skin }}/images/awards/{{ rawurlencode($midLayerAsset) }}" 
+        <img src="/skins/{{ $skin }}/images/distinctions/{{ rawurlencode($midLayerAsset) }}" 
              class="ui-award-layer ui-award-layer-mid" 
              alt="{{ $distinctionTitle }}">
     @elseif($midLayerMode === 'css')
@@ -34,7 +34,7 @@
     @endif
   
     @if($topLayerMode === 'image' && $topLayerAsset)
-        <img src="/skins/{{ $skin }}/images/awards/{{ rawurlencode($topLayerAsset) }}" 
+        <img src="/skins/{{ $skin }}/images/distinctions/{{ rawurlencode($topLayerAsset) }}" 
              x-show="!imgError"
              x-on:error="imgError = true" 
              class="ui-award-layer ui-award-layer-top" 

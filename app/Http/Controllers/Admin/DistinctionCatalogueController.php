@@ -12,23 +12,25 @@ class DistinctionCatalogueController extends Controller
     {
         abort_unless(auth()->user()->can('issue_awards'), 403, 'Authorised action.');
 
-        $validated = $request->validate([
+        $validated =$request->validate([
             'catalogue_title' => 'required|string|max:255',
         ]);
 
-        DistinctionCatalogue::create($validated);
+        $catalogue = DistinctionCatalogue::create($validated);
 
         return response()->json([
             'status' => 'success',
-            'message' => lexicon('msg_distinction_catalogue_created', 'Distinction catalogue created successfully!')
-        ]);
+            'message' => lexicon('msg_distinction_catalogue_created', 'Distinction catalogue created successfully!'),
+            'data' => $catalogue,
+            'redirect' => null,
+        ], 200);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request,$id)
     {
         abort_unless(auth()->user()->can('issue_awards'), 403, 'Authorised action.');
 
-        $validated = $request->validate([
+        $validated =$request->validate([
             'catalogue_title' => 'required|string|max:255',
         ]);
 
@@ -37,20 +39,23 @@ class DistinctionCatalogueController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'message' => lexicon('msg_distinction_catalogue_updated', 'Distinction catalogue updated successfully!')
-        ]);
+            'message' => lexicon('msg_distinction_catalogue_updated', 'Distinction catalogue updated successfully!'),
+            'data' => $catalogue,
+            'redirect' => null,
+        ], 200);
     }
 
     public function destroy($id)
     {
         abort_unless(auth()->user()->can('issue_awards'), 403, 'Authorised action.');
 
-        $catalogue = DistinctionCatalogue::findOrFail($id);
-        $catalogue->delete();
+        $catalogue = DistinctionCatalogue::findOrFail($id);$catalogue->delete();
 
         return response()->json([
             'status' => 'success',
-            'message' => lexicon('msg_distinction_catalogue_deleted', 'Distinction catalogue deleted successfully!')
-        ]);
+            'message' => lexicon('msg_distinction_catalogue_deleted', 'Distinction catalogue deleted successfully!'),
+            'data' => $catalogue,
+            'redirect' => null,
+        ], 200);
     }
 }

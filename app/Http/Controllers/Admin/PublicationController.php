@@ -16,23 +16,20 @@ class PublicationController extends Controller
     {
         $systemPage = Book::where('books_uri', 'admin/story')
             ->where('is_published', true)
-            ->with(['layout.blocks', 'widgets' => function ($query) {
-                $query->orderBy('book_modules.module_sort_order');
+            ->with(['layout.blocks', 'widgets' => function ($query) {$query->orderBy('book_modules.module_sort_order');
             }])
             ->firstOrFail();
 
         $shelves = Shelf::with([
-            'volumes' => function ($q) {
-                $q->select('id', 'shelf_id', 'publication_state_id', 'volume_title', 'volume_synopsis', 'ic_day', 'ic_time', 'volume_sort_order')
+            'volumes' => function ($q) {$q->select('id', 'shelf_id', 'publication_state_id', 'volume_title', 'volume_synopsis', 'ic_day', 'ic_time', 'volume_sort_order')
                     ->orderBy('volume_sort_order')
                     ->orderBy('volume_title');
             },
-            'volumes.folios' => function ($q) {
-                $q->select('id', 'volume_id', 'folio_mode', 'scene_location', 'folio_status', 'ic_day', 'ic_time', 'content_tier_l', 'content_tier_s', 'content_tier_v', 'folio_sort_order', 'created_at')
+            'volumes.folios' => function ($q) {$q->select('id', 'volume_id', 'folio_mode', 'scene_location', 'folio_status', 'ic_day', 'ic_time', 'content_tier_l', 'content_tier_s', 'content_tier_v', 'folio_sort_order', 'created_at')
                     ->orderBy('folio_sort_order')
                     ->orderBy('created_at', 'desc');
             },
-            'volumes.publicationState:id,state_title,book_url'
+            'volumes.publicationState:id,state_title,book_url',
         ])
             ->select('id', 'shelf_title', 'shelf_sort_order')
             ->orderBy('shelf_sort_order')
@@ -41,12 +38,11 @@ class PublicationController extends Controller
 
         $looseVolumes = Volume::whereNull('shelf_id')
             ->with([
-                'folios' => function ($q) {
-                    $q->select('id', 'volume_id', 'folio_mode', 'scene_location', 'folio_status', 'ic_day', 'ic_time', 'content_tier_l', 'content_tier_s', 'content_tier_v', 'folio_sort_order', 'created_at')
+                'folios' => function ($q) {$q->select('id', 'volume_id', 'folio_mode', 'scene_location', 'folio_status', 'ic_day', 'ic_time', 'content_tier_l', 'content_tier_s', 'content_tier_v', 'folio_sort_order', 'created_at')
                         ->orderBy('folio_sort_order')
                         ->orderBy('created_at', 'desc');
                 },
-                'publicationState:id,state_title,book_url'
+                'publicationState:id,state_title,book_url',
             ])
             ->select('id', 'publication_state_id', 'volume_title', 'volume_synopsis', 'ic_day', 'ic_time', 'volume_sort_order')
             ->orderBy('volume_sort_order')
@@ -62,7 +58,7 @@ class PublicationController extends Controller
 
     public function storeStatus(Request $request)
     {
-        $validated = $request->validate([
+        $validated =$request->validate([
             'state_title' => 'required|string|max:255',
         ]);
 
@@ -75,29 +71,30 @@ class PublicationController extends Controller
         ]);
 
         return response()->json([
-            'status'  => 'success',
-            'data'    => $status,
-            'message' => lexicon('msg_Story_StatusCreated', 'Publication state created successfully.')
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Story_StatusCreated', 'Publication state created successfully.'),
+            'data'     => $status,
+            'redirect' => null,
+        ], 200);
     }
 
-    public function updateStatus(Request $request, $id)
+    public function updateStatus(Request $request,$id)
     {
-        $validated = $request->validate([
+        $validated =$request->validate([
             'state_title' => 'required|string|max:255',
         ]);
 
-        $status = PublicationState::findOrFail($id);
-        $status->update([
+        $status = PublicationState::findOrFail($id);$status->update([
             'state_title' => $validated['state_title'],
             'book_url'    => Str::slug($validated['state_title']),
         ]);
 
         return response()->json([
-            'status'  => 'success',
-            'data'    => $status,
-            'message' => lexicon('msg_Story_StatusUpdated', 'Publication state updated successfully.')
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Story_StatusUpdated', 'Publication state updated successfully.'),
+            'data'     => $status,
+            'redirect' => null,
+        ], 200);
     }
 
     public function destroyStatus($id)
@@ -105,9 +102,10 @@ class PublicationController extends Controller
         PublicationState::findOrFail($id)->delete();
 
         return response()->json([
-            'status'  => 'success',
-            'data'    => null,
-            'message' => lexicon('msg_Story_StatusDeleted', 'Publication state deleted successfully.')
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Story_StatusDeleted', 'Publication state deleted successfully.'),
+            'data'     => null,
+            'redirect' => null,
+        ], 200);
     }
 }

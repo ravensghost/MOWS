@@ -43,26 +43,26 @@
                             <x-badge :variant="$award->scope_target === 'IC' ? 'primary' : ($award->scope_target === 'OOC' ? 'warning' : 'success')">
                                 {{ $award->scope_target }}
                             </x-badge>
-                            @if($award->category)
-                                <span class="text-xs ml-2 opacity-75">/ {{ $award->category->catalogue_title ?? $award->category->name }}</span>
+                            @if($award->catalogue)
+                                <span class="text-xs ml-2 opacity-75">/ {{ $award->catalogue->catalogue_title }}</span>
                             @endif
                         </td>
                         <td class="p-4 text-sm text-muted">
-                            <x-badge :variant="$award->is_layered ? 'info' : 'secondary'">
-                                {{ $award->is_layered ? lexicon('label_awards_3Layered', '3-Layered') : lexicon('label_awards_StaticImage', 'Static Image') }}
+                            <x-badge :variant="!empty($award->top_layer_mode) ? 'info' : 'secondary'">
+                                {{ !empty($award->top_layer_mode) ? lexicon('label_awards_3Layered', '3-Layered') : lexicon('label_awards_StaticImage', 'Static Image') }}
                             </x-badge>
                         </td>
                         <td class="p-4">
                             <x-distinction-badge 
-                                :award-name="$award->distinction_title"
-                                :description="$award->distinction_description"
-                                :base-layer="$award->distinction_base_colour"
-                                :mid-type="$award->mid_layer_mode"
-                                :mid-image="$award->mid_layer_asset"
-                                :mid-css="$award->mid_layer_modifier"
-                                :top-type="$award->top_layer_mode"
-                                :top-image="$award->top_layer_asset"
-                                :top-css="$award->top_layer_modifier"
+                                :distinction-title="$award->distinction_title"
+                                :distinction-description="$award->distinction_description"
+                                :distinction-base-colour="$award->distinction_base_colour"
+                                :mid-layer-mode="$award->mid_layer_mode"
+                                :mid-layer-asset="$award->mid_layer_asset"
+                                :mid-layer-modifier="$award->mid_layer_modifier"
+                                :top-layer-mode="$award->top_layer_mode"
+                                :top-layer-asset="$award->top_layer_asset"
+                                :top-layer-modifier="$award->top_layer_modifier"
                                 :skin="$activeSkin->folder_name ?? 'default'"
                             />
                         </td>
@@ -152,14 +152,14 @@
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_awards_SubgroupSelect', 'Assign this award to a custom subgroup category')) }}'">
                                 <option value="">{{ lexicon('label_awards_NoSubgroup', '-- No Subgroup --') }}</option>
                                 @foreach($categories as $category)
-                                    <option value="{{ $category->id }}">{{ $category->catalogue_title ?? $category->name }}</option>
+                                    <option value="{{ $category->id }}">{{ $category->catalogue_title }}</option>
                                 @endforeach
                             </select>
                         </div>
                     </div>
 
                     <div class="flex flex-col gap-xs border-t border-panel pt-3">
-                        <x-colour-picker name="distinction_base_colour" xModel="distinction_base_colour" :label="lexicon('label_awards_BaseColor', 'Base Color / Background')" />
+                        <x-colour-picker name="distinction_base_colour" xModel="distinction_base_colour" :label="lexicon('label_awards_BaseColor', 'Base Colour / Background')" />
                     </div>
 
                     <!-- Middle Layer Configuration -->
@@ -203,7 +203,7 @@
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_awards_MidCssSelect', 'Select a predefined middle CSS shape')) }}'">
                                 <option value="">{{ lexicon('msg_awards_SelectShape', '-- Select Shape Modifier --') }}</option>
                                 @foreach($midShapes ?? [] as $class => $label)
-                                    <option value="{{ $class }}">{{ $label }} (award-ml-{{ $class }})</option>
+                                    <option value="{{ $class }}">{{ $label }} (distinction-ml-{{ $class }})</option>
                                 @endforeach
                             </select>
                         </div>
@@ -251,7 +251,7 @@
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_awards_TopCssSelect', 'Select a predefined top CSS shape')) }}'">
                                 <option value="">{{ lexicon('msg_awards_SelectShape', '-- Select Shape Modifier --') }}</option>
                                 @foreach($topShapes ?? [] as $class => $label)
-                                    <option value="{{ $class }}">{{ $label }} (award-tl-{{ $class }})</option>
+                                    <option value="{{ $class }}">{{ $label }} (distinction-tl-{{ $class }})</option>
                                 @endforeach
                             </select>
                         </div>
@@ -283,7 +283,7 @@
                 <form action="/admin/awards/categories" method="POST" x-data="ajaxForm" @submit.prevent="submit" class="flex flex-row gap-sm mb-4">
                     @csrf
                     <input type="text" 
-                           name="name" 
+                           name="catalogue_title" 
                            class="bg-input text-input border-input rounded-input p-input outline-none h-input flex-grow box-border focus-border-accent focus-shadow-accent p-2" 
                            placeholder="{{ lexicon('msg_awards_NewSubgroupName', 'New Subgroup Name (e.g., Mission Medals)') }}" 
                            x-tooltip="'{{ addslashes(lexicon('tooltip_awards_NewSubgroupInput', 'Enter new award category title')) }}'"
@@ -309,9 +309,9 @@
                                     @csrf
                                     @method('PUT')
                                     <input type="text" 
-                                           name="name" 
+                                           name="catalogue_title" 
                                            class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent p-2 text-sm" 
-                                           value="{{ $category->catalogue_title ?? $category->name }}" 
+                                           value="{{ $category->catalogue_title }}" 
                                            x-tooltip="'{{ addslashes(lexicon('tooltip_awards_EditSubgroupInput', 'Edit category title')) }}'"
                                            aria-label="{{ lexicon('tooltip_awards_EditSubgroupInput', 'Edit category title') }}"
                                            required>
@@ -322,7 +322,7 @@
                             </td>
                             <td class="p-3 text-right">
                                 <x-button variant="text" class="text-danger hover-danger text-sm" 
-                                    x-data="deleteAction('/admin/awards/categories/{{ $category->id }}', 'DELETE', '{{ addslashes($category->catalogue_title ?? $category->name) }}')" 
+                                    x-data="deleteAction('/admin/awards/categories/{{ $category->id }}', 'DELETE', '{{ addslashes($category->catalogue_title) }}')" 
                                     @click="confirmDelete()"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_common_DeleteSubgroup', 'Delete this subgroup')) }}'"
                                     aria-label="{{ lexicon('tooltip_common_DeleteSubgroup', 'Delete this subgroup') }}">

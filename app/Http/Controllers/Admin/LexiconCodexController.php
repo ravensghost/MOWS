@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use App\Models\LexiconCodex;
 use App\Models\Book;
 use App\Models\Configuration;
+use App\Models\LexiconCodex;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class LexiconCodexController extends Controller
 {
@@ -20,7 +20,7 @@ class LexiconCodexController extends Controller
             ->with([
                 'grid.gridModules',
                 'module' => function ($query) {$query->orderBy('module_sort_order');
-                }
+                },
             ])
             ->firstOrFail();
 
@@ -29,7 +29,9 @@ class LexiconCodexController extends Controller
             ->orderBy('semantic_token')
             ->get();
 
-        $activeSkin = Configuration::where('configuration_token', 'active_skin')->value('configuration_payload') ?? 'default';$customLabels = Configuration::where('configuration_token', 'like', 'lexicon_label_%')->pluck('configuration_payload', 'configuration_token')->toArray();
+        $activeSkin = Configuration::where('configuration_token', 'active_skin')->value('configuration_payload') ?? 'default';$customLabels = Configuration::where('configuration_token', 'like', 'lexicon_label_%')
+            ->pluck('configuration_payload', 'configuration_token')
+            ->toArray();
 
         foreach ($codexEntries as$entry) {
             if (is_array($entry->translation_payloads)) {
@@ -44,7 +46,7 @@ class LexiconCodexController extends Controller
             }
         }
 
-        if (!isset($locales['gb'])) {$locales['gb'] = 'English';
+        if (! isset($locales['gb'])) {$locales['gb'] = 'English';
         }
 
         $groupedTerms = $codexEntries->groupBy('prefix_group_title')->map(function ($groupEntries) {
@@ -58,10 +60,10 @@ class LexiconCodexController extends Controller
     {
         abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
 
-        $data =$request->input('lexicon_entries');
+        $data = $request->input('lexicon_entries');$model = null;
 
         // 1. Bulk Table Update
-        if (is_array($data)) {
+        if (is_array($data)) {$updatedModels = [];
             foreach ($data as $id =>$localeData) {
                 $entry = LexiconCodex::find($id);
 
@@ -74,9 +76,11 @@ class LexiconCodexController extends Controller
                         $entry->default_lexicon_string =$payloads['gb'];
                     }
                     $entry->save();
+                    $updatedModels[] =$entry;
                 }
             }
-            Cache::forget('mows_lexicon');
+            $model =$updatedModels;
+            Cache::forget('lexicon_codex');
         }
         // 2. Single Entry Create / Edit Modal Support
         elseif ($request->filled('semantic_token')) {
@@ -84,12 +88,19 @@ class LexiconCodexController extends Controller
             $incomingPayloads =$request->input('translation_payloads', []);
 
             if (str_starts_with($semanticToken, 'public_label_')) {$defaultPrefixGroup = 'public_label';
-                $defaultGroup = substr($semanticToken, 13) ?: 'general';
+                $remainder = substr($semanticToken, 13);
+                $parts =$remainder !== '' ? explode('_', $remainder) : [];$defaultGroup = (! empty($parts[0])) ?$parts[0] : 'NotDefinedRight';
             } elseif (str_starts_with($semanticToken, 'admin_label_')) {$defaultPrefixGroup = 'admin_label';
-                $defaultGroup = substr($semanticToken, 12) ?: 'general';
+                $remainder = substr($semanticToken, 12);
+                $parts =$remainder !== '' ? explode('_', $remainder) : [];$defaultGroup = (! empty($parts[0])) ?$parts[0] : 'NotDefinedRight';
             } else {
                 $parts = explode('_',$semanticToken);
-                $defaultPrefixGroup = count($parts) > 0 ? $parts[0] : 'general';$defaultGroup = count($parts) > 1 ?$parts[1] : 'general';
+                if (count($parts) >= 3 && ! empty($parts[0]) && ! empty($parts[1])) {
+                    $defaultPrefixGroup =$parts[0];
+                    $defaultGroup =$parts[1];
+                } else {
+                    $defaultPrefixGroup = ! empty($parts[0]) ? $parts[0] : 'NotDefinedRight';$defaultGroup = 'NotDefinedRight';
+                }
             }
 
             $entry =$request->filled('id')
@@ -102,7 +113,7 @@ class LexiconCodexController extends Controller
                 }
             }
 
-            $defaultLexiconString = (!empty($payloads['gb']))
+            $defaultLexiconString = (! empty($payloads['gb']))
                 ? $payloads['gb']
                 : ($entry->default_lexicon_string ?? $semanticToken);
 
@@ -114,7 +125,7 @@ class LexiconCodexController extends Controller
                     'translation_payloads'   => $payloads,
                 ]);
             } else {
-                LexiconCodex::create([
+                $entry = LexiconCodex::create([
                     'semantic_token'         => $semanticToken,
                     'prefix_group_title'     => $request->input('prefix_group_title') ?:$defaultPrefixGroup,
                     'group_title'            => $request->input('group_title') ?:$defaultGroup,
@@ -123,48 +134,44 @@ class LexiconCodexController extends Controller
                 ]);
             }
 
-            Cache::forget('mows_lexicon');
+            $model =$entry;
+            Cache::forget('lexicon_codex');
         }
 
-        if ($request->wantsJson() ||$request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'message' => lexicon('msg_Lexicon_TermUpdated', 'Lexicon term updated successfully.')
-            ]);
-        }
-
-        return redirect('/admin/lexicon')->with('status', lexicon('msg_Lexicon_TermUpdated', 'Lexicon term updated successfully.'));
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_Lexicon_TermUpdated', 'Lexicon term updated successfully.'), 'data' => $model, 'redirect' => null], 200);
     }
 
     public function destroyTerm($id)
     {
         abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
 
-        LexiconCodex::findOrFail($id)->delete();
-        Cache::forget('mows_lexicon');
+        $model = LexiconCodex::findOrFail($id);$model->delete();
+        Cache::forget('lexicon_codex');
 
-        return response()->json(['success' => true]);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_Lexicon_TermDeleted', 'Lexicon term deleted successfully.'), 'data' => $model, 'redirect' => null], 200);
     }
 
     public function destroyGroup($groupName)
     {
         abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
 
-        LexiconCodex::where('prefix_group_title', $groupName)->delete();
-        Cache::forget('mows_lexicon');
+        $deletedCount = LexiconCodex::where('prefix_group_title',$groupName)->delete();
+        Cache::forget('lexicon_codex');
+        $model = ['prefix_group_title' => $groupName, 'deleted_count' =>$deletedCount];
 
-        return response()->json(['success' => true]);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_Lexicon_GroupDeleted', 'Lexicon prefix group deleted successfully.'), 'data' => $model, 'redirect' => null], 200);
     }
 
     public function destroySubgroup($prefixGroupTitle,$groupTitle)
     {
         abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
 
-        LexiconCodex::where('prefix_group_title', $prefixGroupTitle)
+        $deletedCount = LexiconCodex::where('prefix_group_title',$prefixGroupTitle)
             ->where('group_title', $groupTitle)
             ->delete();
-        Cache::forget('mows_lexicon');
+        Cache::forget('lexicon_codex');
+        $model = ['prefix_group_title' =>$prefixGroupTitle, 'group_title' => $groupTitle, 'deleted_count' =>$deletedCount];
 
-        return response()->json(['success' => true]);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_Lexicon_SubgroupDeleted', 'Lexicon subgroup deleted successfully.'), 'data' => $model, 'redirect' => null], 200);
     }
 }

@@ -26,6 +26,7 @@ class PersonaTransferController extends Controller
         $persona->save();
 
         Cache::forget('widget_roster_sections');
+        Cache::forget('widget_personae_table_sections');
 
         $assignmentLabel = $newAssignment->division
             ? "{$newAssignment->assignment_title} ({$newAssignment->division->division_title})"
@@ -40,6 +41,6 @@ class PersonaTransferController extends Controller
             'scope_target'        => 'IC',
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Character transferred and logged in chronological register!']);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_PersonaTransfer_Updated', 'Persona transferred and logged in chronological register!'), 'data' => $persona, 'redirect' => null], 200);
     }
 }

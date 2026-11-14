@@ -16,7 +16,7 @@
 
                 <!-- 1. Profile Information Panel -->
                 <x-accordion-panel :title="lexicon('label_Dashboard_ProfileInformation', 'Profile Information')" :expanded="false">
-                    <form method="POST" action="{{ route('profile.update') }}" x-data="ajaxForm" x-ref="profileForm" @submit.prevent="submit" class="flex flex-col gap-md">
+                    <form id="profile-update-form" method="POST" action="{{ route('profile.update') }}" x-data="ajaxForm" x-ref="profileForm" @submit.prevent="submit" class="flex flex-col gap-md">
                         @csrf
                         @method('patch')
                         
@@ -158,20 +158,33 @@
                     </div>
                 </x-accordion-panel>
 
-            </div>
-            <div class="pt-2 mt-2 flex flex-col gap-md">
-                <x-accordion-panel :title="lexicon('label_Profile_Preferences', 'Account Preferences')" :expanded="false">             
-                    <div class="flex flex-row items-center justify-between gap-md panel p-3">
-                        <div class="flex flex-col">
-                            <label for="content_shield_bypass" class="text-xs font-bold text-main">{{ lexicon('label_Profile_ContentShieldBypass', 'Auto-Bypass Mature Content Shield') }}</label>
-                            <span class="text-xs text-muted">{{ lexicon('msg_Profile_ContentShieldHint', 'Automatically reveal mature content without clicking warning gates.') }}</span>
+                <!-- 3. Account Preferences Panel -->
+                <x-accordion-panel :title="lexicon('label_Profile_Preferences', 'Account Preferences')" :expanded="false">
+                    <form method="POST" action="{{ route('profile.update') }}" x-data="ajaxForm" @submit.prevent="submit" class="flex flex-col gap-md">
+                        @csrf
+                        @method('patch')
+                        <input type="hidden" name="name" value="{{ auth()->user()->name }}">
+                        <input type="hidden" name="email" value="{{ auth()->user()->email }}">
+
+                        <div class="flex flex-row items-center justify-between gap-md panel p-3">
+                            <div class="flex flex-col">
+                                <label for="content_shield_bypass" class="text-xs font-bold text-main">{{ lexicon('label_Profile_ContentShieldBypass', 'Auto-Bypass Mature Content Shield') }}</label>
+                                <span class="text-xs text-muted">{{ lexicon('msg_Profile_ContentShieldHint', 'Automatically reveal mature content without clicking warning gates.') }}</span>
+                            </div>
+                            <input type="hidden" name="content_shield_bypass" value="0">
+                            <input type="checkbox" id="content_shield_bypass" name="content_shield_bypass" value="1"
+                                {{ old('content_shield_bypass', auth()->user()->content_shield_bypass) ? 'checked' : '' }}
+                                class="form-checkbox h-5 w-5 text-accent rounded">
                         </div>
-                        <input type="hidden" name="content_shield_bypass" value="0">
-                        <input type="checkbox" id="content_shield_bypass" name="content_shield_bypass" value="1"
-                            {{ old('content_shield_bypass', auth()->user()->content_shield_bypass) ? 'checked' : '' }}
-                            class="form-checkbox h-5 w-5 text-accent rounded">
-                    </div>
+
+                        <div class="border-t-actions pt-6 mt-4 flex flex-row flex-wrap items-center justify-end gap-md">
+                            <x-button type="submit" variant="primary" x-tooltip="'{{ addslashes(lexicon('tooltip_Dashboard_SavePreferences', 'Save your account preferences')) }}'">
+                                {{ lexicon('btn_common_SaveChanges', 'Save Changes') }}
+                            </x-button>
+                        </div>
+                    </form>
                 </x-accordion-panel>
+
             </div>
         </x-slot:profileinformation>
 

@@ -20,21 +20,24 @@ class CorrespondenceController extends Controller
 
         $threads = CorrespondenceThread::whereHas('participants', function ($query) use ($userId) {
             $query->where('user_id', $userId);
-        })->with(['participants.user', 'participants.character', 'messages.user', 'messages.character'])->orderByDesc('updated_at')->get();
+        })->with(['participants.user', 'participants.persona', 'messages.user', 'messages.persona'])->orderByDesc('updated_at')->get();
 
         $activeThread = $threadId
-            ? CorrespondenceThread::with(['participants.user', 'participants.character', 'messages.user', 'messages.character'])->findOrFail($threadId)
+            ? CorrespondenceThread::with(['participants.user', 'participants.persona', 'messages.user', 'messages.persona'])->findOrFail($threadId)
             : null;
 
-        $users = User::where('id', '!=', $userId)->select('id', 'name')->get();
+        $users = User::where('id', '!=', $userId)->select('id', 'user_handle')->get();
         $characters = Persona::where('persona_status', 'active')->select('id', 'persona_name', 'user_id')->get();
         $myCharacters = Persona::where('user_id', $userId)->where('persona_status', 'active')->get();
 
-        $systemPage = Book::where('slug', 'messenger')
+        $systemPage = Book::where('book_url', 'messenger')
             ->where('is_published', true)
-            ->with(['layout.blocks', 'widgets' => function ($q) {
-                $q->orderBy('page_widget.sort_order');
-            }])
+            ->with([
+                'grid.gridModules',
+                'modules' => function ($q) {
+                    $q->orderBy('module_sort_order');
+                }
+            ])
             ->first();
 
         return view('messenger', compact('threads', 'activeThread', 'users', 'characters', 'myCharacters', 'systemPage'));
@@ -92,16 +95,7 @@ class CorrespondenceController extends Controller
 
         $this->dispatchExternalAlerts($thread, array_unique($notifiedUserIds), $validated['correspondence_text']);
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'status'                   => 'success',
-                'success'                  => true,
-                'correspondence_thread_id' => $thread->id,
-                'message'                  => lexicon('msg_messenger_MessageSent', 'Message sent successfully.'),
-            ]);
-        }
-
-        return back();
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_messenger_MessageSent', 'Message sent successfully.'), 'data' => $thread, 'redirect' => null], 200);
     }
 
     public function reply(Request $request, CorrespondenceThread $thread)
@@ -111,7 +105,7 @@ class CorrespondenceController extends Controller
             'persona_id'          => 'nullable|exists:personae,id',
         ]);
 
-        CorrespondenceEntry::create([
+        $entry = CorrespondenceEntry::create([
             'correspondence_thread_id' => $thread->id,
             'user_id'                  => auth()->id(),
             'persona_id'               => $thread->thread_mode === 'IC' ? ($validated['persona_id'] ?? null) : null,
@@ -128,16 +122,7 @@ class CorrespondenceController extends Controller
 
         $this->dispatchExternalAlerts($thread, $recipientUserIds, $validated['correspondence_text']);
 
-        if ($request->wantsJson()) {
-            return response()->json([
-                'status'                   => 'success',
-                'success'                  => true,
-                'correspondence_thread_id' => $thread->id,
-                'message'                  => lexicon('msg_messenger_ReplySent', 'Reply sent.'),
-            ]);
-        }
-
-        return back();
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_messenger_ReplySent', 'Reply sent.'), 'data' => $entry, 'redirect' => null], 200);
     }
 
     protected function dispatchExternalAlerts(CorrespondenceThread $thread, array $recipientUserIds, string $correspondenceText): void
@@ -147,7 +132,7 @@ class CorrespondenceController extends Controller
         }
 
         $recipients = User::whereIn('id', $recipientUserIds)->get();
-        $senderName = auth()->user()->name ?? 'A writer';
+        $senderName = auth()->user()->user_handle ?? 'A writer';
         $subjectLine = $thread->thread_title ?: 'Direct Message';
 
         foreach ($recipients as $recipient) {
@@ -172,7 +157,7 @@ class CorrespondenceController extends Controller
             $discordId = UserAttribute::where('user_id', $recipient->id)
                 ->where('key', 'discord_id')
                 ->value('value');
-            $mention = !empty($discordId) ? "<@{$discordId}>" : $recipient->name;
+            $mention = !empty($discordId) ? "<@{$discordId}>" : $recipient->user_handle;
 
             NotificationService::sendDiscord(
                 'alerts',

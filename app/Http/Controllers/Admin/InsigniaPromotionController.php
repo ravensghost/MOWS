@@ -36,6 +36,7 @@ class InsigniaPromotionController extends Controller
         $persona->save();
 
         Cache::forget('widget_roster_sections');
+        Cache::forget('widget_personae_table_sections');
 
         ChronologicalRegister::create([
             'user_id'             => $persona->user_id,
@@ -46,6 +47,6 @@ class InsigniaPromotionController extends Controller
             'scope_target'        => 'IC',
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Rank updated and logged in chronological register!']);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_Ranks_Promoted', 'Rank updated and logged in chronological register!'), 'data' => $persona, 'redirect' => null], 200);
     }
 }

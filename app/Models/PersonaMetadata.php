@@ -22,12 +22,4 @@ class PersonaMetadata extends Model
     {
         return $this->belongsTo(Persona::class, 'persona_id');
     }
-
-    /**
-     * Required relationship alias for persona.
-     */
-    public function character(): BelongsTo
-    {
-        return $this->persona();
-    }
 }

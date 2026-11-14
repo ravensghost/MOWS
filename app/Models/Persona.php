@@ -32,14 +32,6 @@ class Persona extends Model
     }
 
     /**
-     * Legacy alias for assignment.
-     */
-    public function position(): BelongsTo
-    {
-        return $this->assignment();
-    }
-
-    /**
      * The rank insignia assigned to this persona.
      */
     public function insignia(): BelongsTo
@@ -48,11 +40,11 @@ class Persona extends Model
     }
 
     /**
-     * Legacy alias for insignia.
+     * The chronological service register entries for this persona.
      */
-    public function rank(): BelongsTo
+    public function chronologicalRegisters(): HasMany
     {
-        return $this->insignia();
+        return $this->hasMany(ChronologicalRegister::class, 'persona_id');
     }
 
     /**
@@ -64,7 +56,7 @@ class Persona extends Model
     }
 
     /**
-     * The folios authored/posted by this persona as active character.
+     * The folios authored/posted by this persona as active persona.
      */
     public function folios(): HasMany
     {
@@ -80,27 +72,19 @@ class Persona extends Model
     }
 
     /**
-     * Legacy alias for folios.
-     */
-    public function chapters(): HasMany
-    {
-        return $this->folios();
-    }
-
-    /**
-     * Legacy alias for featuredFolios.
-     */
-    public function featuredChapters(): BelongsToMany
-    {
-        return $this->featuredFolios();
-    }
-
-    /**
      * The metadata attributes associated with this persona.
      */
     public function attributes(): HasMany
     {
         return $this->hasMany(PersonaMetadata::class, 'persona_id');
+    }
+
+    /**
+     * The candidate petition submitted to create this persona.
+     */
+    public function candidatePetition(): HasOne
+    {
+        return $this->hasOne(CandidatePetition::class, 'persona_id');
     }
 
     /**
