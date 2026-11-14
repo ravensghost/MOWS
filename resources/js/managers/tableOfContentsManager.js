@@ -5,8 +5,8 @@ export default () => ({
     open: false,
     mode: 'create',
     id: '',
-    action: '/admin/navigation',
-    formAction: '/admin/navigation',
+    action: '/admin/table-of-contents',
+    formAction: '/admin/table-of-contents',
     method: 'POST',
     parent_entry_id: '',
     group_title: '',
@@ -60,7 +60,7 @@ export default () => ({
 
     // 4. Modal Handlers (Using window.Modal utility)
     openModal(mode, data = {}) {
-        const baseUrl = '/admin/navigation';
+        const baseUrl = '/admin/table-of-contents';
         if (mode === 'create') {
             window.Modal.create(this, {
                 parent_entry_id: '',

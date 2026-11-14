@@ -188,7 +188,7 @@
                                             <x-button type="button" 
                                                       variant="text" 
                                                       class="text-danger hover-text-h text-sm flex flex-row items-center gap-xs" 
-                                                      x-data="deleteAction('/admin/statuses/{{ $status->id }}', 'DELETE', '{{ addslashes($status->state_title) }}')" 
+                                                      x-data="deleteAction('/admin/publication-states/{{ $status->id }}', 'DELETE', '{{ addslashes($status->state_title) }}')" 
                                                       @click.prevent="confirmDelete()"
                                                       x-tooltip="'{{ addslashes(lexicon('tooltip_Story_DeleteStatus', 'Delete this publication state')) }}'"
                                                       aria-label="{{ lexicon('tooltip_Story_DeleteStatus', 'Delete this publication state') }}">

@@ -9,7 +9,7 @@
                 <x-slot:actions>
                     @can('manage_navigation')
                         <x-button variant="success"
-                                  href="/admin/navigation/options"
+                                  href="/admin/table-of-contents/options"
                                   aria-label="{{ lexicon('tooltip_Navigation_ManageOptions', 'Configure navigation locations, groups, and access clearance options') }}"
                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_ManageOptions', 'Configure navigation locations, groups, and access clearance options')) }}'">
                             <i class="bi bi-sliders"></i> {{ lexicon('btn_Navigation_ManageOptions', 'Manage Dropdown Options') }}
@@ -129,7 +129,7 @@
                                               class="text-danger hover-danger text-xs"
                                               aria-label="{{ lexicon('tooltip_Navigation_DeleteLink', 'Delete this menu item') }}"
                                               x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_DeleteLink', 'Delete this menu item')) }}'"
-                                              x-data="deleteAction(`/admin/navigation/{{ $entry->id }}`, 'DELETE', '{{ addslashes($entry->translation_code_key) }}', '{{ addslashes(lexicon('msg_Navigation_ConfirmDelete', 'Are you sure you want to remove this menu item?')) }}')"
+                                              x-data="deleteAction(`/admin/table-of-contents/{{ $entry->id }}`, 'DELETE', '{{ addslashes($entry->translation_code_key) }}', '{{ addslashes(lexicon('msg_Navigation_ConfirmDelete', 'Are you sure you want to remove this menu item?')) }}')"
                                               @click="confirmDelete()">
                                         <i class="bi bi-trash"></i> {{ lexicon('btn_common_Delete', 'Delete') }}
                                     </x-button>
@@ -220,7 +220,7 @@
                                                   class="text-danger hover-danger text-xs"
                                                   aria-label="{{ lexicon('tooltip_Navigation_DeleteLink', 'Delete this menu item') }}"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_DeleteLink', 'Delete this menu item')) }}'"
-                                                  x-data="deleteAction(`/admin/navigation/{{ $child->id }}`, 'DELETE', '{{ addslashes($child->translation_code_key) }}', '{{ addslashes(lexicon('msg_Navigation_ConfirmDelete', 'Are you sure you want to remove this menu item?')) }}')"
+                                                  x-data="deleteAction(`/admin/table-of-contents/{{ $child->id }}`, 'DELETE', '{{ addslashes($child->translation_code_key) }}', '{{ addslashes(lexicon('msg_Navigation_ConfirmDelete', 'Are you sure you want to remove this menu item?')) }}')"
                                                   @click="confirmDelete()">
                                             <i class="bi bi-trash"></i> {{ lexicon('btn_common_Delete', 'Delete') }}
                                         </x-button>

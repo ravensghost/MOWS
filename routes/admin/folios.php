@@ -1,12 +1,11 @@
 <?php
 
 use App\Http\Controllers\Admin\FolioController;
-use App\Http\Controllers\FolioAuthoringController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/chapters/reorder', [FolioController::class, 'reorder']);
-Route::put('/chapters/{id}/move', [FolioController::class, 'move']);
-Route::delete('/chapters/{id}', [FolioController::class, 'destroy']);
+Route::post('/folios/reorder', [FolioController::class, 'reorder'])->name('admin.folios.reorder');
+Route::put('/folios/{id}/move', [FolioController::class, 'move'])->name('admin.folios.move');
+Route::delete('/folios/{id}', [FolioController::class, 'destroy'])->name('admin.folios.destroy');
 
 // AI Content & Lore Assistance for Folios
-Route::post('/ai/chapter-generate', [FolioAuthoringController::class, 'aiChapterGenerate']);
+Route::post('/folios/ai-generate', [FolioController::class, 'aiGenerate'])->name('admin.folios.ai_generate');

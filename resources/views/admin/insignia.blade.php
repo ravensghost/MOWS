@@ -9,7 +9,7 @@
 @section('content')
 <div x-data="insigniaManager('{{ $defaultDeptColour }}', '{{ $defaultBaseLayer }}')" 
      x-init="initData()"
-     @ajax-success.window="refreshDOM_US()">
+     @ajax-success.window="refreshDOM()">
 
     <x-admin-grid-wrapper :page="$systemPage">
         <x-slot:content>
@@ -19,7 +19,7 @@
                         <div class="flex flex-row flex-wrap items-center gap-sm">
                             <x-button variant="secondary" 
                                       tag="a"
-                                      href="{{ route('admin.ranks.export') }}"
+                                      href="{{ route('admin.insignia.export') }}"
                                       x-tooltip="'{{ addslashes(lexicon('tooltip_ranks_Export', 'Download ranks JSON manifest')) }}'">
                                 <i class="bi bi-download"></i>
                                 <span>{{ lexicon('btn_common_Export', 'Export Ranks') }}</span>
@@ -27,7 +27,7 @@
 
                             <x-button variant="secondary" 
                                       tag="a"
-                                      href="{{ route('admin.ranks.template') }}"
+                                      href="{{ route('admin.insignia.template') }}"
                                       x-tooltip="'{{ addslashes(lexicon('tooltip_ranks_Template', 'Download blank JSON rank template')) }}'">
                                 <i class="bi bi-file-earmark-code"></i>
                                 <span>{{ lexicon('btn_common_DownloadTemplate', 'Download Blank Template') }}</span>
@@ -74,7 +74,7 @@
 
                                 <div class="flex flex-col gap-xs">
                                     <label class="text-sm font-bold text-h">{{ lexicon('label_common_UploadJson', 'Upload JSON Manifest') }}</label>
-                                    <x-dropzone :url="route('admin.ranks.import')"
+                                    <x-dropzone :url="route('admin.insignia.import')"
                                                 id="ranks-import-dropzone"
                                                 :maxFiles="1"
                                                 acceptedFiles="application/json,.json,.txt"
@@ -123,7 +123,7 @@
                                               class="text-danger hover-danger text-sm" 
                                               aria-label="{{ lexicon('tooltip_ranks_DeleteSet', 'Delete this rank set and all its ranks') }}"
                                               x-tooltip="'{{ addslashes(lexicon('tooltip_ranks_DeleteSet', 'Delete this rank set and all its ranks')) }}'"
-                                              x-data="deleteAction('/admin/rank-sets/{{ $set->id }}', 'DELETE', '{{ addslashes($set->catalogue_title) }}')" 
+                                              x-data="deleteAction('/admin/insignia/catalogues/{{ $set->id }}', 'DELETE', '{{ addslashes($set->catalogue_title) }}')" 
                                               @click="confirmDelete()">
                                         {{ lexicon('btn_ranks_DeleteSet', 'Delete Set') }}
                                     </x-button>
@@ -132,7 +132,7 @@
                         </div>
                         
                         <div class="p-panel grid grid-cols-1 md-grid-cols-2 lg-grid-cols-3 gap-md w-full"
-                             x-data="sortableManager('/admin/ranks/reorder')">
+                             x-data="sortableManager('/admin/insignia/reorder')">
                             @forelse($set->insignia as $rank)
                                 @php
                                     $badgeColour = $set->divisions && $set->divisions->count() > 0 ? ($set->divisions->first()->division_hue ?? '#ffffffFF') : '#ffffffFF';
@@ -191,7 +191,7 @@
                                                       class="text-danger hover-danger text-xs justify-end" 
                                                       aria-label="{{ lexicon('tooltip_ranks_DeleteRank', 'Delete this rank badge') }}"
                                                       x-tooltip="'{{ addslashes(lexicon('tooltip_ranks_DeleteRank', 'Delete this rank badge')) }}'"
-                                                      x-data="deleteAction('/admin/ranks/{{ $rank->id }}', 'DELETE', '{{ addslashes($rank->insignia_title) }}')" 
+                                                      x-data="deleteAction('/admin/insignia/{{ $rank->id }}', 'DELETE', '{{ addslashes($rank->insignia_title) }}')" 
                                                       @click="confirmDelete()">
                                                 {{ lexicon('btn_common_Delete', 'Delete') }}
                                             </x-button>
@@ -219,7 +219,7 @@
                         <span>{{ lexicon('label_ranks_CreateRankSet', 'Create Rank Set') }}</span>
                     </x-slot:top>
                     
-                    <form action="/admin/rank-sets" 
+                    <form action="/admin/insignia/catalogues" 
                           method="POST" 
                           class="flex flex-col gap-md" 
                           x-data="ajaxForm" 
@@ -258,7 +258,7 @@
                         <span class="text-accent" x-text="' - ' + assignSet.catalogue_title"></span>
                     </x-slot:top>
                     
-                    <form :action="`/admin/rank-sets/${assignSet.id}/assign`" 
+                    <form :action="`/admin/insignia/catalogues/${assignSet.id}/assign`" 
                           method="POST" 
                           class="flex flex-col gap-md" 
                           x-data="ajaxForm" 
@@ -306,7 +306,7 @@
                     </x-slot:top>
                     
                     <div class="grid grid-cols-1 lg-grid-cols-12 gap-md w-full items-start">
-                        <form :action="modal === 'rank-edit' ? `/admin/ranks/${modals.insignia.id}` : '/admin/ranks'" 
+                        <form :action="modal === 'rank-edit' ? `/admin/insignia/${modals.insignia.id}` : '/admin/insignia'" 
                               method="POST" 
                               class="lg-col-span-8 flex flex-col gap-md" 
                               x-data="ajaxForm" 
@@ -335,7 +335,7 @@
                                     <option value="">{{ lexicon('msg_ranks_SelectSet', 'Select a Set...') }}</option>
                                     @foreach($rankSets as $set)
                                         @php $setColour = $set->divisions && $set->divisions->count() > 0 ? ($set->divisions->first()->division_hue ?? '#ffffffFF') : '#ffffffFF'; @endphp
-                                        <option value="{{ $set->id }}" data-catalogue-title="{{ $set->catalogue_title }}" data-color="{{ $setColour }}">{{ $set->catalogue_title }}</option>
+                                        <option value="{{ $set->id }}" data-catalogue-title="{{ $set->catalogue_title }}" data-colour="{{ $setColour }}" data-color="{{ $setColour }}">{{ $set->catalogue_title }}</option>
                                     @endforeach
                                 </select>
                             </div>

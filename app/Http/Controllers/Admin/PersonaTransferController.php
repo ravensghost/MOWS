@@ -3,17 +3,17 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use App\Models\Persona;
 use App\Models\Assignment;
 use App\Models\ChronologicalRegister;
+use App\Models\Persona;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class PersonaTransferController extends Controller
 {
     public function __invoke(Request $request)
     {
-        $validated = $request->validate([
+        $validated =$request->validate([
             'persona_id'     => 'required|exists:personae,id',
             'assignment_id'  => 'required|exists:assignments,id',
             'chronicle_text' => 'required|string',
@@ -22,13 +22,13 @@ class PersonaTransferController extends Controller
         $persona = Persona::findOrFail($validated['persona_id']);
         $newAssignment = Assignment::with('division')->findOrFail($validated['assignment_id']);
 
-        $persona->assignment_id = $newAssignment->id;
+        $persona->assignment_id =$newAssignment->id;
         $persona->save();
 
         Cache::forget('widget_roster_sections');
         Cache::forget('widget_personae_table_sections');
 
-        $assignmentLabel = $newAssignment->division
+        $assignmentLabel =$newAssignment->division
             ? "{$newAssignment->assignment_title} ({$newAssignment->division->division_title})"
             : $newAssignment->assignment_title;
 

@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Division;
+use App\Models\InsigniaCatalogue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use App\Models\InsigniaCatalogue;
-use App\Models\Division;
 
 class InsigniaCatalogueController extends Controller
 {
@@ -42,7 +42,7 @@ class InsigniaCatalogueController extends Controller
         ], 200);
     }
 
-    public function update(Request $request, InsigniaCatalogue$rankSet)
+    public function update(Request $request, InsigniaCatalogue$catalogue)
     {
         abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
 
@@ -51,9 +51,9 @@ class InsigniaCatalogueController extends Controller
             'is_visible'      => 'nullable|boolean',
         ]);
 
-        $rankSet->update([
-            'catalogue_title' => $request->input('catalogue_title',$rankSet->catalogue_title),
-            'is_visible'      => $request->boolean('is_visible',$rankSet->is_visible),
+        $catalogue->update([
+            'catalogue_title' => $request->input('catalogue_title',$catalogue->catalogue_title),
+            'is_visible'      => $request->boolean('is_visible',$catalogue->is_visible),
         ]);
 
         $this->clearRankCaches();
@@ -61,16 +61,16 @@ class InsigniaCatalogueController extends Controller
         return response()->json([
             'status'   => 'success',
             'message'  => lexicon('msg_RankSets_Updated', 'Rank set updated successfully.'),
-            'data'     => $rankSet,
+            'data'     => $catalogue,
             'redirect' => null,
         ], 200);
     }
 
-    public function destroy(InsigniaCatalogue $rankSet)
+    public function destroy(InsigniaCatalogue $catalogue)
     {
         abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
 
-        $rankSet->delete();
+        $catalogue->delete();
 
         $this->clearRankCaches();
 
@@ -82,14 +82,14 @@ class InsigniaCatalogueController extends Controller
         ], 200);
     }
 
-    public function assignSections(Request $request, InsigniaCatalogue$rankSet)
+    public function assignSections(Request $request, InsigniaCatalogue$catalogue)
     {
         abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
 
-        Division::where('insignia_catalogue_id', $rankSet->id)->update(['insignia_catalogue_id' => null]);
+        Division::where('insignia_catalogue_id', $catalogue->id)->update(['insignia_catalogue_id' => null]);
 
         if ($request->has('divisions') && is_array($request->input('divisions'))) {
-            Division::whereIn('id', $request->input('divisions'))->update(['insignia_catalogue_id' =>$rankSet->id]);
+            Division::whereIn('id', $request->input('divisions'))->update(['insignia_catalogue_id' =>$catalogue->id]);
         }
 
         $this->clearRankCaches();
@@ -97,7 +97,7 @@ class InsigniaCatalogueController extends Controller
         return response()->json([
             'status'   => 'success',
             'message'  => lexicon('msg_RankSets_SectionsAssigned', 'Organisational sections assigned successfully.'),
-            'data'     => $rankSet->load('divisions'),
+            'data'     => $catalogue->load('divisions'),
             'redirect' => null,
         ], 200);
     }

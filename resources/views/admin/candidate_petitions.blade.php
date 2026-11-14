@@ -5,7 +5,7 @@
                  index: '{{ route('admin.candidate_petitions.index') }}',
                  store: '{{ route('admin.candidate_petitions.store') }}',
                  baseUrl: '{{ url('/admin/candidate-petitions') }}',
-                 evaluationsUrl: '{{ url('/admin/council-evaluations') }}'
+                 evaluationsUrl: '{{ url('/admin/candidate-petitions') }}'
              },
              initialPetitions: {{ Js::from($petitions ?? []) }},
              insignias: {{ Js::from($insignias ?? []) }},
@@ -92,7 +92,7 @@
                             <th class="p-4 text-right">{{ lexicon('col_common_Actions', 'Actions') }}</th>
                         </tr>
                     </thead>
-                    <tbody id="candidate-petitions-tbody" class="divide-y border-panel text-sm text-p">
+                    <tbody id="candidate-petitions-tbody" x-ref="candidate-petitions-tbody" class="divide-y border-panel text-sm text-p">
                         @forelse($petitions ?? [] as $petition)
                             @php
                                 $petitionId = $petition->id;
@@ -131,6 +131,8 @@
                                                       'personaId' => $personaId,
                                                       'personaName' => $personaName,
                                                       'petition_status' => $petitionStatus,
+                                                      'insignia_id' => $petition->persona?->insignia_id ?? null,
+                                                      'assignment_id' => $petition->persona?->assignment_id ?? null,
                                                       'entries' => $petition->entries ?? [],
                                                       'evaluations' => $petition->evaluations ?? []
                                                   ]) }}, 'review')"
@@ -217,6 +219,35 @@
                                  class="p-4 bg-panel-sub border-panel rounded-panel text-sm text-input-muted">
                                 {{ lexicon('msg_Petitions_NoEntries', 'No petition entries recorded for this submission.') }}
                             </div>
+                        </div>
+                    </div>
+
+                    {{-- Initial Assignment & Insignia Selection on Approval --}}
+                    <div class="grid grid-cols-1 md-grid-cols-2 gap-md border-t-panel pt-4">
+                        <div class="flex flex-col gap-xs">
+                            <label class="text-xs font-bold text-input-muted uppercase tracking-wider">
+                                {{ lexicon('label_Demographics_Rank', 'Insignia') }}
+                            </label>
+                            <select x-model="activePetition.insignia_id"
+                                    class="w-full bg-input text-input border-input rounded-input p-2 text-sm">
+                                <option value="">{{ lexicon('label_Demographics_Unranked', 'Default / Unranked') }}</option>
+                                <template x-for="insignia in insignias" :key="insignia.id">
+                                    <option :value="insignia.id" x-text="insignia.insignia_title"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-col gap-xs">
+                            <label class="text-xs font-bold text-input-muted uppercase tracking-wider">
+                                {{ lexicon('label_Demographics_Position', 'Assignment') }}
+                            </label>
+                            <select x-model="activePetition.assignment_id"
+                                    class="w-full bg-input text-input border-input rounded-input p-2 text-sm">
+                                <option value="">{{ lexicon('label_Demographics_Unassigned', 'Default / Unassigned') }}</option>
+                                <template x-for="assignment in assignments" :key="assignment.id">
+                                    <option :value="assignment.id" x-text="assignment.assignment_title"></option>
+                                </template>
+                            </select>
                         </div>
                     </div>
 

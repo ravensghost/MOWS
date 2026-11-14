@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Grid;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class GridController extends Controller
@@ -11,7 +12,7 @@ class GridController extends Controller
     /**
      * Store a newly created grid and synchronise its grid modules.
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         $request->validate([
             'grid_title'    => 'required|string|max:255',
@@ -21,13 +22,18 @@ class GridController extends Controller
         $grid = Grid::create($request->only(['grid_title', 'grid_synopsis']));
         $this->syncGridModules($grid, $request->input('grid_modules', []));
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('grid_created_successfully', 'Grid created successfully.'),
+            'data'     => $grid->load('gridModules'),
+            'redirect' => null,
+        ], 200);
     }
 
     /**
      * Update the specified grid and synchronise its grid modules.
      */
-    public function update(Request $request, Grid $grid)
+    public function update(Request $request, Grid $grid): JsonResponse
     {
         $request->validate([
             'grid_title'    => 'required|string|max:255',
@@ -37,17 +43,27 @@ class GridController extends Controller
         $grid->update($request->only(['grid_title', 'grid_synopsis']));
         $this->syncGridModules($grid, $request->input('grid_modules', []));
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('grid_updated_successfully', 'Grid updated successfully.'),
+            'data'     => $grid->load('gridModules'),
+            'redirect' => null,
+        ], 200);
     }
 
     /**
      * Remove the specified grid from storage.
      */
-    public function destroy(Grid $grid)
+    public function destroy(Grid $grid): JsonResponse
     {
         $grid->delete();
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('grid_deleted_successfully', 'Grid deleted successfully.'),
+            'data'     => null,
+            'redirect' => null,
+        ], 200);
     }
 
     /**

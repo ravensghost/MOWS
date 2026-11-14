@@ -46,14 +46,14 @@ class CandidatePetitionController extends Controller
     /**
      * Display the Candidate Petition & Roster Queue inside the Admin Control Panel.
      */
-    public function index()
+    public function index(Request $request)
     {
         $this->authoriseAccess('applications_vote');
 
-        $systemPage = Book::where('slug', 'admin/applications')
+        $systemPage = Book::whereIn('slug', ['admin/candidate-petitions', 'admin/applications'])
             ->where('is_published', true)
             ->with(['grid.gridModules', 'module'])
-            ->firstOrFail();
+            ->first();
 
         $reviewMode = Configuration::where('configuration_token', 'approval_review_mode')
             ->value('configuration_payload') ?? 'single';
@@ -77,6 +77,10 @@ class CandidatePetitionController extends Controller
             }
 
             $petition->setRelation('answers',$petition->entries);
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json(['status' => 'success', 'message' => lexicon('msg_Applications_LoadedSuccess', 'Candidate petitions retrieved successfully.'), 'data' => $petitions, 'redirect' => null], 200);
         }
 
         $activePersonae = Persona::with(['assignment', 'insignia', 'user'])
@@ -153,7 +157,7 @@ class CandidatePetitionController extends Controller
             'petition_status'       => $validated['petition_status'] ?? $model->petition_status,
         ]);
 
-        if ($model->persona_id && (! empty($validated['assignment_id']) \vert{}\vert{} ! empty($validated['insignia_id']))) {
+        if ($model->persona_id && (! empty($validated['assignment_id']) || ! empty($validated['insignia_id']))) {
             $persona = Persona::find($model->persona_id);
             if ($persona) {$persona->update([
                     'persona_name'  => $validated['proposed_persona_name'] ?? $persona->persona_name,
@@ -192,24 +196,27 @@ class CandidatePetitionController extends Controller
         $this->authoriseAccess('applications_approve');
 
         $validated =$request->validate([
-            'assignment_id' => 'required|integer',
-            'insignia_id'   => 'required|integer',
+            'assignment_id' => 'nullable|integer',
+            'insignia_id'   => 'nullable|integer',
         ]);
 
-        $model = CandidatePetition::with(['entries', 'user'])->findOrFail($id);
+        $model = CandidatePetition::with(['entries', 'user', 'persona'])->findOrFail($id);
 
         if (strtolower($model->petition_status) !== 'pending') {
             return response()->json(['status' => 'error', 'message' => lexicon('msg_Applications_NotPending', 'This petition is no longer pending review.'), 'data' => $model, 'redirect' => null], 422);
         }
 
+        $assignmentId = $validated['assignment_id'] ?? $model->persona?->assignment_id ?? Assignment::orderBy('id')->value('id');
+        $insigniaId = $validated['insignia_id'] ?? $model->persona?->insignia_id ?? Insignia::orderBy('insignia_sort_order')->value('id');
+
         $metadataById = Metadata::all()->keyBy('id');
 
-        DB::transaction(function () use ($model,$validated, $metadataById) {$persona = Persona::create([
+        DB::transaction(function () use ($model, $assignmentId,$insigniaId, $metadataById) {$persona = Persona::create([
                 'user_id'        => $model->user_id,
                 'persona_name'   => $model->proposed_persona_name,
                 'persona_status' => 'active',
-                'assignment_id'  => $validated['assignment_id'],
-                'insignia_id'    => $validated['insignia_id'],
+                'assignment_id'  => $assignmentId,
+                'insignia_id'    => $insigniaId,
             ]);
 
             foreach ($model->entries as $entry) {$meta = $metadataById->get($entry->metadata_id);
@@ -244,8 +251,7 @@ class CandidatePetitionController extends Controller
                 }
             }
 
-            $assignmentTitle = Assignment::where('id',$validated['assignment_id'])->value('assignment_title') ?? 'Assigned Position';
-            $insigniaTitle = Insignia::where('id',$validated['insignia_id'])->value('insignia_title') ?? 'Assigned Insignia';
+            $assignmentTitle =$assignmentId ? (Assignment::where('id', $assignmentId)->value('assignment_title') ?? 'Assigned Position') : 'Unassigned';$insigniaTitle = $insigniaId ? (Insignia::where('id', $insigniaId)->value('insignia_title') ?? 'Assigned Insignia') : 'Unranked';
 
             ChronologicalRegister::create([
                 'user_id'             => $model->user_id,
@@ -277,7 +283,7 @@ class CandidatePetitionController extends Controller
             );
         }
 
-        $model->load(['persona', 'user']);
+        $model->load(['persona', 'user', 'entries', 'evaluations']);
 
         return response()->json(['status' => 'success', 'message' => lexicon('msg_Applications_ApprovedSuccess', 'Petition approved and persona integrated into the active roster!'), 'data' => $model, 'redirect' => null], 200);
     }
@@ -322,6 +328,8 @@ class CandidatePetitionController extends Controller
                 }
             }
         });
+
+        $model->load(['persona', 'user', 'entries', 'evaluations']);
 
         return response()->json(['status' => 'success', 'message' => lexicon('msg_Applications_RejectedSuccess', 'Petition has been rejected.'), 'data' => $model, 'redirect' => null], 200);
     }

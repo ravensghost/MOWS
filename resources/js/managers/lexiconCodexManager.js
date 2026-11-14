@@ -19,7 +19,7 @@ export default () => ({
             master_group: '',
             subgroup: '',
             translations: {},
-            action: '/admin/lexicon',
+            action: '/admin/lexicon-codex',
             method: 'POST'
         },
         addLang: {
@@ -126,7 +126,7 @@ export default () => ({
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
         this.dropzoneInstance = new Dropzone(this.$refs.lexiconDropzone, {
-            url: '/admin/lexicon/import',
+            url: '/admin/lexicon-codex/import',
             paramName: 'import_file',
             maxFiles: 1,
             maxFilesize: 10,
@@ -243,7 +243,7 @@ export default () => ({
             this.modals.term.translations = { gb: '' };
         }
 
-        this.modals.term.action = '/admin/lexicon';
+        this.modals.term.action = '/admin/lexicon-codex';
         this.modals.term.method = 'POST';
         this.modals.term.open = true;
     },

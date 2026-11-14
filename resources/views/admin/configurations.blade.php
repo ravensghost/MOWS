@@ -395,7 +395,7 @@
                                         <x-button type="button" 
                                                 variant="text" 
                                                 class="text-danger hover-text-h flex flex-row items-center gap-xs" 
-                                                x-data="deleteAction('/admin/time-systems/{{ $ts->id }}', 'DELETE', '{{ addslashes($ts->engine_title) }}')" 
+                                                x-data="deleteAction('/admin/chronological-engines/{{ $ts->id }}', 'DELETE', '{{ addslashes($ts->engine_title) }}')" 
                                                 @click.prevent="confirmDelete()"
                                                 x-tooltip="'{{ addslashes(lexicon('tooltip_setting_DeleteTimeSystem', 'Delete this time system')) }}'">
                                             <i class="bi bi-trash"></i>
@@ -422,7 +422,7 @@
                     <span x-text="`{{ addslashes(lexicon('btn_common_Edit', 'Edit')) }} ${modal.title}`"></span>
                 </x-slot:top>
                 
-                <form action="/admin/settings/update" method="POST" class="flex flex-col gap-md" x-data="ajaxForm" @submit.prevent="submit($event)">
+                <form action="/admin/configurations/update" method="POST" class="flex flex-col gap-md" x-data="ajaxForm" @submit.prevent="submit($event)">
                     @csrf
                     <div class="flex flex-col gap-xs">
                         <label for="central-setting-input" class="text-xs font-bold text-input-muted" x-text="modal.title"></label>
@@ -477,7 +477,7 @@
                     <span x-text="tsModal.isEdit ? '{{ addslashes(lexicon('label_setting_EditTimeSystem', 'Edit Time System')) }}' : '{{ addslashes(lexicon('label_setting_NewTimeSystem', 'New Time System')) }}'"></span>
                 </x-slot:top>
                 
-                <form :action="tsModal.isEdit ? `/admin/time-systems/${tsModal.data.id}` : '/admin/time-systems'" 
+                <form :action="tsModal.isEdit ? `/admin/chronological-engines/${tsModal.data.id}` : '/admin/chronological-engines'" 
                       method="POST" 
                       class="flex flex-col gap-md" 
                       x-data="ajaxForm" 

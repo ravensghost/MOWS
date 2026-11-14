@@ -52,13 +52,17 @@ export default function distinctionManager() {
             this.loadImages();
         },
 
-        updateColorFromPicker(model, value) {
+        updateColourFromPicker(model, value) {
             if (typeof this[model] !== 'undefined') {
                 this[model] = value;
             }
             if (this.modals.distinction && typeof this.modals.distinction[model] !== 'undefined') {
                 this.modals.distinction[model] = value;
             }
+        },
+
+        updateColorFromPicker(model, value) {
+            this.updateColourFromPicker(model, value);
         },
 
         async loadImages() {
@@ -70,8 +74,9 @@ export default function distinctionManager() {
                 });
 
                 if (ok && data) {
-                    this.available_images = data.images || [];
-                    this.active_skin = data.active_skin || 'default';
+                    const payload = data.data || data;
+                    this.available_images = payload.images || [];
+                    this.active_skin = payload.active_skin || 'default';
                 } else {
                     this.available_images = [];
                     this.active_skin = 'default';

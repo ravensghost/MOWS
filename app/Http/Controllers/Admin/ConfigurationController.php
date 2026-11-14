@@ -15,24 +15,21 @@ class ConfigurationController extends Controller
     {
         abort_unless(auth()->user()?->can('manage_settings'), 403, lexicon('msg_Settings_Unauthorised', 'Unauthorised access to Global Settings.'));
 
-        $systemPage = Book::where('books_uri', 'admin/settings')
+        $systemPage = Book::where('books_uri', 'admin/configurations')
             ->where('is_published', true)
-            ->with(['layout.blocks', 'widgets' => function ($query) {
-                $query->orderBy('book_modules.module_sort_order');
+            ->with(['layout.blocks', 'widgets' => function ($query) {$query->orderBy('book_modules.module_sort_order');
             }])
             ->firstOrFail();
 
         $globalSettings = Configuration::all()->pluck('configuration_payload', 'configuration_token')->toArray();
-        if (!isset($globalSettings['mail_mailer'])) {
-            $globalSettings['mail_mailer'] = 'smtp';
+        if (!isset($globalSettings['mail_mailer'])) {$globalSettings['mail_mailer'] = 'smtp';
         }
 
-        $timeSystems = ChronologicalEngine::all();
-        $customLanguages = Configuration::where('configuration_token', 'like', 'lexicon_label_%')
+        $timeSystems = ChronologicalEngine::all();$customLanguages = Configuration::where('configuration_token', 'like', 'lexicon_label_%')
             ->get()
             ->mapWithKeys(function ($setting) {
-                $code = str_replace('lexicon_label_', '', $setting->configuration_token);
-                return [$code => $setting->configuration_payload];
+                $code = str_replace('lexicon_label_', '',$setting->configuration_token);
+                return [$code =>$setting->configuration_payload];
             })
             ->toArray();
 
@@ -43,22 +40,21 @@ class ConfigurationController extends Controller
     {
         abort_unless(auth()->user()?->can('manage_settings'), 403, lexicon('msg_Settings_Unauthorised', 'Unauthorised access to Global Settings.'));
 
-        $settings = $request->input('settings', []);
+        $settings =$request->input('settings', []);
 
         if (empty($settings) && !$request->has('settings')) {
-            $settings = $request->except(['_token', '_method']);
+            $settings =$request->except(['_token', '_method']);
         }
 
-        if (isset($settings['mail_mailer']) && !in_array($settings['mail_mailer'], ['smtp', 'phpmail', 'log'], true)) {
-            $settings['mail_mailer'] = 'smtp';
+        if (isset($settings['mail_mailer']) && !in_array($settings['mail_mailer'], ['smtp', 'phpmail', 'log'], true)) {$settings['mail_mailer'] = 'smtp';
         }
 
         $updatedConfigurations = [];
 
-        foreach ($settings as $token => $value) {
+        foreach ($settings as $token =>$value) {
             $updatedConfigurations[$token] = Configuration::updateOrCreate(
                 ['configuration_token' => $token],
-                ['configuration_payload' => is_array($value) ? json_encode($value) : $value]
+                ['configuration_payload' => is_array($value) ? json_encode($value) :$value]
             );
         }
 

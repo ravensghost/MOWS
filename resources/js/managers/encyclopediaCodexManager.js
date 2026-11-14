@@ -8,7 +8,7 @@ export default () => ({
         open: false,
         mode: 'create',
         method: 'POST',
-        formAction: '/admin/wiki',
+        formAction: '/admin/encyclopedia-codex',
         id: null,
         title: '',
         category: 'General',
@@ -62,10 +62,10 @@ export default () => ({
 
     openWikiModal(mode, data = {}) {
         if (mode === 'edit') {
-            window.Modal.edit(this.wikiModal, data, (id) => `/admin/wiki/${id}`);
+            window.Modal.edit(this.wikiModal, data, (id) => `/admin/encyclopedia-codex/${id}`);
             this.wikiModal.mode = 'edit';
             this.wikiModal.method = 'PUT';
-            this.wikiModal.formAction = `/admin/wiki/${data.id}`;
+            this.wikiModal.formAction = `/admin/encyclopedia-codex/${data.id}`;
             this.wikiModal.is_visible = data.is_visible !== undefined ? Boolean(data.is_visible) : true;
         } else {
             window.Modal.create(this.wikiModal, {
@@ -73,10 +73,10 @@ export default () => ({
                 is_visible: true,
                 title: '',
                 content: ''
-            }, '/admin/wiki');
+            }, '/admin/encyclopedia-codex');
             this.wikiModal.mode = 'create';
             this.wikiModal.method = 'POST';
-            this.wikiModal.formAction = '/admin/wiki';
+            this.wikiModal.formAction = '/admin/encyclopedia-codex';
         }
         this.wikiModal.open = true;
 

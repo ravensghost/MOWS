@@ -1,8 +1,9 @@
 <?php
+
 use App\Http\Controllers\Admin\EncyclopediaCodexController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/wiki', [EncyclopediaCodexController::class, 'index'])->name('wiki.index');
-Route::post('/wiki', [EncyclopediaCodexController::class, 'store'])->name('wiki.store');
-Route::put('/wiki/{wikiArticle}', [EncyclopediaCodexController::class, 'update'])->name('wiki.update');
-Route::delete('/wiki/{wikiArticle}', [EncyclopediaCodexController::class, 'destroy'])->name('wiki.destroy');
+Route::get('/', [EncyclopediaCodexController::class, 'index'])->name('index');
+Route::post('/', [EncyclopediaCodexController::class, 'store'])->name('store');
+Route::put('/{encyclopediaCodex}', [EncyclopediaCodexController::class, 'update'])->name('update');
+Route::delete('/{encyclopediaCodex}', [EncyclopediaCodexController::class, 'destroy'])->name('destroy');

@@ -1,7 +1,7 @@
 // resources/js/managers/metadataManager.js
 export default () => ({
     modals: {
-        form: { open: false, mode: 'create', id: '', name: '', is_visible: true, action: '/admin/forms', method: 'POST' },
+        form: { open: false, mode: 'create', id: '', name: '', is_visible: true, action: '/admin/metadata', method: 'POST' },
         field: {
             open: false,
             mode: 'create',
@@ -13,7 +13,7 @@ export default () => ({
             options: '',
             formLinked: '',
             serviceRecordGroups: [],
-            action: '/admin/forms/fields',
+            action: '/admin/metadata/fields',
             method: 'POST'
         }
     },
@@ -29,17 +29,17 @@ export default () => ({
 
     openForm(mode, data = {}) {
         if (mode === 'create') {
-            window.Modal.create(this.modals.form, { is_visible: true }, '/admin/forms');
+            window.Modal.create(this.modals.form, { is_visible: true }, '/admin/metadata');
         } else {
-            window.Modal.edit(this.modals.form, data, (id) => `/admin/forms/${id}`);
+            window.Modal.edit(this.modals.form, data, (id) => `/admin/metadata/${id}`);
         }
     },
 
     openField(mode, data = {}) {
         if (mode === 'create') {
-            window.Modal.create(this.modals.field, { type: 'text', isRequired: false, is_visible: true, serviceRecordGroups: [] }, '/admin/forms/fields');
+            window.Modal.create(this.modals.field, { type: 'text', isRequired: false, is_visible: true, serviceRecordGroups: [] }, '/admin/metadata/fields');
         } else {
-            window.Modal.edit(this.modals.field, data, (id) => `/admin/forms/fields/${id}`);
+            window.Modal.edit(this.modals.field, data, (id) => `/admin/metadata/fields/${id}`);
         }
 
         let groups = [];

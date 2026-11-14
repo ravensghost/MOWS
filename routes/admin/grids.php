@@ -3,6 +3,6 @@
 use App\Http\Controllers\Admin\GridController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/layouts', [GridController::class, 'store']);
-Route::put('/layouts/{layout}', [GridController::class, 'update']);
-Route::delete('/layouts/{layout}', [GridController::class, 'destroy']);
+Route::post('/grids', [GridController::class, 'store'])->name('admin.grids.store');
+Route::put('/grids/{grid}', [GridController::class, 'update'])->name('admin.grids.update');
+Route::delete('/grids/{grid}', [GridController::class, 'destroy'])->name('admin.grids.destroy');

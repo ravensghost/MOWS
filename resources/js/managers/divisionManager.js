@@ -4,10 +4,18 @@ export default (config = {}) => ({
     searchQuery: '',
     isGeneratingAi: false,
     sectionTomSelect: null,
-    aiEndpoint: config.aiEndpoint || '/admin/sections/generate-description',
+    aiEndpoint: config.aiEndpoint || '/admin/divisions/generate-description',
     emptyNameMsg: config.emptyNameMsg || 'Please enter a Section Name first.',
     importModalOpen: false,
     importMode: 'merge',
+
+    catalogueModalOpen: false,
+    catalogueMode: 'create',
+    catalogueId: null,
+    catalogueTitle: '',
+    catalogueDesc: '',
+    assignCatalogueModalOpen: false,
+    assignedSectionIds: [],
 
     section: {
         id: '',
@@ -24,8 +32,8 @@ export default (config = {}) => ({
         division_id: '',
         assignment_title: '',
         assignment_description: '',
-        max_assignees: 1,
-        is_open: true,
+        maximum_occupants: 1,
+        is_recruitment_open: true,
         is_visible: true,
         division_title: '',
         division_base_colour: ''
@@ -110,8 +118,8 @@ export default (config = {}) => ({
                     division_base_colour: data.division_base_colour || data.section_color || '#374151ff',
                     assignment_title: '',
                     assignment_description: '',
-                    max_assignees: 1,
-                    is_open: true,
+                    maximum_occupants: 1,
+                    is_recruitment_open: true,
                     is_visible: true
                 };
                 this.modal = 'position-create';
@@ -122,8 +130,8 @@ export default (config = {}) => ({
                     division_id: String(data.division_id),
                     assignment_title: data.assignment_title || data.name || '',
                     assignment_description: data.assignment_description || data.description || '',
-                    max_assignees: data.max_assignees ?? data.capacity ?? 1,
-                    is_open: Boolean(data.is_open),
+                    maximum_occupants: data.maximum_occupants ?? data.max_assignees ?? data.capacity ?? 1,
+                    is_recruitment_open: Boolean(data.is_recruitment_open ?? data.is_open ?? true),
                     is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true,
                     division_title: '',
                     division_base_colour: ''
@@ -143,6 +151,66 @@ export default (config = {}) => ({
 
     closeModal() {
         this.modal = null;
+    },
+
+    openCatalogueModal(mode = 'create', data = {}) {
+        this.catalogueMode = mode;
+        this.catalogueId = data.id || null;
+        this.catalogueTitle = data.catalogue_title || '';
+        this.catalogueDesc = data.catalogue_description || '';
+        this.catalogueModalOpen = true;
+    },
+
+    async submitCatalogue() {
+        const url = this.catalogueMode === 'edit' && this.catalogueId
+            ? `/admin/divisions/catalogues/${this.catalogueId}`
+            : '/admin/divisions/catalogues';
+
+        const payload = {
+            catalogue_title: this.catalogueTitle,
+            catalogue_description: this.catalogueDesc
+        };
+
+        const method = this.catalogueMode === 'edit' ? 'put' : 'post';
+        const { ok } = await window.Fetch[method](url, payload);
+        if (ok) {
+            this.catalogueTitle = '';
+            this.catalogueDesc = '';
+            this.catalogueMode = 'create';
+            this.catalogueId = null;
+            window.location.reload();
+        }
+    },
+
+    async deleteCatalogue(id) {
+        const confirmResult = await window.Swal.confirm(
+            'Delete Catalogue?',
+            'Are you sure you want to delete this division catalogue?',
+            'Delete'
+        );
+        if (!confirmResult.isConfirmed) return;
+
+        const { ok } = await window.Fetch.delete(`/admin/divisions/catalogues/${id}`);
+        if (ok) {
+            window.location.reload();
+        }
+    },
+
+    openAssignCatalogueModal(catId, divisionIds = []) {
+        this.catalogueId = catId;
+        this.assignedSectionIds = (divisionIds || []).map(String);
+        this.assignCatalogueModalOpen = true;
+    },
+
+    async submitCatalogueAssignment() {
+        if (!this.catalogueId) return;
+        const { ok } = await window.Fetch.post(`/admin/divisions/catalogues/${this.catalogueId}/assign`, {
+            division_ids: this.assignedSectionIds
+        });
+        if (ok) {
+            this.assignCatalogueModalOpen = false;
+            window.location.reload();
+        }
     },
 
     matchesSearch(secName, secDesc, posNames) {
@@ -196,9 +264,12 @@ export default (config = {}) => ({
                 showError: false
             });
 
-            if (ok && data && (data.description || data.division_description)) {
-                this.section.division_description = data.division_description || data.description;
-                this.refreshAutosize();
+            if (ok && data) {
+                const desc = data.division_description || data.description || data.data?.division_description || data.data?.description;
+                if (desc) {
+                    this.section.division_description = desc;
+                    this.refreshAutosize();
+                }
             }
         } catch (error) {
             console.error(error);

@@ -141,7 +141,7 @@ class ModuleController extends Controller
         // 2. Alter existing tables with additional columns declared by the module
         if (!empty($schema['alter']) && is_array($schema['alter'])) {
             foreach ($schema['alter'] as $tableName =>$columns) {
-                if (!$this->isValidIdentifier($tableName) \vert{}\vert{} !is_array($columns)) {
+                if (!$this->isValidIdentifier($tableName) || !is_array($columns)) {
                     continue;
                 }
 

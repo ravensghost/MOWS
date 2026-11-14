@@ -1,11 +1,11 @@
 <?php
 
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\PortalController;
-use App\Http\Controllers\FolioAuthoringController;
-use App\Http\Controllers\CorrespondenceController;
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CandidatePetitionSubmissionController;
+use App\Http\Controllers\CorrespondenceController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FolioAuthoringController;
+use App\Http\Controllers\PortalController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -27,10 +27,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/folios/create', [FolioAuthoringController::class, 'createFolio'])->name('folios.create');
     Route::get('/folios/{folio}/edit', [FolioAuthoringController::class, 'editFolio'])->name('folios.edit');
     Route::post('/folios', [FolioAuthoringController::class, 'storeFolio'])->name('folios.store');
-    Route::post('/folios/autosave', [FolioAuthoringController::class, 'autoSave']);
-    Route::post('/folios/{folio}/autosave', [FolioAuthoringController::class, 'autoSave']);
-    Route::post('/folios/{folio}/lock', [FolioAuthoringController::class, 'acquireLock']);
-    Route::post('/folios/{folio}/ping', [FolioAuthoringController::class, 'pingLockWriter']);
+    Route::post('/folios/autosave', [FolioAuthoringController::class, 'autoSave'])->name('folios.autosave.new');
+    Route::post('/folios/{folio}/autosave', [FolioAuthoringController::class, 'autoSave'])->name('folios.autosave');
+    Route::post('/folios/{folio}/lock', [FolioAuthoringController::class, 'acquireLock'])->name('folios.lock');
+    Route::post('/folios/{folio}/ping', [FolioAuthoringController::class, 'pingLockWriter'])->name('folios.ping');
 
     // Correspondence Engine (Private Messaging)
     Route::get('/correspondence/{threadId?}', [CorrespondenceController::class, 'index'])->name('correspondence.index');
@@ -38,12 +38,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/correspondence/{thread}/reply', [CorrespondenceController::class, 'reply'])->name('correspondence.reply');
 
     // Persona Portrait & Gallery Management
-    Route::post('/bio/{persona}/avatar', [PortalController::class, 'uploadPersonaPortrait'])->name('bio.avatar.upload');
-    Route::post('/bio/{persona}/avatar/primary', [PortalController::class, 'setPrimaryPersonaPortrait'])->name('bio.avatar.primary');
-    Route::delete('/bio/{persona}/avatar', [PortalController::class, 'deletePersonaPortrait'])->name('bio.avatar.delete');
+    Route::post('/bio/{persona}/portrait', [PortalController::class, 'uploadPersonaPortrait'])->name('bio.portrait.upload');
+    Route::post('/bio/{persona}/portrait/primary', [PortalController::class, 'setPrimaryPersonaPortrait'])->name('bio.portrait.primary');
+    Route::delete('/bio/{persona}/portrait', [PortalController::class, 'deletePersonaPortrait'])->name('bio.portrait.delete');
 
     // Explicit Candidate Petition Submission
-    Route::post('/form/submit/{identifier}', [CandidatePetitionSubmissionController::class, 'submit']);
+    Route::post('/form/submit/{identifier}', [CandidatePetitionSubmissionController::class, 'submit'])->name('petition.submit.id');
 });
 
 /*
@@ -55,19 +55,20 @@ Route::middleware('auth')->group(function () {
 require __DIR__ . '/auth.php';
 require __DIR__ . '/admin.php';
 
-
 /*
 |--------------------------------------------------------------------------
 | Public Portal & Catch-All Routes
 |--------------------------------------------------------------------------
 */
-// Dynamic Metadata Forms
 
-Route::get('/form/{type}', [CandidatePetitionSubmissionController::class, 'show']);
-Route::post('/form/{type}', [CandidatePetitionSubmissionController::class, 'submit']);
+// Dynamic Candidate Petition Forms
+Route::get('/form/{type}', [CandidatePetitionSubmissionController::class, 'show'])->name('petition.show');
+Route::post('/form/{type}', [CandidatePetitionSubmissionController::class, 'submit'])->name('petition.submit');
 
 // Public Persona Biographies
 Route::get('/bio/{persona}', [PortalController::class, 'showBio'])->name('bio.show');
 
 // The Book Builder Catch-All (Must remain absolute last)
-Route::get('/{slug?}', [PortalController::class, 'showBook'])->where('slug', '.*');
+Route::get('/{bookUrl?}', [PortalController::class, 'showBook'])
+    ->where('bookUrl', '.*')
+    ->name('book.show');

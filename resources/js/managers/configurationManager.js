@@ -10,7 +10,16 @@ export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
 
     tomSelectInstance: null,
 
-    modal: { open: false, key: '', title: '', value: '', type: 'select', options: {} },
+    modal: {
+        open: false,
+        key: '',
+        configuration_token: '',
+        title: '',
+        value: '',
+        configuration_payload: '',
+        type: 'select',
+        options: {}
+    },
     tsModal: { open: false, isEdit: false, data: {} },
 
     init() {
@@ -23,7 +32,7 @@ export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
     initFuse() {
         if (this.$refs.settingsSearchData && window.Search) {
             try {
-                this.searchHelperInstance = window.Search.create('#settings-search-catalog [data-setting-item], [data-settings-search-item]', ['label', 'key', 'group'], {
+                this.searchHelperInstance = window.Search.create('#settings-search-catalog [data-setting-item], [data-settings-search-item]', ['label', 'configuration_token', 'key', 'group'], {
                     threshold: 0.35
                 });
             } catch (e) {
@@ -69,9 +78,10 @@ export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
                         maxOptions: null,
                         onChange: (val) => {
                             this.modal.value = val;
+                            this.modal.configuration_payload = val;
                         }
                     });
-                    window.Select.setValue(selectEl, String(this.modal.value ?? ''), true);
+                    window.Select.setValue(selectEl, String(this.modal.configuration_payload ?? ''), true);
                 }
             });
         }
@@ -79,8 +89,10 @@ export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
 
     openModal(key, title, value, type = 'select', options = {}) {
         this.modal.key = key;
+        this.modal.configuration_token = key;
         this.modal.title = title;
         this.modal.value = value;
+        this.modal.configuration_payload = value;
         this.modal.type = type;
         this.modal.options = options;
         this.modal.open = true;
@@ -96,24 +108,28 @@ export default (initialAiMode = 'cloud', initialMailMailer = 'smtp') => ({
             this.tsModal.isEdit = false;
             this.tsModal.data = {
                 id: '',
-                name: '',
-                engine_type: 'real_world',
-                prefix: '',
-                suffix: '',
+                engine_title: '',
+                calculation_algorithm: 'real_world',
+                date_prefix: '',
+                date_suffix: '',
                 base_earth_year: '',
+                base_earth_modifier: 0,
                 base_system_value: '',
-                multiplier: 1
+                temporal_multiplier: 1
             };
         }
         this.tsModal.open = true;
     },
 
     async refreshDOM() {
-        if (this.modal.open && this.modal.key === 'ai_mode') {
-            this.ai_mode = this.modal.value;
+        const activeToken = this.modal.configuration_token || this.modal.key;
+        const activePayload = this.modal.configuration_payload ?? this.modal.value;
+
+        if (this.modal.open && activeToken === 'ai_mode') {
+            this.ai_mode = activePayload;
         }
-        if (this.modal.open && this.modal.key === 'mail_mailer') {
-            this.mail_mailer = this.modal.value;
+        if (this.modal.open && activeToken === 'mail_mailer') {
+            this.mail_mailer = activePayload;
         }
 
         if (typeof window.updateDOM === 'function') {

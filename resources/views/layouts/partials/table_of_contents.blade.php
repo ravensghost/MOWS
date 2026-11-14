@@ -1,6 +1,6 @@
 @php
-    $topLevelNav = isset($primaryNav) ? $primaryNav->filter(fn($entry) => !isset($entry->parent_entry_id) || empty($entry->parent_entry_id)) : collect();
-    $childNav = isset($primaryNav) ? $primaryNav->filter(fn($entry) => isset($entry->parent_entry_id) && !empty($entry->parent_entry_id))->groupBy('parent_entry_id') : collect();
+    $topLevelNav = isset($primaryNav) ? $primaryNav->filter(fn($entry) => empty($entry->parent_entry_id)) : collect();
+    $childNav = isset($primaryNav) ? $primaryNav->filter(fn($entry) => !empty($entry->parent_entry_id))->groupBy('parent_entry_id') : collect();
 @endphp
 
 <div data-global-sync="table-of-contents" x-data="{ drawerOpen: false, activeDropdown: null }">
@@ -55,22 +55,22 @@
                         $user = auth()->user();
                         $hasTwitter = !empty($user->twitter_handle);
                         $hasFacebook = !empty($user->facebook_handle);
-                        $currentPageAddress = urlencode(request()->fullUrl());
+                        $currentBookAddress = urlencode(request()->fullUrl());
                     @endphp
 
                     <x-button type="button"
                               variant="text"
                               @click="$dispatch('open-messenger')"
-                              x-tooltip="'{{ addslashes(lexicon('tooltip_nav_OpenMessenger', 'Open Private Messages')) }}'"
-                              aria-label="{{ lexicon('tooltip_nav_OpenMessenger', 'Open Private Messages') }}">
+                              x-tooltip="'{{ addslashes(lexicon('tooltip_nav_OpenCorrespondence', 'Open Correspondence')) }}'"
+                              aria-label="{{ lexicon('tooltip_nav_OpenCorrespondence', 'Open Correspondence') }}">
                         <i class="bi bi-envelope"></i>
                     </x-button>
 
                     <x-button type="button"
                               variant="text"
                               @click="$dispatch('open-chapter-modal')"
-                              x-tooltip="'{{ addslashes(lexicon('tooltip_nav_WriteChapter', 'Write a new story chapter')) }}'"
-                              aria-label="{{ lexicon('tooltip_nav_WriteChapter', 'Write a new story chapter') }}">
+                              x-tooltip="'{{ addslashes(lexicon('tooltip_nav_WriteFolio', 'Write a new story folio')) }}'"
+                              aria-label="{{ lexicon('tooltip_nav_WriteFolio', 'Write a new story folio') }}">
                         <i class="bi bi-journal-richtext"></i>
                     </x-button>
 
@@ -78,7 +78,7 @@
                         <div class="hidden-mobile flex flex-row items-center gap-sm">
                             @if($hasTwitter)
                                 @php $cleanTwitter = ltrim($user->twitter_handle, '@'); @endphp
-                                <a href="https://twitter.com/intent/tweet?text={{ $currentPageAddress }}&via={{ $cleanTwitter }}"
+                                <a href="https://twitter.com/intent/tweet?text={{ $currentBookAddress }}&via={{ $cleanTwitter }}"
                                    target="_blank"
                                    rel="noopener noreferrer"
                                    class="bg-transparent border-none text-muted hover-text-accent cursor-pointer flex items-center justify-center no-underline"
@@ -91,7 +91,7 @@
                             @endif
 
                             @if($hasFacebook)
-                                <a href="https://www.facebook.com/sharer/sharer.php?u={{ $currentPageAddress }}"
+                                <a href="https://www.facebook.com/sharer/sharer.php?u={{ $currentBookAddress }}"
                                    target="_blank"
                                    rel="noopener noreferrer"
                                    class="bg-transparent border-none text-muted hover-text-accent cursor-pointer flex items-center justify-center no-underline"
@@ -148,8 +148,8 @@
             <div data-global-nav="drawer" class="flex flex-col gap-md mt-lg">
                 @guest
                     <x-button variant="success"
-                            @click="drawerOpen = false; $dispatch('open-auth')"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_auth_OpenLoginModal', 'Log in or register an account')) }}'">
+                              @click="drawerOpen = false; $dispatch('open-auth')"
+                              x-tooltip="'{{ addslashes(lexicon('tooltip_auth_OpenLoginModal', 'Log in or register an account')) }}'">
                         {{ lexicon('btn_common_LoginRegister', 'Login / Register') }}
                     </x-button>
                 @endguest
@@ -180,13 +180,13 @@
                                 
                                 <div class="flex flex-col gap-sm" x-show="expanded" x-collapse x-cloak>
                                     @foreach($entries as $entry)
-                                        @if($entry->destination_url === '/chapters/create')
+                                        @if($entry->destination_url === '/folios/create')
                                             <button type="button"
                                                     @click="drawerOpen = false; $dispatch('open-chapter-modal')"
                                                     class="font-bold text-lg text-input-muted border-none border-b border-b-table-row hover-text-accent p-2 block w-full text-left bg-transparent cursor-pointer">
                                                 {{ lexicon($entry->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $entry->translation_code_key))) }}
                                             </button>
-                                        @elseif($entry->destination_url === '/messenger')
+                                        @elseif($entry->destination_url === '/correspondence')
                                             <button type="button"
                                                     @click="drawerOpen = false; $dispatch('open-messenger')"
                                                     class="font-bold text-lg text-input-muted border-none border-b border-b-table-row hover-text-accent p-2 block w-full text-left bg-transparent cursor-pointer">
@@ -203,13 +203,13 @@
                         @else
                             <div class="flex flex-col gap-sm mb-6">
                                 @foreach($entries as $entry)
-                                    @if($entry->destination_url === '/chapters/create')
+                                    @if($entry->destination_url === '/folios/create')
                                         <button type="button"
                                                 @click="drawerOpen = false; $dispatch('open-chapter-modal')"
                                                 class="font-bold text-lg text-input-muted border-none border-b border-b-table-row hover-text-accent p-2 block w-full text-left bg-transparent cursor-pointer">
                                             {{ lexicon($entry->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $entry->translation_code_key))) }}
                                         </button>
-                                    @elseif($entry->destination_url === '/messenger')
+                                    @elseif($entry->destination_url === '/correspondence')
                                         <button type="button"
                                                 @click="drawerOpen = false; $dispatch('open-messenger')"
                                                 class="font-bold text-lg text-input-muted border-none border-b border-b-table-row hover-text-accent p-2 block w-full text-left bg-transparent cursor-pointer">

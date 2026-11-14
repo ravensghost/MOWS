@@ -25,10 +25,11 @@ export default () => ({
             });
 
             if (ok && responseData) {
-                this.recipients = responseData.recipients || [];
+                const payload = responseData.data ?? responseData;
+                this.recipients = payload.recipients || [];
                 this.selectedRecipients = this.recipients.map(r => `${r.type}:${r.id}`);
-                if (responseData.volume_synopsis) {
-                    this.chronicleText = responseData.volume_synopsis;
+                if (payload.volume_synopsis) {
+                    this.chronicleText = payload.volume_synopsis;
                 }
             } else {
                 window.Swal.error('Error', 'Failed to load participating characters and co-writers.');

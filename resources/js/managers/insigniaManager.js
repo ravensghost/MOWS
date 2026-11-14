@@ -1,5 +1,5 @@
 // resources/js/managers/insigniaManager.js
-export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF') {
+export default function insigniaManager(defaultDeptColour, baseLayer = '#1a1a1aFF') {
     const defaultInsigniaState = {
         id: '',
         insignia_catalogue_id: '',
@@ -16,7 +16,7 @@ export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF
         top_layer_modifier: '',
         top_layer_hue: '#ffffffFF',
         catalogue_title: '',
-        set_color: defaultDeptColor,
+        set_color: defaultDeptColour,
         is_visible: true,
         available_images: [],
         loading_images: false
@@ -26,7 +26,7 @@ export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF
         modal: null,
         importModalOpen: false,
         importMode: 'merge',
-        defaultDeptColor: defaultDeptColor,
+        defaultDeptColour: defaultDeptColour,
         baseLayer: baseLayer,
         assignSet: { id: '', catalogue_title: '', assignedIds: [], is_visible: true },
         imageError: { mid: false, top: false },
@@ -64,13 +64,14 @@ export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF
             }
             this.modals.insignia.loading_images = true;
             try {
-                const { ok, data } = await window.Fetch.get(`/admin/ranks/images?set_name=${encodeURIComponent(this.modals.insignia.catalogue_title)}`, {
+                const { ok, data } = await window.Fetch.get(`/admin/insignia/images?set_name=${encodeURIComponent(this.modals.insignia.catalogue_title)}`, {
                     loading: false,
                     showError: false
                 });
 
                 if (ok && data) {
-                    this.modals.insignia.available_images = data.images || [];
+                    const imagesList = Array.isArray(data.data) ? data.data : (data.images || []);
+                    this.modals.insignia.available_images = imagesList;
 
                     this.$nextTick(() => {
                         if (preserveMid) {
@@ -102,7 +103,7 @@ export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF
                     ...baseDefaultState,
                     mid_layer_hue: this.baseLayer || '#1a1a1aFF',
                     top_layer_hue: '#ffffffFF',
-                    set_color: this.defaultDeptColor,
+                    set_color: this.defaultDeptColour,
                     available_images: [],
                     loading_images: false,
                     ...data
@@ -118,7 +119,7 @@ export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF
                 this.modals[domain] = {
                     ...baseDefaultState,
                     ...data,
-                    set_color: data.set_color || this.defaultDeptColor,
+                    set_color: data.set_color || this.defaultDeptColour,
                     mid_layer_asset: savedMidImage,
                     top_layer_asset: savedTopImage,
                     mid_layer_hue: data.mid_layer_hue || this.baseLayer || '#1a1a1aFF',
@@ -136,7 +137,7 @@ export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF
         onSetChange(event) {
             const opt = event.target.options[event.target.selectedIndex];
             this.modals.insignia.catalogue_title = opt.dataset.catalogueTitle || opt.dataset.name || '';
-            this.modals.insignia.set_color = opt.dataset.color || this.defaultDeptColor;
+            this.modals.insignia.set_color = opt.dataset.colour || opt.dataset.color || this.defaultDeptColour;
             this.modals.insignia.mid_layer_asset = '';
             this.modals.insignia.top_layer_asset = '';
             this.imageError = { mid: false, top: false };

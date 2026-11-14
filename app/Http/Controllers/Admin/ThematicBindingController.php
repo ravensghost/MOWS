@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use App\Models\ThematicBinding;
-use App\Models\Page;
+use App\Models\Book;
 use ZipArchive;
 
 class ThematicBindingController extends Controller
@@ -15,7 +15,7 @@ class ThematicBindingController extends Controller
     {
         abort_unless(auth()->user()->can('manage_themes'), 403, lexicon('msg_Themes_Unauthorised', 'Unauthorised access to the Theme & Skin Engine.'));
 
-        $systemPage = Page::where('slug', 'admin/themes')
+        $systemPage = Book::where('book_url', 'admin/thematic-bindings')
             ->where('is_published', true)
             ->with(['layout.blocks', 'widgets' => function ($query) {
                 $query->orderBy('page_widget.sort_order');
@@ -144,7 +144,7 @@ class ThematicBindingController extends Controller
             ], 200);
         }
 
-        return redirect('/admin/themes')->with('status', lexicon('msg_Themes_CssUpdated', 'Visual theme settings updated successfully.'));
+        return redirect('/admin/thematic-bindings')->with('status', lexicon('msg_Themes_CssUpdated', 'Visual theme settings updated successfully.'));
     }
 
     /**
@@ -392,7 +392,7 @@ class ThematicBindingController extends Controller
                 ], 200);
             }
 
-            return redirect('/admin/themes')->with('status', lexicon('msg_Themes_SkinUploaded', 'Skin package uploaded and installed successfully.'));
+            return redirect('/admin/thematic-bindings')->with('status', lexicon('msg_Themes_SkinUploaded', 'Skin package uploaded and installed successfully.'));
         }
 
         if ($request->ajax() || $request->wantsJson()) {
@@ -427,7 +427,7 @@ class ThematicBindingController extends Controller
             ], 200);
         }
 
-        return redirect('/admin/themes')->with('status', lexicon('msg_Themes_SkinActivated', 'Skin is now the global default.') . " ({$skin->binding_title})");
+        return redirect('/admin/thematic-bindings')->with('status', lexicon('msg_Themes_SkinActivated', 'Skin is now the global default.') . " ({$skin->binding_title})");
     }
 
     public function export(ThematicBinding $skin)

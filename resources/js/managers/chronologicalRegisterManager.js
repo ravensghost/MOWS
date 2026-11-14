@@ -17,9 +17,9 @@ export default (awardsList = []) => ({
     },
 
     initFuse() {
-        if (this.$refs.serviceRecordsSearchData && window.Search) {
+        if (this.$refs.chronologicalRegistersSearchData && window.Search) {
             try {
-                this.searchHelperInstance = window.Search.create('[data-service-record-item]', ['recipient', 'event_type', 'award_name', 'description'], {
+                this.searchHelperInstance = window.Search.create('[data-chronological-register-item]', ['recipient', 'register_event_mode', 'distinction_title', 'chronicle_text'], {
                     threshold: 0.35
                 });
             } catch (e) {
@@ -50,10 +50,11 @@ export default (awardsList = []) => ({
 
     get filteredAwards() {
         return this.awards.filter(award => {
+            const target = award.scope_target || award.master_group || 'BOTH';
             if (this.recipientType === 'user') {
-                return award.master_group === 'OOC' || award.master_group === 'BOTH';
+                return target === 'OOC' || target === 'BOTH';
             } else {
-                return award.master_group === 'IC' || award.master_group === 'BOTH';
+                return target === 'IC' || target === 'BOTH';
             }
         });
     }

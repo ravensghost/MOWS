@@ -10,16 +10,17 @@ use App\Models\Configuration;
 use App\Models\Persona;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CommandCentreController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         abort_unless(
             auth()->user()?->can('access-admin'),
             403,
-            lexicon('msg_AdminDashboard_Unauthorised', 'Unauthorised access to the Command Centre.')
+            lexicon('msg_CommandCentre_Unauthorised', 'Unauthorised access to the Command Centre.')
         );
 
         $systemPage = Book::where('slug', 'admin')
@@ -136,7 +137,7 @@ class CommandCentreController extends Controller
             ->orderByDesc('total_words')
             ->get();
 
-        return view('admin.dashboard', [
+        $payload = [
             'systemPage'              => $systemPage,
             'pendingApps'             => CandidatePetition::where('petition_status', 'Pending')->count(),
             'activeUsers'             => $allUsers->count(),
@@ -148,6 +149,17 @@ class CommandCentreController extends Controller
             'flaggedInactiveCount'    => $flaggedInactiveCount,
             'inactivityThresholdDays' => $inactivityThresholdDays,
             'currentMonthMetrics'     => $currentMonthMetrics,
-        ]);
+        ];
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'status'   => 'success',
+                'message'  => lexicon('msg_CommandCentre_Loaded', 'Command Centre data retrieved successfully.'),
+                'data'     => $payload,
+                'redirect' => null,
+            ], 200);
+        }
+
+        return view('admin.dashboard', $payload);
     }
 }

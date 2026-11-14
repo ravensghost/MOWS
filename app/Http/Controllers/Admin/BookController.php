@@ -141,12 +141,9 @@ class BookController extends Controller
 
         $this->syncBookModules($book, $request);
 
-        return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Book_Created', 'Book created successfully.'),
-            'data'     => $book->load('modules'),
-            'redirect' => null,
-        ], 200);
+        $model = $book->load('modules');
+
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_Book_Created', 'Book created successfully.'), 'data' => $model, 'redirect' => null], 200);
     }
 
     /**
@@ -175,12 +172,9 @@ class BookController extends Controller
 
         $this->syncBookModules($book, $request);
 
-        return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Book_Updated', 'Book updated successfully.'),
-            'data'     => $book->load('modules'),
-            'redirect' => null,
-        ], 200);
+        $model = $book->load('modules');
+
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_Book_Updated', 'Book updated successfully.'), 'data' => $model, 'redirect' => null], 200);
     }
 
     /**
@@ -188,14 +182,10 @@ class BookController extends Controller
      */
     public function destroy(Book $book): JsonResponse
     {
+        $model = $book;
         $book->delete();
 
-        return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Book_Deleted', 'Book deleted successfully.'),
-            'data'     => $book,
-            'redirect' => null,
-        ], 200);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_Book_Deleted', 'Book deleted successfully.'), 'data' => $model, 'redirect' => null], 200);
     }
 
     /**

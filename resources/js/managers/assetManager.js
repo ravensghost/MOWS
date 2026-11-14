@@ -19,13 +19,13 @@ export default () => ({
     async loadImages() {
         this.isLoading = true;
         try {
-            const { ok, data } = await window.Fetch.get('/admin/general-images', {
+            const { ok, data } = await window.Fetch.get('/admin/assets', {
                 loading: false,
                 showError: false
             });
 
             if (ok && data) {
-                this.images = data.images || [];
+                this.images = data.images || data.data || [];
             } else {
                 this.images = [];
             }
@@ -64,7 +64,7 @@ export default () => ({
         if (!confirmResult.isConfirmed) return;
 
         try {
-            const { ok, data } = await window.Fetch.delete('/admin/general-images', { filename: filename }, {
+            const { ok, data } = await window.Fetch.delete('/admin/assets', { filename: filename }, {
                 loading: false,
                 showError: true
             });

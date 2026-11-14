@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\EncyclopediaCodex;
-use App\Models\Page;
+use App\Models\Book;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Stevebauman\Purify\Facades\Purify;
@@ -19,7 +19,7 @@ class EncyclopediaCodexController extends Controller
             lexicon('msg_Wiki_Unauthorised', 'Unauthorised access to the Encyclopedia Codex.')
         );
 
-        $systemPage = Page::where('page_url', 'admin/wiki')
+        $systemPage = Book::where('book_url', 'admin/encyclopedia-codex')
             ->where('is_published', true)
             ->with(['layout.blocks', 'widgets' => function ($query) {
                 $query->orderBy('page_widget.sort_order');

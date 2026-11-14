@@ -3,15 +3,18 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Assignment;
+use App\Models\ChronologicalRegister;
+use App\Models\Insignia;
+use App\Models\Persona;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use App\Models\Persona;
-use App\Models\Assignment;
-use App\Models\Insignia;
-use App\Models\ChronologicalRegister;
 
 class PersonaAssignmentController extends Controller
 {
+    /**
+     * Reassign an active persona's duty assignment and insignia rank.
+     */
     public function __invoke(Request $request, $id)
     {
         $validated = $request->validate([
@@ -20,20 +23,20 @@ class PersonaAssignmentController extends Controller
             'reason'        => 'nullable|string',
         ]);
 
-        $persona = Persona::with(['insignia', 'assignment.division'])->findOrFail($id);
+        $model = Persona::with(['insignia', 'assignment.division'])->findOrFail($id);
 
-        $oldInsignia = $persona->insignia;
-        $oldAssignment = $persona->assignment;
+        $oldInsignia = $model->insignia;
+        $oldAssignment = $model->assignment;
 
-        $insigniaChanged = (int) $persona->insignia_id !== (int) $validated['insignia_id'];
-        $assignmentChanged = (int) $persona->assignment_id !== (int) $validated['assignment_id'];
+        $insigniaChanged = (int) $model->insignia_id !== (int) $validated['insignia_id'];
+        $assignmentChanged = (int) $model->assignment_id !== (int) $validated['assignment_id'];
 
-        $persona->update([
+        $model->update([
             'assignment_id' => $validated['assignment_id'],
             'insignia_id'   => $validated['insignia_id'],
         ]);
 
-        $reasonSuffix = !empty($validated['reason'])
+        $reasonSuffix = ! empty($validated['reason'])
             ? ' Reason: ' . $validated['reason']
             : ' (Updated via Roster Management)';
 
@@ -50,8 +53,8 @@ class PersonaAssignmentController extends Controller
             }
 
             ChronologicalRegister::create([
-                'user_id'             => $persona->user_id,
-                'persona_id'          => $persona->id,
+                'user_id'             => $model->user_id,
+                'persona_id'          => $model->id,
                 'register_event_mode' => 'promotion',
                 'chronicle_text'      => "{$actionText} {$newInsignia->insignia_title}.{$reasonSuffix}",
                 'authorising_user_id' => auth()->id(),
@@ -70,8 +73,8 @@ class PersonaAssignmentController extends Controller
                 : 'Unassigned';
 
             ChronologicalRegister::create([
-                'user_id'             => $persona->user_id,
-                'persona_id'          => $persona->id,
+                'user_id'             => $model->user_id,
+                'persona_id'          => $model->id,
                 'register_event_mode' => 'transfer',
                 'chronicle_text'      => "Transferred from {$oldPosLabel} to {$newPosLabel}.{$reasonSuffix}",
                 'authorising_user_id' => auth()->id(),
@@ -82,6 +85,6 @@ class PersonaAssignmentController extends Controller
         Cache::forget('widget_roster_sections');
         Cache::forget('widget_personae_table_sections');
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_Roster_PersonaReassigned', "Persona '{$persona->persona_name}' successfully reassigned."), 'data' => $persona, 'redirect' => null], 200);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_Roster_PersonaReassigned', "Persona '{$model->persona_name}' successfully reassigned."), 'data' => $model, 'redirect' => null], 200);
     }
 }

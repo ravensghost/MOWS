@@ -19,7 +19,7 @@ class ChronologicalRegisterController extends Controller
     {
         // Eager load grid.gridModules and module to keep queries under Q < 10
         $systemPage = Book::with(['grid.gridModules', 'module'])
-            ->where('slug', 'admin/service-records')
+            ->where('slug', 'admin/chronological-registers')
             ->where('is_published', true)
             ->firstOrFail();
 
@@ -35,7 +35,7 @@ class ChronologicalRegisterController extends Controller
             ->limit(25)
             ->get();
 
-        return view('admin.service-records', compact(
+        return view('admin.chronological_registers', compact(
             'systemPage',
             'awards',
             'users',
@@ -93,39 +93,29 @@ class ChronologicalRegisterController extends Controller
             'scope_target'        => $distinction->scope_target,
         ]);
 
-        return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_distinction_issued', 'Distinction issued and added to chronological register!'),
-            'data'     => $record,
-            'redirect' => null,
-        ], 200);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_distinction_issued', 'Distinction issued and added to chronological register!'), 'data' => $record, 'redirect' => null], 200);
     }
 
-    public function removeAward(Request $request, ChronologicalRegister$serviceRecord)
+    public function removeAward(Request $request, ChronologicalRegister$chronologicalRegister)
     {
         $validated =$request->validate([
             'chronicle_text' => 'required|string',
         ]);
 
         $record = ChronologicalRegister::create([
-            'user_id'             => $serviceRecord->user_id,
-            'persona_id'          => $serviceRecord->persona_id,
-            'distinction_id'      => $serviceRecord->distinction_id,
-            'register_event_mode' => $serviceRecord->register_event_mode,
+            'user_id'             => $chronologicalRegister->user_id,
+            'persona_id'          => $chronologicalRegister->persona_id,
+            'distinction_id'      => $chronologicalRegister->distinction_id,
+            'register_event_mode' => $chronologicalRegister->register_event_mode,
             'chronicle_text'      => 'REVOKED: ' . $validated['chronicle_text'],
             'authorising_user_id' => auth()->id(),
-            'scope_target'        => $serviceRecord->scope_target ?? 'BOTH',
+            'scope_target'        => $chronologicalRegister->scope_target ?? 'BOTH',
         ]);
 
-        return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_register_revoked', 'Action revoked and logged in chronological register.'),
-            'data'     => $record,
-            'redirect' => null,
-        ], 200);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_register_revoked', 'Action revoked and logged in chronological register.'), 'data' => $record, 'redirect' => null], 200);
     }
 
-    public function updateRecord(Request $request, ChronologicalRegister$serviceRecord)
+    public function updateRecord(Request $request, ChronologicalRegister$chronologicalRegister)
     {
         $validated =$request->validate([
             'chronicle_text'      => 'required|string',
@@ -138,18 +128,13 @@ class ChronologicalRegisterController extends Controller
             'scope_target'   => $validated['scope_target'],
         ];
 
-        if (!empty($validated['register_event_mode']) && !$serviceRecord->distinction_id) {
+        if (!empty($validated['register_event_mode']) && !$chronologicalRegister->distinction_id) {
             $updateData['register_event_mode'] =$validated['register_event_mode'];
         }
 
-        $serviceRecord->update($updateData);
+        $chronologicalRegister->update($updateData);
 
-        return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_register_updated', 'Chronological register updated successfully.'),
-            'data'     => $serviceRecord,
-            'redirect' => null,
-        ], 200);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_register_updated', 'Chronological register updated successfully.'), 'data' => $chronologicalRegister, 'redirect' => null], 200);
     }
 
     public function issueManualEntry(Request $request)
@@ -172,11 +157,6 @@ class ChronologicalRegisterController extends Controller
             'scope_target'        => $validated['scope_target'] ?? 'BOTH',
         ]);
 
-        return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_register_entry_added', 'Chronological register entry added.'),
-            'data'     => $record,
-            'redirect' => null,
-        ], 200);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_register_entry_added', 'Chronological register entry added.'), 'data' => $record, 'redirect' => null], 200);
     }
 }

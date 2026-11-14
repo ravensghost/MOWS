@@ -70,7 +70,7 @@ export default () => ({
         this.isSubmitting = true;
 
         const isEdit = this.formMode === 'edit' && this.parameterId;
-        const endpoint = isEdit ? `/admin/navigation/options/${this.parameterId}` : '/admin/navigation/options';
+        const endpoint = isEdit ? `/admin/table-of-contents/options/${this.parameterId}` : '/admin/table-of-contents/options';
         const method = isEdit ? 'PUT' : 'POST';
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 

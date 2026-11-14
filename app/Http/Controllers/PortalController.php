@@ -2,130 +2,56 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Book;
+use App\Models\Bulletin;
+use App\Models\Configuration;
+use App\Models\Folio;
+use App\Models\Persona;
+use App\Models\PersonaMetadata;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\View;
-use App\Models\Book;
-use App\Models\Module;
-use App\Models\Grid;
-use App\Models\GridModule;
-use App\Models\Bulletin;
-use App\Models\Folio;
-use App\Models\Persona;
-use App\Models\PersonaMetadata;
-use App\Models\Configuration;
+use Illuminate\Support\Str;
+use Illuminate\View\View as ViewContract;
 
 class PortalController extends Controller
 {
-    public function showBook($bookUrl = '/')
+    /**
+     * Display a published Book by its URL slug.
+     */
+    public function showBook(string $bookUrl = '/'): ViewContract
     {
-        $bookUrl = $bookUrl === '/' ? '/' : ltrim($bookUrl, '/');
+        $normalizedUrl = $bookUrl === '/' ? '/' : ltrim($bookUrl, '/');
 
-        $systemPage = Book::where('book_url',$bookUrl)
-            ->where('is_published', true)
-            ->with([
-                'grid.gridModules',
-                'modules' => function ($query) {$query->wherePivot('is_visible', true)
-                        ->orderBy('module_sort_order');
-                }
-            ])
-            ->firstOrFail();
+        $payload = $this->resolvePublishedBook($normalizedUrl);
 
-        $user = auth()->user();
-        $filteredModules = ($systemPage->modules ?? collect())->filter(function ($widget) use ($user) {
-            if (! ($widget->pivot->is_visible ?? true)) {
-                return false;
-            }
-            $required =$widget->pivot->access_clearance;
-            if (empty($required)) {
-                return true;
-            }
-            return $user ? $user->can($required) : false;
-        })->values();
-
-        $systemPage->setRelation('modules',$filteredModules);
-        $systemPage->setRelation('module',$filteredModules);
-        $systemPage->setRelation('widgets',$filteredModules);
-
-        $lookupUrl = $systemPage->book_url === '/' ? '/' : '/' . ltrim($systemPage->book_url, '/');
-
-        $navKey = Cache::remember('nav_lexicon_' . md5($lookupUrl), 3600, function () use ($lookupUrl) {
-            return DB::table('table_of_contents')
-                ->where('destination_url', $lookupUrl)
-                ->pluck('translation_code_key')
-                ->first();
-        });
-
-        $pageKey =$navKey ?: ('public_label_' . ($systemPage->book_url === '/' ? 'Landing' : Str::studly(basename($systemPage->book_url))));
-
-        $data = [
-            'page'       => $systemPage,
-            'systemPage' => $systemPage,
-            'navKey'     => $navKey,
-            'pageKey'    => $pageKey,
-            'newsItems'  => null,
-            'storyPosts' => null,
-        ];
-
-        $widgetKeys =$filteredModules->pluck('module_token')->toArray();
-
-        if (in_array('news', $widgetKeys) || in_array('widget_news', $widgetKeys)) {$data['newsItems'] = Bulletin::with('author')
-                ->orderBy('published_at', 'desc')
-                ->take(5)
-                ->get();
-        }
-
-        if (in_array('posts', $widgetKeys) || in_array('widget_posts', $widgetKeys)) {$data['storyPosts'] = Folio::with('activePersona')
-                ->where('folio_status', 'published')
-                ->orderBy('created_at', 'desc')
-                ->take(5)
-                ->get();
-        }
-
-        return view('page', $data);
+        return view('book', $payload);
     }
 
-    public function showBio(Persona $persona)
+    /**
+     * Display a Persona biography within the 'bio' Book layout.
+     */
+    public function showBio(Persona $persona): ViewContract
     {
-        $systemPage = Book::where('book_url', 'bio')
-            ->where('is_published', true)
-            ->with([
-                'grid.gridModules',
-                'modules' => function ($query) {$query->wherePivot('is_visible', true)
-                        ->orderBy('module_sort_order');
-                }
-            ])
-            ->firstOrFail();
-
-        $user = auth()->user();
-        $filteredModules = ($systemPage->modules ?? collect())->filter(function ($module) use ($user) {
-            if (! ($module->pivot->is_visible ?? true)) {
-                return false;
-            }
-            $required =$module->pivot->access_clearance;
-            if (empty($required)) {
-                return true;
-            }
-            return $user ? $user->can($required) : false;
-        })->values();
-
-        $systemPage->setRelation('modules',$filteredModules);
-        $systemPage->setRelation('module',$filteredModules);
-        $systemPage->setRelation('widgets',$filteredModules);
+        $payload = $this->resolvePublishedBook('bio', 'public_label_Bio');
 
         $persona->load([
             'user',
-            'insignia' => function ($query) {$query->where('is_visible', true)->with([
-                    'insigniaGroup' => function ($q) {$q->where('is_visible', true);
-                    }
+            'insignia' => function ($query) {
+                $query->where('is_visible', true)->with([
+                    'insigniaGroup' => function ($q) {
+                        $q->where('is_visible', true);
+                    },
                 ]);
             },
-            'assignment' => function ($query) {$query->where('is_visible', true)->with([
-                    'division' => function ($q) {$q->where('is_visible', true);
-                    }
+            'assignment' => function ($query) {
+                $query->where('is_visible', true)->with([
+                    'division' => function ($q) {
+                        $q->where('is_visible', true);
+                    },
                 ]);
             },
             'candidatePetition.answers.formField',
@@ -136,56 +62,131 @@ class PortalController extends Controller
 
         View::share('persona', $persona);
 
-        $lookupUrl = '/bio';$navKey = Cache::remember('nav_lexicon_' . md5($lookupUrl), 3600, function () use ($lookupUrl) {
+        $payload['persona'] = $persona;
+
+        return view('book', $payload);
+    }
+
+    /**
+     * Resolve a published Book, filter its modules by user clearance, and build the view payload.
+     */
+    protected function resolvePublishedBook(string $bookUrl, ?string $fallbackBookKey = null): array
+    {
+        $book = Book::where('book_url', $bookUrl)
+            ->where('is_published', true)
+            ->with([
+                'grid.gridModules',
+                'modules' => function ($query) {
+                    $query->wherePivot('is_visible', true)
+                        ->orderBy('module_sort_order');
+                },
+            ])
+            ->firstOrFail();
+
+        $user = auth()->user();
+
+        $filteredModules = ($book->modules ?? collect())->filter(function ($module) use ($user) {
+            if (! ($module->pivot->is_visible ?? true)) {
+                return false;
+            }
+
+            $required = $module->pivot->access_clearance;
+            if (empty($required)) {
+                return true;
+            }
+
+            return $user ? $user->can($required) : false;
+        })->values();
+
+        $book->setRelation('modules', $filteredModules);
+
+        $lookupUrl = $book->book_url === '/' ? '/' : '/' . ltrim($book->book_url, '/');
+
+        $navKey = Cache::remember('nav_lexicon_' . md5($lookupUrl), 3600, function () use ($lookupUrl) {
             return DB::table('table_of_contents')
                 ->where('destination_url', $lookupUrl)
                 ->pluck('translation_code_key')
                 ->first();
         });
 
-        $pageKey =$navKey ?: 'public_label_Bio';
+        $defaultKey = $fallbackBookKey ?? ('public_label_' . ($book->book_url === '/' ? 'Landing' : Str::studly(basename($book->book_url))));
+        $bookKey = $navKey ?: $defaultKey;
 
-        $data = [
-            'page'       => $systemPage,
-            'systemPage' => $systemPage,
-            'pageKey'    => $pageKey,
-            'persona'    => $persona,
-            'newsItems'  => null,
-            'storyPosts' => null,
+        $moduleTokens = $filteredModules->pluck('module_token')->toArray();
+
+        $bulletins = null;
+        if (! empty(array_intersect(['bulletins', 'module_bulletins'], $moduleTokens))) {
+            $bulletins = Bulletin::with('author')
+                ->orderBy('published_at', 'desc')
+                ->take(5)
+                ->get();
+        }
+
+        $folios = null;
+        if (! empty(array_intersect(['folios', 'module_folios'], $moduleTokens))) {
+            $folios = Folio::with('activePersona')
+                ->where('folio_status', 'published')
+                ->orderBy('created_at', 'desc')
+                ->take(5)
+                ->get();
+        }
+
+        return [
+            'book'      => $book,
+            'navKey'    => $navKey,
+            'bookKey'   => $bookKey,
+            'bulletins' => $bulletins,
+            'folios'    => $folios,
         ];
-
-        return view('page', $data);
     }
 
-    protected function authorizeAvatarAction(Persona $persona): void
+    /**
+     * Authorise portrait modifications for the given Persona.
+     */
+    protected function authorizePortraitAction(Persona $persona): void
     {
         $user = auth()->user();
 
-        $isAuthorized =$user && (
-            (int) $user->id === (int) $persona->user_id ||$user->hasRole('webmaster') ||
-            $user->can('manage_roster_assignments') ||$user->can('manage_users')
+        $isAuthorized = $user && (
+            (int) $user->id === (int) $persona->user_id ||
+            $user->hasRole('webmaster') ||
+            $user->can('manage_roster_assignments') ||
+            $user->can('manage_users')
         );
 
-        abort_unless($isAuthorized, 403, lexicon('msg_CharacterAvatar_Unauthorised', 'Unauthorised to modify character portraits.'));
+        abort_unless(
+            $isAuthorized,
+            403,
+            lexicon('msg_PersonaPortrait_Unauthorised', 'Unauthorised to modify persona portraits.')
+        );
     }
 
+    /**
+     * Build the portrait data payload for JSON responses.
+     */
     protected function getPortraitPayload(Persona $persona): array
     {
-        $persona->refresh();$persona->load('attributes');
+        $persona->refresh();
+        $persona->load('attributes');
 
-        $primaryUrl =$persona->primary_portrait_url
-            ? (Str::startsWith($persona->primary_portrait_url, ['http://', 'https://', '/']) ? $persona->primary_portrait_url : asset('images/characters/' .$persona->primary_portrait_url))
+        $primaryUrl = $persona->primary_portrait_url
+            ? (Str::startsWith($persona->primary_portrait_url, ['http://', 'https://', '/'])
+                ? $persona->primary_portrait_url
+                : asset('images/personas/' . $persona->primary_portrait_url))
             : null;
 
-        $gallery =$persona->attributes
+        $gallery = $persona->attributes
             ->where('attribute_key', 'gallery_image')
             ->values()
             ->map(function ($attr) {
-                $val =$attr->attribute_value;
+                $val = $attr->attribute_value;
+
                 return [
                     'id'       => $attr->id,
                     'filename' => $val,
-                    'url'      => Str::startsWith($val, ['http://', 'https://', '/']) ? $val : asset('images/characters/' .$val),
+                    'url'      => Str::startsWith($val, ['http://', 'https://', '/'])
+                        ? $val
+                        : asset('images/personas/' . $val),
                 ];
             })
             ->all();
@@ -197,25 +198,30 @@ class PortalController extends Controller
         ];
     }
 
-    public function uploadCharacterAvatar(Request $request, Persona$persona)
+    /**
+     * Upload a new primary or gallery portrait for a Persona.
+     */
+    public function uploadPersonaPortrait(Request $request, Persona $persona): JsonResponse
     {
-        $this->authorizeAvatarAction($persona);
+        $this->authorizePortraitAction($persona);
 
         $request->validate([
             'file' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:5120'],
         ]);
 
-        $destinationPath = public_path('images/characters');
+        $destinationPath = public_path('images/personas');
         if (! File::exists($destinationPath)) {
             File::makeDirectory($destinationPath, 0755, true);
         }
 
-        $file = $request->file('file');$extension = strtolower($file->getClientOriginalExtension() ?: 'webp');$filename = 'char_' . $persona->id . '_' . time() . '_' . Str::lower(Str::random(5)) . '.' . $extension;
+        $file = $request->file('file');
+        $extension = strtolower($file->getClientOriginalExtension() ?: 'webp');
+        $filename = 'persona_' . $persona->id . '_' . time() . '_' . Str::lower(Str::random(5)) . '.' . $extension;
 
-        $file->move($destinationPath,$filename);
+        $file->move($destinationPath, $filename);
 
         if (empty($persona->primary_portrait_url)) {
-            $persona->update(['primary_portrait_url' =>$filename]);
+            $persona->update(['primary_portrait_url' => $filename]);
         } else {
             PersonaMetadata::create([
                 'persona_id'      => $persona->id,
@@ -226,76 +232,94 @@ class PortalController extends Controller
 
         $portraits = $this->getPortraitPayload($persona);
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_CharacterAvatar_UploadSuccess', 'Character portrait uploaded successfully.'), 'data' => $portraits, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_PersonaPortrait_UploadSuccess', 'Persona portrait uploaded successfully.'),
+            'data'     => $portraits,
+            'redirect' => null,
+        ], 200);
     }
 
-    public function setPrimaryCharacterAvatar(Request $request, Persona$persona)
+    /**
+     * Promote a gallery portrait to the primary portrait slot.
+     */
+    public function setPrimaryPersonaPortrait(Request $request, Persona $persona): JsonResponse
     {
-        $this->authorizeAvatarAction($persona);
+        $this->authorizePortraitAction($persona);
 
-        $validated =$request->validate([
+        $validated = $request->validate([
             'attribute_id' => ['required', 'integer'],
         ]);
 
-        $attribute = PersonaMetadata::where('persona_id',$persona->id)
+        $attribute = PersonaMetadata::where('persona_id', $persona->id)
             ->where('attribute_key', 'gallery_image')
             ->where('id', $validated['attribute_id'])
             ->firstOrFail();
 
-        $oldPrimary =$persona->primary_portrait_url;
-        $newPrimary =$attribute->attribute_value;
+        $oldPrimary = $persona->primary_portrait_url;
+        $newPrimary = $attribute->attribute_value;
 
-        $persona->update(['primary_portrait_url' =>$newPrimary]);
+        $persona->update(['primary_portrait_url' => $newPrimary]);
 
         if (! empty($oldPrimary)) {
-            $attribute->update(['attribute_value' =>$oldPrimary]);
+            $attribute->update(['attribute_value' => $oldPrimary]);
         } else {
             $attribute->delete();
         }
 
         $portraits = $this->getPortraitPayload($persona);
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_CharacterAvatar_PrimaryUpdated', 'Primary character portrait updated.'), 'data' => $portraits, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_PersonaPortrait_PrimaryUpdated', 'Primary persona portrait updated.'),
+            'data'     => $portraits,
+            'redirect' => null,
+        ], 200);
     }
 
-    public function deleteCharacterAvatar(Request $request, Persona$persona)
+    /**
+     * Delete a primary or gallery portrait from disk and database.
+     */
+    public function deletePersonaPortrait(Request $request, Persona $persona): JsonResponse
     {
-        $this->authorizeAvatarAction($persona);
+        $this->authorizePortraitAction($persona);
 
-        $validated =$request->validate([
+        $validated = $request->validate([
             'type'         => ['required', 'in:primary,gallery'],
-            'attribute_id' => ['nullable', 'integer'],
+            'attribute_id' => ['required_if:type,gallery', 'nullable', 'integer'],
         ]);
 
         if ($validated['type'] === 'primary') {
-            $filename =$persona->primary_portrait_url;
+            $filename = $persona->primary_portrait_url;
 
             if ($filename && ! Str::startsWith($filename, ['http://', 'https://'])) {
-                $filePath = public_path('images/characters/' . ltrim($filename, '/'));
+                $filePath = public_path('images/personas/' . ltrim($filename, '/'));
                 if (File::exists($filePath)) {
                     File::delete($filePath);
                 }
             }
 
-            $nextGalleryAttr = PersonaMetadata::where('persona_id',$persona->id)
+            $nextGalleryAttr = PersonaMetadata::where('persona_id', $persona->id)
                 ->where('attribute_key', 'gallery_image')
                 ->orderBy('id', 'asc')
                 ->first();
 
-            if ($nextGalleryAttr) {$persona->update(['primary_portrait_url' => $nextGalleryAttr->attribute_value]);$nextGalleryAttr->delete();
+            if ($nextGalleryAttr) {
+                $persona->update(['primary_portrait_url' => $nextGalleryAttr->attribute_value]);
+                $nextGalleryAttr->delete();
             } else {
                 $persona->update(['primary_portrait_url' => null]);
             }
         } else {
-            $attribute = PersonaMetadata::where('persona_id',$persona->id)
+            $attribute = PersonaMetadata::where('persona_id', $persona->id)
                 ->where('attribute_key', 'gallery_image')
                 ->where('id', $validated['attribute_id'])
                 ->firstOrFail();
 
-            $filename =$attribute->attribute_value;
+            $filename = $attribute->attribute_value;
 
             if ($filename && ! Str::startsWith($filename, ['http://', 'https://'])) {
-                $filePath = public_path('images/characters/' . ltrim($filename, '/'));
+                $filePath = public_path('images/personas/' . ltrim($filename, '/'));
                 if (File::exists($filePath)) {
                     File::delete($filePath);
                 }
@@ -306,27 +330,39 @@ class PortalController extends Controller
 
         $portraits = $this->getPortraitPayload($persona);
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_CharacterAvatar_Deleted', 'Character portrait removed.'), 'data' => $portraits, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_PersonaPortrait_Deleted', 'Persona portrait removed.'),
+            'data'     => $portraits,
+            'redirect' => null,
+        ], 200);
     }
 
+    /**
+     * Evaluate whether a Folio requires a mature content shield gate.
+     */
     protected function evaluateContentShield(Folio $folio): array
     {
-        $isMature = ($folio->content_tier_l >= 3 ||
-            $folio->content_tier_s >= 3 ||$folio->content_tier_v >= 3
+        $isMature = (
+            $folio->content_tier_l >= 3 ||
+            $folio->content_tier_s >= 3 ||
+            $folio->content_tier_v >= 3
         );
 
-        $user = auth()->user();$bypassMode = Configuration::where('configuration_token', 'content_shield_bypass')
+        $user = auth()->user();
+
+        $bypassMode = Configuration::where('configuration_token', 'content_shield_bypass')
             ->pluck('configuration_payload')
             ->first() ?? 'locked';
 
         $userBypassed = false;
-        if ($isMature && $user &&$bypassMode === 'user_bypass') {
-            $userBypassed = (bool)$user->content_shield_bypass;
+        if ($isMature && $user && $bypassMode === 'user_bypass') {
+            $userBypassed = (bool) $user->content_shield_bypass;
         }
 
         return [
             'is_mature'     => $isMature,
-            'requires_gate' => $isMature && !$userBypassed,
+            'requires_gate' => $isMature && ! $userBypassed,
         ];
     }
 }

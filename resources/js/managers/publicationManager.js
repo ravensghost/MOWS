@@ -39,7 +39,7 @@ export default () => ({
         mode: 'create',
         id: '',
         state_title: '',
-        action: '/admin/statuses',
+        action: '/admin/publication-states',
         method: 'POST'
     },
 
@@ -97,8 +97,8 @@ export default () => ({
 
         if (type === 'status') {
             mode === 'edit'
-                ? window.Modal.edit(this.statusModal, data, '/admin/statuses')
-                : window.Modal.create(this.statusModal, { state_title: '' }, '/admin/statuses');
+                ? window.Modal.edit(this.statusModal, data, '/admin/publication-states')
+                : window.Modal.create(this.statusModal, { state_title: '' }, '/admin/publication-states');
             return;
         }
 

@@ -1,20 +1,20 @@
 <?php
 
-use App\Http\Controllers\Admin\InsigniaController;
 use App\Http\Controllers\Admin\InsigniaCatalogueController;
+use App\Http\Controllers\Admin\InsigniaController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/ranks', [InsigniaController::class, 'index'])->name('ranks.index');
-Route::get('/ranks/export', [InsigniaController::class, 'export'])->name('ranks.export');
-Route::get('/ranks/template', [InsigniaController::class, 'template'])->name('ranks.template');
-Route::post('/ranks/import', [InsigniaController::class, 'import'])->name('ranks.import');
-Route::get('/ranks/images', [InsigniaController::class, 'images'])->name('ranks.images');
-Route::post('/ranks/reorder', [InsigniaController::class, 'reorder']);
-Route::post('/ranks', [InsigniaController::class, 'store']);
-Route::put('/ranks/{rank}', [InsigniaController::class, 'update']);
-Route::delete('/ranks/{rank}', [InsigniaController::class, 'destroy']);
+Route::get('/insignia', [InsigniaController::class, 'index'])->name('insignia.index');
+Route::get('/insignia/export', [InsigniaController::class, 'export'])->name('insignia.export');
+Route::get('/insignia/template', [InsigniaController::class, 'template'])->name('insignia.template');
+Route::post('/insignia/import', [InsigniaController::class, 'import'])->name('insignia.import');
+Route::get('/insignia/images', [InsigniaController::class, 'images'])->name('insignia.images');
+Route::post('/insignia/reorder', [InsigniaController::class, 'reorder'])->name('insignia.reorder');
+Route::post('/insignia', [InsigniaController::class, 'store'])->name('insignia.store');
+Route::put('/insignia/{insignia}', [InsigniaController::class, 'update'])->name('insignia.update');
+Route::delete('/insignia/{insignia}', [InsigniaController::class, 'destroy'])->name('insignia.destroy');
 
-Route::post('/rank-sets', [InsigniaCatalogueController::class, 'store']);
-Route::put('/rank-sets/{rankSet}', [InsigniaCatalogueController::class, 'update']);
-Route::delete('/rank-sets/{rankSet}', [InsigniaCatalogueController::class, 'destroy']);
-Route::post('/rank-sets/{rankSet}/assign', [InsigniaCatalogueController::class, 'assignSections']);
+Route::post('/insignia/catalogues', [InsigniaCatalogueController::class, 'store'])->name('insignia.catalogues.store');
+Route::put('/insignia/catalogues/{catalogue}', [InsigniaCatalogueController::class, 'update'])->name('insignia.catalogues.update');
+Route::delete('/insignia/catalogues/{catalogue}', [InsigniaCatalogueController::class, 'destroy'])->name('insignia.catalogues.destroy');
+Route::post('/insignia/catalogues/{catalogue}/assign', [InsigniaCatalogueController::class, 'assignSections'])->name('insignia.catalogues.assign');

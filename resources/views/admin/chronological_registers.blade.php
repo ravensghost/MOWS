@@ -3,13 +3,13 @@
 @section('title', lexicon('admin_label_ServiceRecords', 'Service Records Hub'))
 
 @section('content')
-<div x-data="serviceRecordManager({{ json_encode($awards) }})"
-     @ajax-success.window="window.updateDOM_US($refs, ['serviceRecordsTableContent'], () => { issueModalOpen = false; })">
+<div x-data="chronologicalRegisterManager({{ json_encode($awards) }})"
+     @ajax-success.window="window.updateDOM_US($refs, ['chronologicalRegistersTableContent'], () => { issueModalOpen = false; })">
     
      <x-admin-grid-wrapper :page="$systemPage">
     
         <x-slot:top>
-            <script type="application/json" x-ref="serviceRecordsSearchData">
+            <script type="application/json" x-ref="chronologicalRegistersSearchData">
                 {!! json_encode($recentRecords->map(fn($r) => [
                     'id' => $r->id,
                     'recipient' => $r->persona_id ? ($r->persona->persona_name ?? '') : ($r->user->name ?? ''),
@@ -75,8 +75,8 @@
             <div class="flex flex-col gap-lg">
                 {{-- Instant Fuzzy Search Bar (Fuse.js) --}}
                 <div class="bg-panel border border-panel rounded-panel shadow-panel p-panel">
-                    <x-form-input name="service_records_search"
-                                  id="service-records-search-input"
+                    <x-form-input name="chronological_registers_search"
+                                  id="chronological-registers-search-input"
                                   :label="lexicon('label_ServiceRecords_FilterRecords', 'Filter Service Records')"
                                   :placeholder="lexicon('label_ServiceRecords_FilterPlaceholder', 'Search records by recipient, award, or citation...')"
                                   :tooltip="lexicon('tooltip_ServiceRecords_FilterInput', 'Instantaneously filter service records using fuzzy search')"
@@ -101,7 +101,7 @@
                     </x-button>
                 </x-slot:top>
     
-                <x-table id="service-records-table-content" x-ref="serviceRecordsTableContent" class="max-h-table" :bareBody="true">
+                <x-table id="chronological-registers-table-content" x-ref="chronologicalRegistersTableContent" class="max-h-table" :bareBody="true">
                     <x-slot:headers>
                         <th class="p-4 text-left">{{ lexicon('label_common_Date', 'Date') }}</th>
                         <th class="p-4 text-left">{{ lexicon('label_ServiceRecords_Recipient', 'Recipient') }}</th>
@@ -114,6 +114,7 @@
                     <tbody class="divide-y divide-panel">
                         @forelse($recentRecords as $record)
                             <tr class="border-b-table-row hover-bg-table-row" 
+                                data-chronological-register-item="{{ $record->id }}"
                                 x-data="{ editing: false, editReason: '{{ addslashes($record->chronicle_text) }}', editTarget: '{{ $record->scope_target ?? 'BOTH' }}', editEventMode: '{{ $record->register_event_mode }}', removing: false }"
                                 x-show="isItemVisible({{ $record->id }})"
                                 x-cloak>
@@ -137,7 +138,7 @@
                                         $badgeVariant = match($record->register_event_mode) {
                                             'promotion', 'commendation', 'milestone' => 'success',
                                             'transfer', 'assignment', 'affiliation', 'faction' => 'primary',
-                                            'award' => 'warning',
+                                            'award', 'distinction' => 'warning',
                                             'status_change', 'academy', 'education', 'training', 'background' => 'info',
                                             'incident' => 'danger',
                                             'manual_entry', 'family', 'relationship', 'psychological', 'evaluation', 'physicals' => 'completed',
@@ -183,7 +184,7 @@
                                     {{-- Inline Edit Form --}}
                                     <form x-cloak 
                                           x-show="editing" 
-                                          action="/admin/service-records/{{ $record->id }}" 
+                                          action="/admin/chronological-registers/{{ $record->id }}" 
                                           method="POST" 
                                           x-data="ajaxForm" 
                                           @submit.prevent="submit; editing = false" 
@@ -257,7 +258,7 @@
                                     
                                     {{-- Remove Confirmation Box --}}
                                     <div x-show="removing" class="bg-panel-sub border border-panel rounded-panel p-2 mt-1" x-cloak>
-                                        <form action="/admin/service-records/{{ $record->id }}/remove" 
+                                        <form action="/admin/chronological-registers/{{ $record->id }}/remove" 
                                               method="POST" 
                                               x-data="ajaxForm" 
                                               @submit.prevent="submit; removing = false" 
@@ -347,7 +348,7 @@
     
                 {{-- TAB 1: ISSUE AWARD --}}
                 <div x-show="actionTab === 'award'" x-cloak>
-                    <form action="/admin/service-records/award" method="POST" x-data="ajaxForm" @submit.prevent="submit" class="flex flex-col gap-md">
+                    <form action="/admin/chronological-registers/award" method="POST" x-data="ajaxForm" @submit.prevent="submit" class="flex flex-col gap-md">
                         @csrf
                         <div class="flex flex-col gap-xs">
                             <label for="award-recipient-type-select" class="text-xs font-bold text-input-muted">
@@ -393,7 +394,7 @@
                                 <option value="">{{ lexicon('label_common_SelectCharacter', '-- Select Character --') }}</option>
                                 @foreach($characters as $character)
                                     <option value="{{ $character->id }}">
-                                        {{ $character->persona_name }} @if($character->user) ({{ lexicon('label_ServiceRecords_Owner', 'Owner:') }} {{$character->user->name }}) @endif
+                                        {{ $character->persona_name }} @if($character->user) ({{ lexicon('label_ServiceRecords_Owner', 'Owner:') }} {{ $character->user->name }}) @endif
                                     </option>
                                 @endforeach
                             </select>
@@ -438,7 +439,7 @@
     
                 {{-- TAB 2: PROMOTION / DEMOTION --}}
                 <div x-cloak x-show="actionTab === 'promotion'">
-                    <form action="/admin/service-records/promotion" method="POST" x-data="ajaxForm" @submit.prevent="submit" class="flex flex-col gap-md">
+                    <form action="/admin/chronological-registers/promotion" method="POST" x-data="ajaxForm" @submit.prevent="submit" class="flex flex-col gap-md">
                         @csrf
                         <div class="flex flex-col gap-xs">
                             <label for="promo-character-select" class="text-xs font-bold text-input-muted">
@@ -452,9 +453,9 @@
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
                                     required>
                                 <option value="">{{ lexicon('label_common_SelectCharacter', '-- Select Character --') }}</option>
-                                @foreach($characters as$character)
+                                @foreach($characters as $character)
                                     <option value="{{ $character->id }}">
-                                        {{ $character->persona_name }} @if($character->insignia) ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{$character->insignia->insignia_title }}) @endif
+                                        {{ $character->persona_name }} @if($character->insignia) ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{ $character->insignia->insignia_title }}) @endif
                                     </option>
                                 @endforeach
                             </select>
@@ -471,7 +472,7 @@
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
                                     required>
                                 <option value="">{{ lexicon('label_ServiceRecords_OptSelectRank', '-- Select Rank --') }}</option>
-                                @foreach($ranks as$rank)
+                                @foreach($ranks as $rank)
                                     <option value="{{ $rank->id }}">{{ $rank->insignia_title }}</option>
                                 @endforeach
                             </select>
@@ -499,7 +500,7 @@
     
                 {{-- TAB 3: TRANSFER --}}
                 <div x-cloak x-show="actionTab === 'transfer'">
-                    <form action="/admin/service-records/transfer" method="POST" x-data="ajaxForm" @submit.prevent="submit" class="flex flex-col gap-md">
+                    <form action="/admin/chronological-registers/transfer" method="POST" x-data="ajaxForm" @submit.prevent="submit" class="flex flex-col gap-md">
                         @csrf
                         <div class="flex flex-col gap-xs">
                             <label for="transfer-character-select" class="text-xs font-bold text-input-muted">
@@ -513,9 +514,9 @@
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
                                     required>
                                 <option value="">{{ lexicon('label_common_SelectCharacter', '-- Select Character --') }}</option>
-                                @foreach($characters as$character)
+                                @foreach($characters as $character)
                                     <option value="{{ $character->id }}">
-                                        {{ $character->persona_name }} @if($character->assignment) ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{$character->assignment->assignment_title }}) @endif
+                                        {{ $character->persona_name }} @if($character->assignment) ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{ $character->assignment->assignment_title }}) @endif
                                     </option>
                                 @endforeach
                             </select>
@@ -532,9 +533,9 @@
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
                                     required>
                                 <option value="">{{ lexicon('label_ServiceRecords_OptSelectPosition', '-- Select Position --') }}</option>
-                                @foreach($positions as$position)
+                                @foreach($positions as $position)
                                     <option value="{{ $position->id }}">
-                                        {{ $position->assignment_title }} @if($position->division) ({{$position->division->division_title }}) @endif
+                                        {{ $position->assignment_title }} @if($position->division) ({{ $position->division->division_title }}) @endif
                                     </option>
                                 @endforeach
                             </select>
@@ -562,7 +563,7 @@
     
                 {{-- TAB 4: STATUS CHANGE --}}
                 <div x-cloak x-show="actionTab === 'status_change'">
-                    <form action="/admin/service-records/status-change" method="POST" x-data="ajaxForm" @submit.prevent="submit" class="flex flex-col gap-md">
+                    <form action="/admin/chronological-registers/status-change" method="POST" x-data="ajaxForm" @submit.prevent="submit" class="flex flex-col gap-md">
                         @csrf
                         <div class="flex flex-col gap-xs">
                             <label for="status-character-select" class="text-xs font-bold text-input-muted">
@@ -576,9 +577,9 @@
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
                                     required>
                                 <option value="">{{ lexicon('label_common_SelectCharacter', '-- Select Character --') }}</option>
-                                @foreach($characters as$character)
+                                @foreach($characters as $character)
                                     <option value="{{ $character->id }}">
-                                        {{ $character->persona_name }} ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{ strtoupper(str_replace('_', ' ',$character->persona_status)) }})
+                                        {{ $character->persona_name }} ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{ strtoupper(str_replace('_', ' ', $character->persona_status)) }})
                                     </option>
                                 @endforeach
                             </select>
@@ -625,7 +626,7 @@
     
                 {{-- TAB 5: GENERAL / MANUAL ENTRY (ALL 20 TYPES SUPPORTED) --}}
                 <div x-cloak x-show="actionTab === 'manual_entry'">
-                    <form action="/admin/service-records/manual-entry" method="POST" x-data="ajaxForm" @submit.prevent="submit" class="flex flex-col gap-md">
+                    <form action="/admin/chronological-registers/manual-entry" method="POST" x-data="ajaxForm" @submit.prevent="submit" class="flex flex-col gap-md">
                         @csrf
                         <div class="flex flex-col gap-xs">
                             <label for="manual-character-select" class="text-xs font-bold text-input-muted">
@@ -639,7 +640,7 @@
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
                                     required>
                                 <option value="">{{ lexicon('label_common_SelectCharacter', '-- Select Character --') }}</option>
-                                @foreach($characters as$character)
+                                @foreach($characters as $character)
                                     <option value="{{ $character->id }}">{{ $character->persona_name }}</option>
                                 @endforeach
                             </select>
@@ -656,10 +657,10 @@
                                         x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_SelectEventType', 'Select service record event category')) }}'"
                                         class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent"
                                         required>
-                                    @foreach($eventTypeGroups as $groupKey =>$groupData)
+                                    @foreach($eventTypeGroups as $groupKey => $groupData)
                                         <optgroup label="{{ $groupData['label'] }}">
-                                            @foreach($groupData['types'] as $typeKey =>$typeLabel)
-                                                <option value="{{ $typeKey }}" @selected($typeKey === 'manual_entry')>{{$typeLabel }}</option>
+                                            @foreach($groupData['types'] as $typeKey => $typeLabel)
+                                                <option value="{{ $typeKey }}" @selected($typeKey === 'manual_entry')>{{ $typeLabel }}</option>
                                             @endforeach
                                         </optgroup>
                                     @endforeach

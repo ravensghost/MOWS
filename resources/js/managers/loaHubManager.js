@@ -50,7 +50,7 @@ export default () => ({
                 }
 
                 if (typeof window.refreshDOM === 'function') {
-                    await window.refreshDOM('.table-wrapper', null, false);
+                    await window.refreshDOM('.table-wrapper', '/admin/command-centre', false);
                 } else {
                     window.location.reload();
                 }

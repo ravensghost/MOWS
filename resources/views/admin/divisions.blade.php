@@ -4,7 +4,7 @@
 
 @section('content')
 <div x-data="sectionManager({
-        aiEndpoint: '{{ route('admin.sections.generate-description') }}',
+        aiEndpoint: '{{ route('admin.divisions.generate_description') }}',
         emptyNameMsg: '{{ addslashes(lexicon('msg_SectionsPositions_EnterNameFirst', 'Please enter a Section Name first.')) }}'
     })"
     @ajax-success.window="handleAjaxSuccess()">
@@ -39,7 +39,7 @@
                         </x-button>
                         <x-button variant="secondary"
                             tag="a"
-                            href="{{ route('admin.sections.export') }}"
+                            href="{{ route('admin.divisions.export') }}"
                             x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_Export', 'Download sections and positions JSON manifest')) }}'">
                             <i class="bi bi-download"></i>
                             <span>{{ lexicon('btn_common_Export', 'Export Sections & Positions') }}</span>
@@ -47,7 +47,7 @@
 
                         <x-button variant="secondary"
                             tag="a"
-                            href="{{ route('admin.sections.template') }}"
+                            href="{{ route('admin.divisions.template') }}"
                             x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_Template', 'Download blank JSON manifest template')) }}'">
                             <i class="bi bi-file-earmark-code"></i>
                             <span>{{ lexicon('btn_common_DownloadTemplate', 'Download Blank Template') }}</span>
@@ -80,7 +80,7 @@
 
                                 <div class="flex flex-col gap-xs">
                                     <label class="text-sm font-bold text-h">{{ lexicon('label_common_UploadJson', 'Upload JSON Manifest') }}</label>
-                                    <x-dropzone :url="route('admin.sections.import')"
+                                    <x-dropzone :url="route('admin.divisions.import')"
                                         id="sections-import-dropzone"
                                         :maxFiles="1"
                                         acceptedFiles="application/json,.json,.txt"
@@ -165,7 +165,7 @@
                             <x-button type="button"
                                 variant="text"
                                 class="text-danger hover-text-h text-sm flex items-center gap-xs"
-                                x-data="deleteAction('/admin/sections/{{ $sec->id }}', 'DELETE', '{{ addslashes($sec->division_title) }}')"
+                                x-data="deleteAction('/admin/divisions/{{ $sec->id }}', 'DELETE', '{{ addslashes($sec->division_title) }}')"
                                 @click.prevent="confirmDelete()"
                                 aria-label="{{ lexicon('tooltip_SectionsPositions_DeleteSection', 'Delete this section and its positions') }}"
                                 x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_DeleteSection', 'Delete this section and its positions')) }}'">
@@ -236,7 +236,7 @@
                                     <x-button type="button"
                                         variant="text"
                                         class="text-xs text-danger hover-text-h p-0 flex items-center gap-xs"
-                                        x-data="deleteAction('/admin/positions/{{ $pos->id }}', 'DELETE', '{{ addslashes($pos->assignment_title) }}')"
+                                        x-data="deleteAction('/admin/assignments/{{ $pos->id }}', 'DELETE', '{{ addslashes($pos->assignment_title) }}')"
                                         @click.prevent="confirmDelete()"
                                         aria-label="{{ lexicon('tooltip_SectionsPositions_DeletePosition', 'Delete this position') }}"
                                         x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_DeletePosition', 'Delete this position')) }}'">
@@ -267,7 +267,7 @@
                     {{ lexicon('label_SectionsPositions_CreateSection', 'Create Section') }}
                 </x-slot:top>
 
-                <form action="/admin/sections" method="POST" class="flex flex-col gap-md" x-data="ajaxForm" @submit.prevent="submit">
+                <form action="/admin/divisions" method="POST" class="flex flex-col gap-md" x-data="ajaxForm" @submit.prevent="submit">
                     @csrf
                     <div class="grid grid-cols-1 md-grid-cols-2 gap-md bg-panel-sub border border-panel rounded-panel p-3">
                         <x-form-input name="division_title"
@@ -371,7 +371,7 @@
                     {{ lexicon('label_SectionsPositions_EditSection', 'Edit Section') }}
                 </x-slot:top>
 
-                <form :action="'/admin/sections/' + section.id" method="POST" class="flex flex-col gap-md" x-data="ajaxForm" @submit.prevent="submit">
+                <form :action="'/admin/divisions/' + section.id" method="POST" class="flex flex-col gap-md" x-data="ajaxForm" @submit.prevent="submit">
                     @csrf
                     @method('PUT')
                     <div class="grid grid-cols-1 md-grid-cols-2 gap-md bg-panel-sub border border-panel rounded-panel p-3">
@@ -480,7 +480,7 @@
                     </div>
                 </x-slot:top>
 
-                <form :action="'/admin/sections/' + position.division_id + '/positions'" method="POST" class="flex flex-col gap-md" x-data="ajaxForm" @submit.prevent="submit">
+                <form :action="'/admin/assignments/divisions/' + position.division_id" method="POST" class="flex flex-col gap-md" x-data="ajaxForm" @submit.prevent="submit">
                     @csrf
                     <div class="grid grid-cols-1 md-grid-cols-2 gap-md bg-panel-sub border border-panel rounded-panel p-3">
                         <x-form-input name="assignment_title"
@@ -569,7 +569,7 @@
                     {{ lexicon('label_SectionsPositions_EditPosition', 'Edit Position') }}
                 </x-slot:top>
 
-                <form :action="'/admin/positions/' + position.id" method="POST" class="flex flex-col gap-md" x-data="ajaxForm" @submit.prevent="submit">
+                <form :action="'/admin/assignments/' + position.id" method="POST" class="flex flex-col gap-md" x-data="ajaxForm" @submit.prevent="submit">
                     @csrf
                     @method('PUT')
 

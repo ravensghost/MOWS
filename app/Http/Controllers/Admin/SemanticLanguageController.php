@@ -56,7 +56,12 @@ class SemanticLanguageController extends Controller
             } catch (\Exception $e) {
                 $errorMsg = 'AI Translation Failed: ' . $e->getMessage();
 
-                return response()->json(['status' => 'error', 'message' => lexicon('msg_Lexicon_AiFailed', $errorMsg), 'data' => null, 'redirect' => null], 500);
+                return response()->json([
+                    'status'   => 'error',
+                    'message'  => lexicon('msg_Lexicon_AiFailed', $errorMsg),
+                    'data'     => null,
+                    'redirect' => null,
+                ], 500);
             }
         } else {
             LexiconCodex::chunk(100, function ($entries) use ($locale) {
@@ -73,7 +78,12 @@ class SemanticLanguageController extends Controller
         Cache::forget('lexicon_codex');
         $defaultMsg = "Language module [{$locale}] initialised successfully.";
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_Lexicon_LangInitialised', $defaultMsg), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Lexicon_LangInitialised', $defaultMsg),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 
     public function update(Request $request)
@@ -92,7 +102,12 @@ class SemanticLanguageController extends Controller
 
         Cache::forget('global_settings');
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_Lexicon_LangUpdated', 'Language display name updated.'), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Lexicon_LangUpdated', 'Language display name updated.'),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 
     public function destroy($code)
@@ -102,7 +117,12 @@ class SemanticLanguageController extends Controller
         $code = strtolower(trim($code));
 
         if ($code === 'gb') {
-            return response()->json(['status' => 'error', 'message' => lexicon('msg_Lexicon_CannotDeleteCore', 'The core British English language pack cannot be deleted.'), 'data' => null, 'redirect' => null], 422);
+            return response()->json([
+                'status'   => 'error',
+                'message'  => lexicon('msg_Lexicon_CannotDeleteCore', 'The core British English language pack cannot be deleted.'),
+                'data'     => null,
+                'redirect' => null,
+            ], 422);
         }
 
         $globalSetting = Configuration::where('configuration_token', 'global_lexicon_setting')->first();
@@ -127,7 +147,12 @@ class SemanticLanguageController extends Controller
 
         $model = ['locale' => $code];
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_Lexicon_LanguageDeleted', 'Language pack deleted successfully and global settings updated.'), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Lexicon_LanguageDeleted', 'Language pack deleted successfully and global settings updated.'),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 
     public function clear($code)
@@ -153,7 +178,12 @@ class SemanticLanguageController extends Controller
         Cache::forget('lexicon_codex');
         $model = ['locale' => $code];
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_Lexicon_LanguageCleared', 'Language entries cleared successfully.'), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Lexicon_LanguageCleared', 'Language entries cleared successfully.'),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 
     public function export($locale = 'gb')
@@ -202,11 +232,21 @@ class SemanticLanguageController extends Controller
             if (json_last_error() !== JSON_ERROR_NONE) {
                 $parseErrMsg = 'JSON Parse Error: ' . json_last_error_msg();
 
-                return response()->json(['status' => 'error', 'message' => lexicon('msg_Lexicon_JsonParseError', $parseErrMsg), 'data' => null, 'redirect' => null], 422);
+                return response()->json([
+                    'status'   => 'error',
+                    'message'  => lexicon('msg_Lexicon_JsonParseError', $parseErrMsg),
+                    'data'     => null,
+                    'redirect' => null,
+                ], 422);
             }
 
             if (! is_array($importedData)) {
-                return response()->json(['status' => 'error', 'message' => lexicon('msg_Lexicon_InvalidJsonStructure', 'Invalid JSON structure.'), 'data' => null, 'redirect' => null], 422);
+                return response()->json([
+                    'status'   => 'error',
+                    'message'  => lexicon('msg_Lexicon_InvalidJsonStructure', 'Invalid JSON structure.'),
+                    'data'     => null,
+                    'redirect' => null,
+                ], 422);
             }
 
             $langCode = null;
@@ -226,7 +266,12 @@ class SemanticLanguageController extends Controller
             }
 
             if (empty($langCode)) {
-                return response()->json(['status' => 'error', 'message' => lexicon('msg_Lexicon_TargetLangMissing', 'Target language could not be determined.'), 'data' => null, 'redirect' => null], 422);
+                return response()->json([
+                    'status'   => 'error',
+                    'message'  => lexicon('msg_Lexicon_TargetLangMissing', 'Target language could not be determined.'),
+                    'data'     => null,
+                    'redirect' => null,
+                ], 422);
             }
 
             $mergedCount = 0;
@@ -294,11 +339,21 @@ class SemanticLanguageController extends Controller
             $model = ['locale' => $langCode, 'merged_count' => $mergedCount, 'created_count' => $createdCount];
             $importMsg = "Successfully merged {$mergedCount} existing entries and added {$createdCount} new entries for language [{$langCode}].";
 
-            return response()->json(['status' => 'success', 'message' => lexicon('msg_Lexicon_ImportSuccess', $importMsg), 'data' => $model, 'redirect' => null], 200);
+            return response()->json([
+                'status'   => 'success',
+                'message'  => lexicon('msg_Lexicon_ImportSuccess', $importMsg),
+                'data'     => $model,
+                'redirect' => null,
+            ], 200);
         } catch (\Exception $e) {
             $exceptionMsg = 'Import Exception: ' . $e->getMessage();
 
-            return response()->json(['status' => 'error', 'message' => lexicon('msg_Lexicon_ImportException', $exceptionMsg), 'data' => null, 'redirect' => null], 500);
+            return response()->json([
+                'status'   => 'error',
+                'message'  => lexicon('msg_Lexicon_ImportException', $exceptionMsg),
+                'data'     => null,
+                'redirect' => null,
+            ], 500);
         }
     }
 

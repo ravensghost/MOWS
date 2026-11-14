@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Page;
+use App\Models\Book;
 use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
@@ -16,7 +16,7 @@ class UserController extends Controller
     {
         abort_unless(auth()->user()->can('manage_users'), 403, lexicon('msg_Users_Unauthorised', 'Unauthorised access to User Management.'));
 
-        $systemPage = Page::where('slug', 'admin/users')
+        $systemPage = Book::where('book_url', 'admin/users')
             ->where('is_published', true)
             ->with(['layout.blocks', 'widgets' => function ($query) {
                 $query->orderBy('page_widget.sort_order');

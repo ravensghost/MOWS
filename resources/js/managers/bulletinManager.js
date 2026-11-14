@@ -5,7 +5,7 @@ export default () => ({
     id: '',
     title: '',
     content: '',
-    formAction: '/admin/news',
+    formAction: '/admin/bulletins',
     method: 'POST',
     searchQuery: '',
     searchHelperInstance: null,
@@ -62,14 +62,14 @@ export default () => ({
                 id: '',
                 title: '',
                 content: ''
-            }, '/admin/news');
+            }, '/admin/bulletins');
             this.mode = 'create';
-            this.formAction = '/admin/news';
+            this.formAction = '/admin/bulletins';
             this.method = 'POST';
         } else {
-            window.Modal.edit(this, data, (id) => `/admin/news/${id}`);
+            window.Modal.edit(this, data, (id) => `/admin/bulletins/${id}`);
             this.mode = 'edit';
-            this.formAction = `/admin/news/${this.id}`;
+            this.formAction = `/admin/bulletins/${this.id}`;
             this.method = 'PUT';
         }
         this.modalOpen = true;

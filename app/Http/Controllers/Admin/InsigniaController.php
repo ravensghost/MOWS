@@ -3,15 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Configuration;
+use App\Models\Division;
+use App\Models\Insignia;
+use App\Models\InsigniaCatalogue;
+use App\Models\Book;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use App\Models\InsigniaCatalogue;
-use App\Models\Division;
-use App\Models\Configuration;
-use App\Models\Page;
-use App\Models\Insignia;
 
 class InsigniaController extends Controller
 {
@@ -26,8 +26,8 @@ class InsigniaController extends Controller
     public function index()
     {
         abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
-
-        $systemPage = Page::where('slug', 'admin/ranks')
+        
+        $systemPage = Book::whereIn('book_url', ['admin/insignia', 'admin/ranks'])
             ->where('is_published', true)
             ->with(['layout.blocks', 'widgets' => function ($query) {$query->orderBy('page_widget.insignia_sort_order');
             }])
@@ -128,7 +128,7 @@ class InsigniaController extends Controller
         ], 200);
     }
 
-    public function update(Request $request, Insignia$rank)
+    public function update(Request $request, Insignia$insignia)
     {
         abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
 
@@ -150,23 +150,23 @@ class InsigniaController extends Controller
         ]);
 
         $validated['is_visible'] =$request->boolean('is_visible', false);
-        $rank->update($validated);
+        $insignia->update($validated);
 
         $this->clearRankCaches();
 
         return response()->json([
             'status'   => 'success',
             'message'  => lexicon('msg_Ranks_Updated', 'Rank updated successfully.'),
-            'data'     => $rank,
+            'data'     => $insignia,
             'redirect' => null,
         ], 200);
     }
 
-    public function destroy(Insignia $rank)
+    public function destroy(Insignia $insignia)
     {
         abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
 
-        $rank->delete();
+        $insignia->delete();
 
         $this->clearRankCaches();
 
@@ -303,7 +303,7 @@ class InsigniaController extends Controller
         $content = file_get_contents($path);
         $data = json_decode($content, true);
 
-        if (!isset($data['insignia_catalogues']) \vert{}\vert{} !is_array($data['insignia_catalogues'])) {
+        if (!isset($data['insignia_catalogues']) || !is_array($data['insignia_catalogues'])) {
             return response()->json([
                 'status'   => 'error',
                 'message'  => lexicon('msg_Ranks_InvalidManifest', 'Invalid insignia manifest format.'),

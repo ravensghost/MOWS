@@ -3,21 +3,24 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use App\Models\Shelf;
-use App\Models\Volume;
 use App\Models\Book;
 use App\Models\PublicationState;
+use App\Models\Shelf;
+use App\Models\Volume;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class PublicationController extends Controller
 {
     public function storyManager()
     {
-        $systemPage = Book::where('books_uri', 'admin/story')
+        $systemPage = Book::whereIn('books_uri', ['admin/volumes', 'admin/story'])
             ->where('is_published', true)
-            ->with(['layout.blocks', 'widgets' => function ($query) {$query->orderBy('book_modules.module_sort_order');
-            }])
+            ->with([
+                'layout.blocks',
+                'widgets' => function ($query) {$query->orderBy('book_modules.module_sort_order');
+                },
+            ])
             ->firstOrFail();
 
         $shelves = Shelf::with([

@@ -16,7 +16,7 @@
             <x-page-header :title="lexicon('admin_label_NavOptions', 'Navigation Options')">
                 <x-slot:actions>
                     <x-button variant="success"
-                              href="/admin/navigation"
+                              href="/admin/table-of-contents"
                               aria-label="{{ lexicon('tooltip_Navigation_BackToNav', 'Return to Navigation Manager') }}"
                               x-tooltip="'{{ addslashes(lexicon('tooltip_Navigation_BackToNav', 'Return to Navigation Manager')) }}'">
                         &larr; {{ lexicon('btn_Navigation_BackToNav', 'Back to Navigation Manager') }}
@@ -168,7 +168,7 @@
                                                   variant="text"
                                                   class="text-danger hover-danger text-xs"
                                                   x-data="deleteAction(
-                                                      '/admin/navigation/options/{{ $parameter->id }}',
+                                                      '/admin/table-of-contents/options/{{ $parameter->id }}',
                                                       'DELETE',
                                                       '{{ addslashes($parameter->parameter_value) }}',
                                                       '{{ addslashes(lexicon('msg_Navigation_ConfirmDeleteOption', 'Are you sure you want to delete this dropdown option?')) }}'

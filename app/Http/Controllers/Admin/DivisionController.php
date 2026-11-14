@@ -3,16 +3,16 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Assignment;
+use App\Models\Book;
+use App\Models\Division;
+use App\Models\DivisionCatalogue;
+use App\Models\InsigniaCatalogue;
+use App\Services\AILoreService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use App\Models\Division;
-use App\Models\DivisionCatalogue;
-use App\Models\InsigniaCatalogue;
-use App\Models\Assignment;
-use App\Models\Page;
-use App\Services\AILoreService;
 
 class DivisionController extends Controller
 {
@@ -31,11 +31,14 @@ class DivisionController extends Controller
     {
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
 
-        $systemPage = Page::where('slug', 'admin/sections')
+        $systemPage = Book::where('book_url', 'admin/divisions')
             ->where('is_published', true)
-            ->with(['layout.blocks', 'widgets' => function ($query) {
-                $query->orderBy('page_widget.sort_order');
-            }])
+            ->with([
+                'grid.gridModules',
+                'modules' => function ($query) {
+                    $query->orderBy('book_modules.module_sort_order');
+                }
+            ])
             ->firstOrFail();
 
         $sections = Division::with([
@@ -80,7 +83,7 @@ class DivisionController extends Controller
         return response()->json(['status' => 'success', 'message' => lexicon('msg_SectionsPositions_SectionCreated', 'Section created successfully.'), 'data' => $model, 'redirect' => null], 200);
     }
 
-    public function update(Request $request, Division $section)
+    public function update(Request $request, Division $division)
     {
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
 
@@ -94,37 +97,40 @@ class DivisionController extends Controller
             'insignia_catalogue_id' => 'nullable|exists:insignia_catalogues,id',
         ]);
 
-        $section->update([
+        $division->update([
             'division_title'        => $validated['division_title'],
             'division_description'  => $validated['division_description'] ?? null,
             'division_base_colour'  => $validated['division_base_colour'],
             'division_sort_order'   => $validated['division_sort_order'],
             'is_visible'            => $request->boolean('is_visible', false),
             'division_catalogue_id' => $validated['division_catalogue_id'] ?? null,
-            'insignia_catalogue_id' => $validated['insignia_catalogue_id'] ?? $section->insignia_catalogue_id,
+            'insignia_catalogue_id' => $validated['insignia_catalogue_id'] ?? $division->insignia_catalogue_id,
         ]);
+
+        $model = $division;
 
         $this->clearDivisionCaches();
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_SectionsPositions_SectionUpdated', 'Section updated successfully.'), 'data' => $section, 'redirect' => null], 200);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_SectionsPositions_SectionUpdated', 'Section updated successfully.'), 'data' => $model, 'redirect' => null], 200);
     }
 
-    public function destroy(Division $section)
+    public function destroy(Division $division)
     {
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
 
-        $section->delete();
+        $model = $division;
+        $division->delete();
 
         $this->clearDivisionCaches();
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_SectionsPositions_SectionDeleted', 'Section deleted successfully.'), 'data' => $section, 'redirect' => null], 200);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_SectionsPositions_SectionDeleted', 'Section deleted successfully.'), 'data' => $model, 'redirect' => null], 200);
     }
 
     public function generateDescription(Request $request, AILoreService $aiLoreService)
     {
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
 
-        $divisionTitle = trim((string) $request->input('division_title'));
+        $divisionTitle = trim((string) $request->input('division_title', $request->input('name', '')));
         $hint = trim((string) $request->input('prompt_hint', ''));
 
         if (empty($divisionTitle)) {
@@ -141,9 +147,17 @@ class DivisionController extends Controller
 
         $model = (object) [
             'division_description' => $generatedText,
+            'description'          => $generatedText,
         ];
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_SectionsPositions_DescGenerated', 'Section description generated successfully.'), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'               => 'success',
+            'message'              => lexicon('msg_SectionsPositions_DescGenerated', 'Section description generated successfully.'),
+            'data'                 => $model,
+            'division_description' => $generatedText,
+            'description'          => $generatedText,
+            'redirect'             => null,
+        ], 200);
     }
 
     public function export()
@@ -299,8 +313,10 @@ class DivisionController extends Controller
             }
         });
 
+        $model = $importedDivisions;
+
         $this->clearDivisionCaches();
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_SectionsPositions_ImportSuccess', 'Divisions and assignments imported successfully.'), 'data' => $importedDivisions, 'redirect' => null], 200);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_SectionsPositions_ImportSuccess', 'Divisions and assignments imported successfully.'), 'data' => $model, 'redirect' => null], 200);
     }
 }

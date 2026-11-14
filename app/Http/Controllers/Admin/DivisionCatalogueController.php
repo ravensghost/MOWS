@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use App\Models\Division;
 use App\Models\DivisionCatalogue;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class DivisionCatalogueController extends Controller
 {
@@ -81,12 +81,20 @@ class DivisionCatalogueController extends Controller
     {
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
 
-        // Reset division_catalogue_id for divisions previously linked to this catalogue
-        Division::where('division_catalogue_id', $divisionCatalogue->id)->update(['division_catalogue_id' => null]);
+        $validated = $request->validate([
+            'division_ids'   => 'nullable|array',
+            'division_ids.*' => 'exists:divisions,id',
+        ]);
 
-        // Link newly selected divisions
-        if ($request->has('sections')) {
-            Division::whereIn('id', $request->input('sections', []))->update(['division_catalogue_id' => $divisionCatalogue->id]);
+        $divisionIds = $validated['division_ids'] ?? [];
+
+        Division::where('division_catalogue_id', $divisionCatalogue->id)
+            ->whereNotIn('id', $divisionIds)
+            ->update(['division_catalogue_id' => null]);
+
+        if (!empty($divisionIds)) {
+            Division::whereIn('id', $divisionIds)
+                ->update(['division_catalogue_id' => $divisionCatalogue->id]);
         }
 
         $model = $divisionCatalogue->load('divisions');

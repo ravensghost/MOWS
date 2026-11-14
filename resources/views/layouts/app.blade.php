@@ -7,7 +7,7 @@
     
     @stack('meta')
 
-    <!-- Lexicon-Integrated Page Title with Fallback -->
+    <!-- Lexicon-Integrated Book Title with Fallback -->
     <title>@hasSection('title') @yield('title') - {{ config('app.name', 'MOWS') }} @else {{ config('app.name', 'MOWS') }} @endif</title>
 
     @php
@@ -23,17 +23,17 @@
     <!-- <link rel="stylesheet" href="{{ asset('skins/' . $currentSkin . '/css/theme.css') }}?v={{ $themeVersion }}"> -->
 
     @php
-        $sectionColors = \Illuminate\Support\Facades\Cache::rememberForever('global_section_colors', function() { 
+        $divisionColours = \Illuminate\Support\Facades\Cache::rememberForever('global_division_colours', function () { 
             return \App\Models\Division::all(['id', 'division_base_colour'])->toArray(); 
         });
 
-        $sectionCss = collect($sectionColors)
-            ->map(fn($sec) => ".section-theme-{$sec['id']} { --section-color: {$sec['division_base_colour']}; }")
+        $divisionCss = collect($divisionColours)
+            ->map(fn($div) => ".section-theme-{$div['id']} { --section-color: {$div['division_base_colour']}; }")
             ->implode("\n        ");
     @endphp
 
-    @if(!empty($sectionCss))
-        {!! "<style>\n        {$sectionCss}\n    </style>" !!}
+    @if(!empty($divisionCss))
+        {!! "<style>\n        {$divisionCss}\n    </style>" !!}
     @endif
 
     <!-- Vite handles 3rd-party vendor styles & core JS -->
@@ -63,14 +63,14 @@
 
     @auth
         <x-messenger-modal
-            :myCharacters="$myCharacters ?? collect()"
+            :myPersonas="$myPersonas ?? collect()"
             :users="$users ?? collect()"
-            :characters="$characters ?? collect()"
+            :personas="$personas ?? collect()"
             :threads="$threads ?? collect()" />
 
         <x-chapter-modal
             :activeBooks="$activeBooks ?? collect()"
-            :allCharacters="$allCharacters ?? collect()"
+            :allPersonas="$allPersonas ?? collect()"
             :languageRatings="$languageRatings ?? collect()"
             :sexRatings="$sexRatings ?? collect()"
             :violenceRatings="$violenceRatings ?? collect()" />

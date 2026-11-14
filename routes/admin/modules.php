@@ -3,7 +3,7 @@
 use App\Http\Controllers\Admin\ModuleController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/widgets/sync', [ModuleController::class, 'sync'])->name('widgets.sync');
-Route::post('/widgets', [ModuleController::class, 'store']);
-Route::put('/widgets/{id}', [ModuleController::class, 'update']);
-Route::delete('/widgets/{id}', [ModuleController::class, 'destroy']);
+Route::post('/modules/sync', [ModuleController::class, 'sync'])->name('modules.sync');
+Route::post('/modules', [ModuleController::class, 'store'])->name('modules.store');
+Route::put('/modules/{id}', [ModuleController::class, 'update'])->name('modules.update');
+Route::delete('/modules/{id}', [ModuleController::class, 'destroy'])->name('modules.destroy');

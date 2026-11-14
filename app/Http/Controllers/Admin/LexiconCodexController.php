@@ -15,7 +15,7 @@ class LexiconCodexController extends Controller
     {
         abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
 
-        $systemPage = Book::where('books_uri', 'admin/lexicon')
+        $systemPage = Book::where('books_uri', 'admin/lexicon-codex')
             ->where('is_published', true)
             ->with([
                 'grid.gridModules',
@@ -138,7 +138,12 @@ class LexiconCodexController extends Controller
             Cache::forget('lexicon_codex');
         }
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_Lexicon_TermUpdated', 'Lexicon term updated successfully.'), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Lexicon_TermUpdated', 'Lexicon term updated successfully.'),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 
     public function destroyTerm($id)
@@ -148,7 +153,12 @@ class LexiconCodexController extends Controller
         $model = LexiconCodex::findOrFail($id);$model->delete();
         Cache::forget('lexicon_codex');
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_Lexicon_TermDeleted', 'Lexicon term deleted successfully.'), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Lexicon_TermDeleted', 'Lexicon term deleted successfully.'),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 
     public function destroyGroup($groupName)
@@ -159,7 +169,12 @@ class LexiconCodexController extends Controller
         Cache::forget('lexicon_codex');
         $model = ['prefix_group_title' => $groupName, 'deleted_count' =>$deletedCount];
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_Lexicon_GroupDeleted', 'Lexicon prefix group deleted successfully.'), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Lexicon_GroupDeleted', 'Lexicon prefix group deleted successfully.'),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 
     public function destroySubgroup($prefixGroupTitle,$groupTitle)
@@ -172,6 +187,11 @@ class LexiconCodexController extends Controller
         Cache::forget('lexicon_codex');
         $model = ['prefix_group_title' =>$prefixGroupTitle, 'group_title' => $groupTitle, 'deleted_count' =>$deletedCount];
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_Lexicon_SubgroupDeleted', 'Lexicon subgroup deleted successfully.'), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Lexicon_SubgroupDeleted', 'Lexicon subgroup deleted successfully.'),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 }

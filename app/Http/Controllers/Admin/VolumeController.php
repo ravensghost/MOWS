@@ -10,7 +10,7 @@ class VolumeController extends Controller
 {
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validated =$request->validate([
             'volume_title'         => 'required|string|max:255',
             'volume_synopsis'      => 'nullable|string',
             'shelf_id'             => 'nullable|exists:shelves,id',
@@ -19,8 +19,8 @@ class VolumeController extends Controller
             'ic_time'              => 'nullable|string|max:255',
         ]);
 
-        $maxOrder = Volume::where('shelf_id', $validated['shelf_id'] ?? null)->max('volume_sort_order') ?? 0;
-        $validated['volume_sort_order'] = $maxOrder + 1;
+        $maxOrder = Volume::where('shelf_id',$validated['shelf_id'] ?? null)->max('volume_sort_order') ?? 0;
+        $validated['volume_sort_order'] =$maxOrder + 1;
 
         $volume = Volume::create($validated);
 
@@ -32,9 +32,9 @@ class VolumeController extends Controller
         ], 200);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request,$id)
     {
-        $validated = $request->validate([
+        $validated =$request->validate([
             'volume_title'         => 'required|string|max:255',
             'volume_synopsis'      => 'nullable|string',
             'shelf_id'             => 'nullable|exists:shelves,id',
@@ -46,23 +46,22 @@ class VolumeController extends Controller
         $volume = Volume::findOrFail($id);
 
         // Assuming completed publication state ID is 3
-        $wasCompleted = (int) $volume->publication_state_id === 3;
+        $wasCompleted = (int)$volume->publication_state_id === 3;
         $volume->update($validated);
-        $isNowCompleted = (int) $volume->publication_state_id === 3;
+        $isNowCompleted = (int)$volume->publication_state_id === 3;
 
         return response()->json([
             'status'         => 'success',
             'message'        => lexicon('msg_Story_VolumeUpdated', 'Volume updated successfully.'),
             'data'           => $volume,
-            'trigger_review' => (!$wasCompleted && $isNowCompleted),
+            'trigger_review' => (!$wasCompleted &&$isNowCompleted),
             'redirect'       => null,
         ], 200);
     }
 
     public function destroy($id)
     {
-        $volume = Volume::findOrFail($id);
-        $volume->delete();
+        $volume = Volume::findOrFail($id);$volume->delete();
 
         return response()->json([
             'status'   => 'success',
@@ -74,7 +73,7 @@ class VolumeController extends Controller
 
     public function reorder(Request $request)
     {
-        foreach ($request->input('items', []) as $index => $item) {
+        foreach ($request->input('items', []) as $index =>$item) {
             if (!isset($item['id'])) {
                 continue;
             }

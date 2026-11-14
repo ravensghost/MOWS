@@ -16,7 +16,7 @@ class TableOfContentsController extends Controller
     {
         abort_unless(auth()->user()->can('manage_navigation'), 403, lexicon('msg_Navigation_Unauthorised', 'Unauthorised access to Navigation Management.'));
 
-        $systemPage = Book::where('book_url', 'admin/navigation')
+        $systemPage = Book::where('book_url', 'admin/table-of-contents')
             ->where('is_published', true)
             ->with([
                 'grid.gridModules',
@@ -153,7 +153,7 @@ class TableOfContentsController extends Controller
     {
         abort_unless(auth()->user()->can('manage_navigation'), 403, lexicon('msg_Navigation_Unauthorised', 'Unauthorised access to Navigation Management.'));
 
-        $systemPage = Book::where('book_url', 'admin/navigation/options')
+        $systemPage = Book::where('book_url', 'admin/table-of-contents/options')
             ->where('is_published', true)
             ->with([
                 'grid.gridModules',

@@ -3,7 +3,7 @@
 use App\Http\Controllers\Admin\ShelfController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/bookcases/reorder', [ShelfController::class, 'reorder']);
-Route::post('/bookcases', [ShelfController::class, 'store']);
-Route::put('/bookcases/{id}', [ShelfController::class, 'update']);
-Route::delete('/bookcases/{id}', [ShelfController::class, 'destroy']);
+Route::post('/shelves/reorder', [ShelfController::class, 'reorder'])->name('admin.shelves.reorder');
+Route::post('/shelves', [ShelfController::class, 'store'])->name('admin.shelves.store');
+Route::put('/shelves/{id}', [ShelfController::class, 'update'])->name('admin.shelves.update');
+Route::delete('/shelves/{id}', [ShelfController::class, 'destroy'])->name('admin.shelves.destroy');

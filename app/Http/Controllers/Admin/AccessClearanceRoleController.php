@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use App\Models\Book;
 use App\Models\TableOfContent;
-use Spatie\Permission\Models\Role;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class AccessClearanceRoleController extends Controller
 {
@@ -16,7 +16,7 @@ class AccessClearanceRoleController extends Controller
     {
         abort_unless(auth()->user()->can('manage_roles'), 403, lexicon('msg_Roles_Unauthorised', 'Unauthorised access to Role Management.'));
 
-        $systemPage = Book::where('book_url', 'admin/roles')
+        $systemPage = Book::where('book_url', 'admin/access-clearance-roles')
             ->where('is_published', true)
             ->with([
                 'grid.gridModules',
@@ -32,7 +32,7 @@ class AccessClearanceRoleController extends Controller
             ->orderBy('entry_sort_order')
             ->get();
 
-        return view('admin.roles', [
+        return view('admin.access_clearance_roles', [
             'systemPage'      => $systemPage,
             'roles'           => $roles,
             'allPermissions'  => $allPermissions,
@@ -70,32 +70,26 @@ class AccessClearanceRoleController extends Controller
             $role->update(['name' =>$newName]);
             $role->syncPermissions($permissionModels);
 
-            return response()->json([
-                'status'   => 'success',
-                'message'  => lexicon('msg_Roles_RoleUpdated', 'Role updated successfully!'),
-                'data'     => $role->load('permissions'),
-                'redirect' => null,
-            ], 200);
+            $model =$role->load('permissions');
+
+            return response()->json(['status' => 'success', 'message' => lexicon('msg_Roles_RoleUpdated', 'Role updated successfully!'), 'data' => $model, 'redirect' => null], 200);
         }
 
         $role = Role::create(['name' => strtolower(trim($validated['name']))]);
         $role->syncPermissions($permissionModels);
 
-        return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Roles_RoleCreated', 'Role created successfully!'),
-            'data'     => $role->load('permissions'),
-            'redirect' => null,
-        ], 200);
+        $model =$role->load('permissions');
+
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_Roles_RoleCreated', 'Role created successfully!'), 'data' => $model, 'redirect' => null], 200);
     }
 
     public function destroy($id)
     {
         abort_unless(auth()->user()->can('manage_roles'), 403, lexicon('msg_Roles_Unauthorised', 'Unauthorised access to Role Management.'));
 
-        $role = Role::findOrFail($id);
+        $model = Role::findOrFail($id);
 
-        if ($role->name === 'webmaster') {
+        if ($model->name === 'webmaster') {
             return response()->json([
                 'status'   => 'error',
                 'message'  => lexicon('msg_Roles_CannotDeleteWebmaster', 'Cannot delete the Webmaster role.'),
@@ -104,13 +98,8 @@ class AccessClearanceRoleController extends Controller
             ], 403);
         }
 
-        $role->delete();
+        $model->delete();
 
-        return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Roles_RoleDeleted', 'Role deleted successfully!'),
-            'data'     => $role,
-            'redirect' => null,
-        ], 200);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_Roles_RoleDeleted', 'Role deleted successfully!'), 'data' => $model, 'redirect' => null], 200);
     }
 }

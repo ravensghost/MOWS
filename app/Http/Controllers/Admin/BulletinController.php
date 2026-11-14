@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\Bulletin;
 use App\Models\Book;
+use App\Models\Bulletin;
+use App\Services\NotificationService;
+use Illuminate\Http\Request;
 use Stevebauman\Purify\Facades\Purify;
 
 class BulletinController extends Controller
@@ -18,7 +19,7 @@ class BulletinController extends Controller
                 $query->orderBy('module_sort_order');
             }
         ])
-            ->where('slug', 'admin/news')
+            ->where('slug', 'admin/bulletins')
             ->where('is_published', true)
             ->firstOrFail();
 
@@ -32,42 +33,61 @@ class BulletinController extends Controller
         // 1. Validate FIRST. If this fails, it stops execution immediately.
         $validated = $request->validate([
             'bulletin_title' => 'required|string|max:255',
-            'bulletin_text' => 'required|string',
+            'bulletin_text'  => 'required|string',
         ]);
 
         // 2. Create SECOND (only runs if validation passes)
-        $news = Bulletin::create([
+        $model = Bulletin::create([
             'bulletin_title' => $validated['bulletin_title'],
-            'bulletin_text' => Purify::clean($validated['bulletin_text']),
-            'user_id' => $request->user()->id,
-            'published_at' => now(),
+            'bulletin_text'  => Purify::clean($validated['bulletin_text']),
+            'user_id'        => $request->user()->id,
+            'published_at'   => now(),
         ]);
 
         // 3. Push to Discord THIRD (only runs if creation succeeds)
-        \App\Services\NotificationService::sendDiscord(
+        NotificationService::sendDiscord(
             'news',
-            "📰 **New Station Announcement!**\n**{$news->bulletin_title}**\nCheck out the latest broadcast on the station."
+            "📰 **New Station Announcement!**\n**{$model->bulletin_title}**\nCheck out the latest broadcast on the station."
         );
 
-        return response()->json(['success' => true]);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Bulletins_Created', 'Bulletin published successfully.'),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
-            'bulletin_title'   => 'required|string|max:255',
-            'bulletin_text' => 'required|string',
+            'bulletin_title' => 'required|string|max:255',
+            'bulletin_text'  => 'required|string',
         ]);
 
         $validated['bulletin_text'] = Purify::clean($validated['bulletin_text']);
-        Bulletin::where('id', $id)->update($validated);
 
-        return response()->json(['success' => true]);
+        $model = Bulletin::findOrFail($id);
+        $model->update($validated);
+
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Bulletins_Updated', 'Bulletin updated successfully.'),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 
     public function destroy($id)
     {
-        Bulletin::where('id', $id)->delete();
-        return response()->json(['success' => true]);
+        $model = Bulletin::findOrFail($id);
+        $model->delete();
+
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Bulletins_Deleted', 'Bulletin deleted successfully.'),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 }

@@ -3,8 +3,8 @@
 use App\Http\Controllers\Admin\ThematicBindingController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/themes', [ThematicBindingController::class, 'index']);
-Route::post('/themes/upload', [ThematicBindingController::class, 'upload']);
-Route::post('/themes/{skin}/activate', [ThematicBindingController::class, 'activate']);
-Route::get('/themes/{skin}/export', [ThematicBindingController::class, 'export']);
-Route::post('/themes/css', [ThematicBindingController::class, 'updateCss']);
+Route::get('/thematic-bindings', [ThematicBindingController::class, 'index'])->name('thematic_bindings.index');
+Route::post('/thematic-bindings/upload', [ThematicBindingController::class, 'upload'])->name('thematic_bindings.upload');
+Route::post('/thematic-bindings/{skin}/activate', [ThematicBindingController::class, 'activate'])->name('thematic_bindings.activate');
+Route::get('/thematic-bindings/{skin}/export', [ThematicBindingController::class, 'export'])->name('thematic_bindings.export');
+Route::post('/thematic-bindings/css', [ThematicBindingController::class, 'updateCss'])->name('thematic_bindings.css');
