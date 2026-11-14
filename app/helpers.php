@@ -2,122 +2,124 @@
 
 use App\Models\ChronologicalEngine;
 use App\Models\Configuration;
-use App\Models\LexiconEntry;
+use App\Models\LexiconCodex;
 use App\Models\Module;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use League\CommonMark\GithubFlavoredMarkdownConverter;
 use Stevebauman\Purify\Facades\Purify;
 
 if (! function_exists('lexicon')) {
+    /**
+     * Resolve a semantic token into its localised translation string, auto-seeding missing tokens.
+     */
     function lexicon(string $semanticToken, ?string $default = ''): string
     {
         static $memoryCache = null;
         static $lowerTokenMap = null;
 
         $locale = strtolower(App::getLocale() ?: 'gb');
-        $default =$default ?? '';
+        $default = $default ?? '';
 
-        // 1. Fetch raw array dictionary from Cache
+        // 1. Fetch lexicon dictionary from Cache via LexiconCodex model
         if ($memoryCache === null) {
-            $memoryCache = Cache::rememberForever('mows_lexicon', function () { return DB::table('lexicon_codex')->pluck('translation_payloads', 'semantic_token')->toArray(); });$lowerTokenMap = [];
-            foreach (array_keys($memoryCache) as $k) {$lowerTokenMap[strtolower($k)] =$k;
+            $memoryCache = Cache::rememberForever('lexicon_codex', function () {
+                return LexiconCodex::query()
+                    ->select(['semantic_token', 'default_lexicon_string', 'translation_payloads'])
+                    ->get()
+                    ->keyBy('semantic_token')
+                    ->map(fn(LexiconCodex $entry) => [
+                        'default'  => $entry->default_lexicon_string,
+                        'payloads' => is_array($entry->translation_payloads) ? $entry->translation_payloads : [],
+                    ])
+                    ->toArray();
+            });
+
+            $lowerTokenMap = [];
+            foreach (array_keys($memoryCache) as $tokenKey) {
+                $lowerTokenMap[strtolower($tokenKey)] = $tokenKey;
             }
         }
 
-        // Case-insensitive token resolution
-        $actualToken =$semanticToken;
-        if (! array_key_exists($actualToken,$memoryCache)) {
+        // 2. Case-insensitive token resolution
+        $actualToken = $semanticToken;
+        if (! array_key_exists($actualToken, $memoryCache)) {
             $lowerLookup = strtolower($semanticToken);
-            if (isset($lowerTokenMap[$lowerLookup])) {$actualToken = $lowerTokenMap[$lowerLookup];
+            if (isset($lowerTokenMap[$lowerLookup])) {
+                $actualToken = $lowerTokenMap[$lowerLookup];
             }
         }
 
-        // 2. Auto-Discovery for missing terms
-        if (! array_key_exists($actualToken,$memoryCache)) {
-            if (str_starts_with($semanticToken, 'public_label_')) {$masterGroup = 'public_label';
-                $subGroup = substr($semanticToken, 13) ?: 'general';
-            } elseif (str_starts_with($semanticToken, 'admin_label_')) {$masterGroup = 'admin_label';
-                $subGroup = substr($semanticToken, 12) ?: 'general';
+        // 3. Auto-discovery for missing tokens
+        if (! array_key_exists($actualToken, $memoryCache)) {
+            if (str_starts_with($semanticToken, 'public_label_')) {
+                $prefixGroup = 'public_label';
+                $remainder = substr($semanticToken, 13);
+                $parts = $remainder !== '' ? explode('_', $remainder) : [];
+                $groupTitle = (! empty($parts[0])) ? $parts[0] : 'NotDefinedRight';
+            } elseif (str_starts_with($semanticToken, 'admin_label_')) {
+                $prefixGroup = 'admin_label';
+                $remainder = substr($semanticToken, 12);
+                $parts = $remainder !== '' ? explode('_', $remainder) : [];
+                $groupTitle = (! empty($parts[0])) ? $parts[0] : 'NotDefinedRight';
             } else {
-                $parts = explode('_',$semanticToken);
-                $masterGroup = count($parts) > 0 ? $parts[0] : 'general';$subGroup = count($parts) > 1 ?$parts[1] : 'general';
+                $parts = explode('_', $semanticToken);
+                // Standard tokens MUST have at least 3 segments: prefix_group_action
+                if (count($parts) >= 3 && ! empty($parts[0]) && ! empty($parts[1])) {
+                    $prefixGroup = $parts[0];
+                    $groupTitle = $parts[1];
+                } else {
+                    $prefixGroup = ! empty($parts[0]) ? $parts[0] : 'NotDefinedRight';
+                    $groupTitle = 'NotDefinedRight';
+                }
             }
 
-            $defaultTranslations = ['gb' =>$default];
+            $defaultPayloads = ['gb' => $default];
 
             try {
-                DB::table('lexicon_codex')->insertOrIgnore([
-                    'semantic_token'         => $semanticToken,
-                    'prefix_group_title'     => $masterGroup,
-                    'group_title'            => $subGroup,
-                    'default_lexicon_string' => $default,
-                    'translation_payloads'   => json_encode($defaultTranslations),
-                    'created_at'             => now(),
-                    'updated_at'             => now(),
-                ]);
+                LexiconCodex::firstOrCreate(
+                    ['semantic_token' => $semanticToken],
+                    [
+                        'prefix_group_title'     => $prefixGroup,
+                        'group_title'            => $groupTitle,
+                        'default_lexicon_string' => $default,
+                        'translation_payloads'   => $defaultPayloads,
+                    ]
+                );
             } catch (\Throwable $e) {
-                // Silently avoid breaking the view render if DB insert fails
+                // Silently avoid breaking the view render if DB write fails
             }
 
-            $memoryCache[$semanticToken] =$defaultTranslations;
-            $lowerTokenMap[strtolower($semanticToken)] =$semanticToken;
-            Cache::put('mows_lexicon', $memoryCache, 86400);
+            $memoryCache[$semanticToken] = [
+                'default'  => $default,
+                'payloads' => $defaultPayloads,
+            ];
+            $lowerTokenMap[strtolower($semanticToken)] = $semanticToken;
+            Cache::forever('lexicon_codex', $memoryCache);
 
             return $default;
         }
 
-        $translations = $memoryCache[$actualToken] ?? [];
+        // 4. Resolve active locale payload with fallback to default_lexicon_string
+        $entry = $memoryCache[$actualToken];
+        $payloads = isset($entry['payloads']) && is_array($entry['payloads'])
+            ? array_change_key_case($entry['payloads'], CASE_LOWER)
+            : [];
 
-        // 3. Normalise JSON if stored as string
-        if (is_string($translations)) {
-            $translations = json_decode($translations, true) ?? [];
+        $resolvedPayload = $payloads[$locale] ?? null;
+
+        if ($resolvedPayload === '' || $resolvedPayload === null) {
+            $resolvedPayload = $payloads['gb'] ?? null;
         }
 
-        if (is_array($translations)) {
-            $translations = array_change_key_case($translations, CASE_LOWER);
-        } else {
-            $translations = [];
+        if ($resolvedPayload === '' || $resolvedPayload === null) {
+            $resolvedPayload = $entry['default'] ?? null;
         }
 
-        // 4. Look up translation with fallbacks
-        $resolvedPayload = $translations[$locale] ?? null;
-
-        if ($resolvedPayload === '' ||$resolvedPayload === null) {
-            $resolvedPayload =$translations['gb'] ?? null;
-        }
-
-        // 5. Intelligent Fallback Upgrade Logic
-        if ($resolvedPayload && !empty($default) && $resolvedPayload !==$default) {
-            $headlineMatch = Str::headline($actualToken);
-            $navMatch = Str::headline(str_replace('nav_link_', '',$actualToken));
-
-            if ($resolvedPayload ===$headlineMatch || $resolvedPayload ===$navMatch) {
-                $translations['gb'] =$default;
-                $resolvedPayload =$default;
-
-                try {
-                    DB::table('lexicon_codex')
-                        ->where('semantic_token', $actualToken)
-                        ->update([
-                            'default_lexicon_string' => $default,
-                            'translation_payloads'   => json_encode($translations),
-                            'updated_at'             => now(),
-                        ]);
-                } catch (\Throwable $e) {
-                    // Silently avoid breaking the view render
-                }
-
-                $memoryCache[$actualToken] =$translations;
-                Cache::put('mows_lexicon', $memoryCache, 86400);
-            }
-        }
-
-        return $resolvedPayload ?: $default;
+        return ($resolvedPayload !== '' && $resolvedPayload !== null) ? (string) $resolvedPayload : $default;
     }
 }
 
@@ -132,7 +134,7 @@ if (! function_exists('markdown')) {
         }
 
         $converter = new GithubFlavoredMarkdownConverter([
-            'html_input' => 'allow',
+            'html_input'         => 'allow',
             'allow_unsafe_links' => false,
         ]);
 
@@ -148,8 +150,8 @@ if (! function_exists('resolve_lexicon_locale')) {
      */
     function resolve_lexicon_locale(): string
     {
-        if (auth()->check() && !empty(auth()->user()->lexicon_version)) {
-            return auth()->user()->lexicon_version;
+        if (auth()->check() && ! empty(auth()->user()->user_lexicon_setting)) {
+            return auth()->user()->user_lexicon_setting;
         }
 
         $globalConfiguration = Cache::rememberForever('global_lexicon_setting', function () {
@@ -158,17 +160,15 @@ if (! function_exists('resolve_lexicon_locale')) {
                 ->first();
         });
 
-        if (! $globalConfiguration ||$globalConfiguration === 'auto') {
-            $lexicon = Cache::get('mows_lexicon', []);$availableLocales = [];
+        if (! $globalConfiguration || $globalConfiguration === 'auto') {
+            $lexicon = Cache::get('lexicon_codex', []);
+            $availableLocales = [];
 
-            foreach ($lexicon as$translations) {
-                if (is_string($translations)) {
-                    $translations = json_decode($translations, true) ?? [];
-                }
-
-                if (is_array($translations)) {
-                    foreach (array_keys($translations) as$lang) {
-                        $availableLocales[$lang] = true;
+            foreach ($lexicon as $entry) {
+                $payloads = $entry['payloads'] ?? [];
+                if (is_array($payloads)) {
+                    foreach (array_keys($payloads) as $lang) {
+                        $availableLocales[strtolower($lang)] = true;
                     }
                 }
             }
@@ -182,34 +182,37 @@ if (! function_exists('resolve_lexicon_locale')) {
     }
 }
 
-if (! function_exists('get_widget_manifest')) {
+if (! function_exists('get_module_manifest')) {
     /**
      * Get the module manifest cache, automatically self-healing/scanning if empty.
      */
-    function get_widget_manifest(): array
+    function get_module_manifest(): array
     {
-        return Cache::rememberForever('mows_widget_manifest', function () {
-            $widgetPath = resource_path('views/widgets');
+        return Cache::rememberForever('module_manifest', function () {
+            $modulePath = resource_path('views/modules');
 
-            if (! File::exists($widgetPath)) {
+            if (! File::exists($modulePath)) {
                 return [];
             }
 
-            $widgetFiles = File::files($widgetPath);$discoveredWidgets = [];
+            $moduleFiles = File::files($modulePath);
+            $discoveredModules = [];
 
-            foreach ($widgetFiles as$file) {
+            foreach ($moduleFiles as $file) {
                 $content = File::get($file);
 
-                if (preg_match('/@WidgetManifest\((.*?)\)\s*--\}\}/s', $content,$matches)) {
+                if (preg_match('/@ModuleManifest\((.*?)\)\s*--\}\}/s', $content, $matches)) {
                     $manifest = json_decode(trim($matches[1]), true);
 
                     if (json_last_error() === JSON_ERROR_NONE) {
-                        $moduleToken = str_replace('.blade.php', '', $file->getFilename());$discoveredWidgets[$moduleToken] =$manifest;
+                        $moduleToken = str_replace('.blade.php', '', $file->getFilename());
+                        $discoveredModules[$moduleToken] = $manifest;
 
                         $defaultConfigurations = [];
                         if (isset($manifest['fields']) && is_array($manifest['fields'])) {
-                            foreach ($manifest['fields'] as $fieldToken =>$field) {
-                                if (isset($field['default'])) {$defaultConfigurations[$fieldToken] =$field['default'];
+                            foreach ($manifest['fields'] as $fieldToken => $field) {
+                                if (isset($field['default'])) {
+                                    $defaultConfigurations[$fieldToken] = $field['default'];
                                 }
                             }
                         }
@@ -217,7 +220,7 @@ if (! function_exists('get_widget_manifest')) {
                         Module::updateOrCreate(
                             ['module_token' => $moduleToken],
                             [
-                                'module_title' => $manifest['module_title'] ?? Str::title(str_replace('_', ' ', $moduleToken)),
+                                'module_title'            => $manifest['module_title'] ?? Str::title(str_replace('_', ' ', $moduleToken)),
                                 'module_default_settings' => $defaultConfigurations,
                             ]
                         );
@@ -225,49 +228,72 @@ if (! function_exists('get_widget_manifest')) {
                 }
             }
 
-            return $discoveredWidgets;
+            return $discoveredModules;
+        });
+    }
+}
+
+if (! function_exists('active_time_system')) {
+    /**
+     * Retrieve the active chronological engine configuration from cache.
+     */
+    function active_time_system(): ?array
+    {
+        return Cache::remember('active_time_system', 3600, function () {
+            $activeId = Configuration::where('configuration_token', 'universe_time_system')
+                ->pluck('configuration_payload')
+                ->first();
+
+            if (! $activeId) {
+                return null;
+            }
+
+            $engine = ChronologicalEngine::find($activeId);
+
+            return $engine ? $engine->toArray() : null;
         });
     }
 }
 
 if (! function_exists('world_date')) {
-    function world_date($date,$fallbackFormat = 'M d, Y H:i')
+    /**
+     * Convert a real-world date into the active universe's primary chronological format.
+     */
+    function world_date(mixed $date, string $fallbackFormat = 'M d, Y H:i'): string
     {
-        if (!$date) return '';
+        if (! $date) {
+            return '';
+        }
 
         $carbonDate = Carbon::parse($date);
+        $system = active_time_system();
 
-        $system = Cache::remember('active_time_system', 3600, function () {$activeId = Configuration::where('configuration_token', 'universe_time_system')
-                ->pluck('configuration_payload')
-                ->first();
-            if (!$activeId) return null;
-            $ts = ChronologicalEngine::find($activeId);
-            return $ts ? $ts->toArray() : null;
-        });
-
-        if (!$system ||$system['calculation_algorithm'] === 'real_world') {
+        if (! $system || ($system['calculation_algorithm'] ?? 'real_world') === 'real_world') {
             return $carbonDate->format($fallbackFormat);
         }
 
-        $prefix = $system['date_prefix'] ?? '';$suffix = $system['date_suffix'] ?? '';$baseEarthYear = $system['base_earth_year'] ?? $carbonDate->year;
-        $baseSystemNum =$system['base_system_value'] ?? 0;
-        $multiplier =$system['temporal_multiplier'] ?? 1;
-        $engineType =$system['calculation_algorithm'] ?? 'real_world';
+        $prefix = $system['date_prefix'] ?? '';
+        $suffix = $system['date_suffix'] ?? '';
+        $baseEarthYear = $system['base_earth_year'] ?? $carbonDate->year;
+        $baseSystemNum = $system['base_system_value'] ?? 0;
+        $multiplier = $system['temporal_multiplier'] ?? 1;
+        $engineType = $system['calculation_algorithm'] ?? 'real_world';
 
         if ($engineType === 'fractional') {
-            $yearDiff = ($carbonDate->year - $baseEarthYear) *$multiplier;
-            $dayFraction = ($carbonDate->dayOfYear / $carbonDate->daysInYear) *$multiplier;
-            $calculatedNum =$baseSystemNum + $yearDiff +$dayFraction;
+            $yearDiff = ($carbonDate->year - $baseEarthYear) * $multiplier;
+            $dayFraction = ($carbonDate->dayOfYear / $carbonDate->daysInYear) * $multiplier;
+            $calculatedNum = $baseSystemNum + $yearDiff + $dayFraction;
 
-            $safePrefix = (str_ends_with($prefix, ' ') ||$prefix === '') ? $prefix :$prefix . ' ';
+            $safePrefix = (str_ends_with($prefix, ' ') || $prefix === '') ? $prefix : $prefix . ' ';
 
-            return $safePrefix . number_format($calculatedNum, 1, '.', '') .$suffix;
+            return $safePrefix . number_format($calculatedNum, 1, '.', '') . $suffix;
         }
 
         if ($engineType === 'offset') {
-            $year =$carbonDate->year - $baseEarthYear +$baseSystemNum;
-            $output =$prefix . $year .$suffix;
-            return str_replace('{day}', $carbonDate->dayOfYear,$output);
+            $year = $carbonDate->year - $baseEarthYear + $baseSystemNum;
+            $output = $prefix . $year . $suffix;
+
+            return str_replace('{day}', (string) $carbonDate->dayOfYear, $output);
         }
 
         return $carbonDate->format($fallbackFormat);
@@ -276,54 +302,49 @@ if (! function_exists('world_date')) {
 
 if (! function_exists('real_date')) {
     /**
-     * Convert an in-game stardate into its corresponding future in-game calendar date 
-     * by applying the base_earth_modifier offset.
+     * Convert an in-game world_date value into its corresponding lore-era human calendar date.
      */
-    function real_date($stardate, string$fallbackFormat = 'M d, Y')
+    function real_date(mixed $worldDate, string $fallbackFormat = 'M d, Y'): string
     {
-        if ($stardate === '' ||$stardate === null) return '';
-
-        // Extract numeric figure from strings (e.g. "Stardate 43309.5" -> 43309.5)
-        $numericFigure = floatval(preg_replace('/[^0-9.]/', '', (string)$stardate));
-
-        $system = Cache::remember('active_time_system', 3600, function () {$activeId = Configuration::where('configuration_token', 'universe_time_system')
-                ->pluck('configuration_payload')
-                ->first();
-            if (!$activeId) return null;
-            $ts = ChronologicalEngine::find($activeId);
-            return $ts ? $ts->toArray() : null;
-        });
-
-        if (!$system ||$system['calculation_algorithm'] === 'real_world') {
-            return Carbon::parse($stardate)->format($fallbackFormat);
+        if ($worldDate === '' || $worldDate === null) {
+            return '';
         }
 
-        // Base Earth Year PLUS the modifier to land in the correct future era (e.g., TNG 2364+)
-        $baseEarthYear = intval($system['base_earth_year'] ?? 1983) + intval($system['base_earth_modifier'] ?? 0);
-        $baseSystemNum = floatval($system['base_system_value'] ?? 0);
-        $multiplier = floatval($system['temporal_multiplier'] ?? 1);
-        $engineType =$system['calculation_algorithm'] ?? 'real_world';
+        $numericFigure = (float) preg_replace('/[^0-9.]/', '', (string) $worldDate);
+        $system = active_time_system();
 
-        if ($engineType === 'fractional') {$netFigure = $numericFigure -$baseSystemNum;
-            $safeMultiplier = ($multiplier != 0) ?$multiplier : 1;
+        if (! $system || ($system['calculation_algorithm'] ?? 'real_world') === 'real_world') {
+            return Carbon::parse($worldDate)->format($fallbackFormat);
+        }
+
+        $baseEarthYear = (int) ($system['base_earth_year'] ?? 1983) + (int) ($system['base_earth_modifier'] ?? 0);
+        $baseSystemNum = (float) ($system['base_system_value'] ?? 0);
+        $multiplier = (float) ($system['temporal_multiplier'] ?? 1);
+        $engineType = $system['calculation_algorithm'] ?? 'real_world';
+
+        if ($engineType === 'fractional') {
+            $netFigure = $numericFigure - $baseSystemNum;
+            $safeMultiplier = ($multiplier != 0.0) ? $multiplier : 1.0;
             $totalYears = $netFigure / $safeMultiplier;
 
-            $yearOffset = floor($totalYears);$fraction = $totalYears -$yearOffset;
+            $yearOffset = floor($totalYears);
+            $fraction = $totalYears - $yearOffset;
 
-            $targetYear = $baseEarthYear + intval($yearOffset);
+            $targetYear = $baseEarthYear + (int) $yearOffset;
 
             $dummyDate = Carbon::createFromDate($targetYear, 1, 1);
-            $daysInYear =$dummyDate->daysInYear;
+            $daysInYear = $dummyDate->daysInYear;
             $dayOfYear = max(1, min($daysInYear, (int) round($fraction * $daysInYear)));
 
             return $dummyDate->addDays($dayOfYear - 1)->format($fallbackFormat);
         }
 
         if ($engineType === 'offset') {
-            $targetYear =$baseEarthYear - $baseSystemNum +$numericFigure;
+            $targetYear = $baseEarthYear - $baseSystemNum + $numericFigure;
+
             return Carbon::createFromDate((int) $targetYear, 1, 1)->format($fallbackFormat);
         }
 
-        return Carbon::parse($stardate)->format($fallbackFormat);
+        return Carbon::parse($worldDate)->format($fallbackFormat);
     }
 }

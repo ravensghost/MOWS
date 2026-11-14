@@ -14,6 +14,7 @@ class AssignmentController extends Controller
      */
     private function clearAssignmentCaches(): void
     {
+        Cache::forget('widget_personae_table_sections');
         Cache::forget('widget_roster_sections');
         Cache::forget('widget_manifest_sections');
     }
@@ -42,11 +43,11 @@ class AssignmentController extends Controller
         $this->clearAssignmentCaches();
 
         return response()->json([
-            'status'  => 'success',
-            'success' => true,
-            'data'    => $assignment,
-            'message' => lexicon('msg_SectionsPositions_PositionCreated', 'Position created successfully.'),
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_SectionsPositions_PositionCreated', 'Position created successfully.'),
+            'data'     => $assignment,
+            'redirect' => null,
+        ], 200);
     }
 
     public function update(Request $request, Assignment $assignment)
@@ -74,11 +75,11 @@ class AssignmentController extends Controller
         $this->clearAssignmentCaches();
 
         return response()->json([
-            'status'  => 'success',
-            'success' => true,
-            'data'    => $assignment,
-            'message' => lexicon('msg_SectionsPositions_PositionUpdated', 'Position updated successfully.'),
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_SectionsPositions_PositionUpdated', 'Position updated successfully.'),
+            'data'     => $assignment,
+            'redirect' => null,
+        ], 200);
     }
 
     public function destroy(Assignment $assignment)
@@ -90,9 +91,10 @@ class AssignmentController extends Controller
         $this->clearAssignmentCaches();
 
         return response()->json([
-            'status'  => 'success',
-            'success' => true,
-            'message' => lexicon('msg_SectionsPositions_PositionDeleted', 'Position deleted successfully.'),
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_SectionsPositions_PositionDeleted', 'Position deleted successfully.'),
+            'data'     => $assignment,
+            'redirect' => null,
+        ], 200);
     }
 }

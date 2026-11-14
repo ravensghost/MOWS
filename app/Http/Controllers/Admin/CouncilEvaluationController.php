@@ -37,13 +37,19 @@ class CouncilEvaluationController extends Controller
 
         if (strtolower($petition->petition_status) !== 'pending') {
             if ($request->wantsJson()) {
-                return response()->json(['status' => 'error', 'message' => 'This candidate petition is no longer pending.'], 422);
+                return response()->json([
+                    'status'   => 'error',
+                    'message'  => lexicon('msg_Applications_NoLongerPending', 'This candidate petition is no longer pending.'),
+                    'data'     => null,
+                    'redirect' => null,
+                ], 422);
             }
-            return back()->with('error', 'This candidate petition is no longer pending.');
+
+            return back()->with('error', lexicon('msg_Applications_NoLongerPending', 'This candidate petition is no longer pending.'));
         }
 
         // Upsert the evaluation for this evaluating user on this petition
-        CouncilEvaluation::updateOrCreate(
+        $evaluation = CouncilEvaluation::updateOrCreate(
             [
                 'candidate_petition_id' => $petition->id,
                 'evaluating_user_id'    => auth()->id(),
@@ -58,7 +64,12 @@ class CouncilEvaluationController extends Controller
         $message = lexicon('msg_Applications_VoteCastSuccess', 'Your council evaluation has been successfully cast.');
 
         if ($request->wantsJson()) {
-            return response()->json(['status' => 'success', 'success' => true, 'message' => $message]);
+            return response()->json([
+                'status'   => 'success',
+                'message'  => $message,
+                'data'     => $evaluation,
+                'redirect' => null,
+            ], 200);
         }
 
         return back()->with('status', $message);

@@ -28,18 +28,8 @@ class Assignment extends Model
         return $this->belongsTo(Division::class, 'division_id');
     }
 
-    public function section()
-    {
-        return $this->belongsTo(Division::class, 'division_id');
-    }
-
     public function personae()
     {
         return $this->hasMany(Persona::class, 'assignment_id');
-    }
-
-    public function characters()
-    {
-        return $this->hasMany(Character::class, 'assignment_id');
     }
 }

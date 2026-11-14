@@ -69,11 +69,11 @@
                 @foreach($division->assignments ?? [] as $assignment)
                     @continue(!($assignment->is_visible ?? true))
                     @php
-                        $assignedPersonae = $assignment->personae ?? $assignment->characters ?? [];
+                        $assignedPersonae = $assignment->personae ?? [];
                     @endphp
                     @forelse($assignedPersonae as $persona)
                         @php
-                            $personaName = $persona->persona_designation ?? $persona->persona_name ?? '';
+                            $personaName = $persona->persona_designation ?? '';
                         @endphp
                         <div class="bg-panel border border-panel rounded-input shadow-panel overflow-hidden hover-bg-panel-hover flex flex-row flex-wrap items-center p-3 gap-md {{ strtolower($persona->persona_type ?? 'pc') === 'pc' ? 'border-pc shadow-pc' : (in_array(strtolower($persona->persona_type ?? ''), ['sc', 'snpc']) ? 'border-success shadow-success' : 'border-warning shadow-warning') }}">
                             

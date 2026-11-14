@@ -17,9 +17,6 @@
         "postcss": "^8.4.31",
         "vite": "^8.0.0"
     },
-    "optionalDependencies": {
-        "@laravel/multiplex": "^0.4.1"
-    },
     "dependencies": {
         "@alpinejs/collapse": "^3.17.4",
         "@tiptap/extension-placeholder": "^3.33.1",

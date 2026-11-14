@@ -25,7 +25,7 @@
                     <x-button type="button" 
                               variant="success" 
                               class="p-btn-sm text-sm flex flex-row items-center gap-xs" 
-                              @click="openIssueModal('award')"
+                              @click="openModal('award')"
                               x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_IssueAward', 'Issue an IC or OOC award')) }}'"
                               aria-label="{{ lexicon('tooltip_ServiceRecords_IssueAward', 'Issue an IC or OOC award') }}">
                         <i class="bi bi-award"></i>
@@ -34,7 +34,7 @@
                     <x-button type="button" 
                               variant="primary" 
                               class="p-btn-sm text-sm flex flex-row items-center gap-xs" 
-                              @click="openIssueModal('promotion')"
+                              @click="openModal('promotion')"
                               x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_RankChange', 'Promote or demote a character')) }}'"
                               aria-label="{{ lexicon('tooltip_ServiceRecords_RankChange', 'Promote or demote a character') }}">
                         <i class="bi bi-person-badge"></i>
@@ -43,7 +43,7 @@
                     <x-button type="button" 
                               variant="primary" 
                               class="p-btn-sm text-sm flex flex-row items-center gap-xs" 
-                              @click="openIssueModal('transfer')"
+                              @click="openModal('transfer')"
                               x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_Transfer', 'Transfer a character to a new position')) }}'"
                               aria-label="{{ lexicon('tooltip_ServiceRecords_Transfer', 'Transfer a character to a new position') }}">
                         <i class="bi bi-arrow-left-right"></i>
@@ -52,7 +52,7 @@
                     <x-button type="button" 
                               variant="primary" 
                               class="p-btn-sm text-sm flex flex-row items-center gap-xs" 
-                              @click="openIssueModal('status_change')"
+                              @click="openModal('status_change')"
                               x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_StatusChange', 'Change character duty status')) }}'"
                               aria-label="{{ lexicon('tooltip_ServiceRecords_StatusChange', 'Change character duty status') }}">
                         <i class="bi bi-shield-check"></i>
@@ -61,7 +61,7 @@
                     <x-button type="button" 
                               variant="primary" 
                               class="p-btn-sm text-sm flex flex-row items-center gap-xs" 
-                              @click="openIssueModal('manual_entry')"
+                              @click="openModal('manual_entry')"
                               x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_ManualNote', 'Log a manual service record entry')) }}'"
                               aria-label="{{ lexicon('tooltip_ServiceRecords_ManualNote', 'Log a manual service record entry') }}">
                         <i class="bi bi-journal-text"></i>
@@ -81,7 +81,7 @@
                                   :placeholder="lexicon('label_ServiceRecords_FilterPlaceholder', 'Search records by recipient, award, or citation...')"
                                   :tooltip="lexicon('tooltip_ServiceRecords_FilterInput', 'Instantaneously filter service records using fuzzy search')"
                                   xModel="searchQuery"
-                                  @input="filterRecords()" />
+                                  @input="performSearch()" />
                 </div>
             </div>
         </x-slot:middle>
@@ -93,7 +93,7 @@
                     <x-button type="button" 
                               variant="success" 
                               class="p-btn-sm text-sm flex flex-row items-center gap-xs" 
-                              @click="openIssueModal('award')"
+                              @click="openModal('award')"
                               x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_NewEntry', 'Create a new service record entry')) }}'"
                               aria-label="{{ lexicon('tooltip_ServiceRecords_NewEntry', 'Create a new service record entry') }}">
                         <i class="bi bi-plus-lg"></i>
@@ -115,7 +115,7 @@
                         @forelse($recentRecords as $record)
                             <tr class="border-b-table-row hover-bg-table-row" 
                                 x-data="{ editing: false, editReason: '{{ addslashes($record->chronicle_text) }}', editTarget: '{{ $record->scope_target ?? 'BOTH' }}', editEventMode: '{{ $record->register_event_mode }}', removing: false }"
-                                x-show="matchesRecord({{ $record->id }})"
+                                x-show="isItemVisible({{ $record->id }})"
                                 x-cloak>
                                 <td class="p-4 text-xs text-muted whitespace-nowrap">{{ function_exists('world_date') ? world_date($record->created_at) : $record->created_at->format('Y-m-d') }}</td>
                                 <td class="p-4 font-bold text-p">
@@ -393,7 +393,7 @@
                                 <option value="">{{ lexicon('label_common_SelectCharacter', '-- Select Character --') }}</option>
                                 @foreach($characters as $character)
                                     <option value="{{ $character->id }}">
-                                        {{ $character->persona_name }} @if($character->user) ({{ lexicon('label_ServiceRecords_Owner', 'Owner:') }} {{ $character->user->name }}) @endif
+                                        {{ $character->persona_name }} @if($character->user) ({{ lexicon('label_ServiceRecords_Owner', 'Owner:') }} {{$character->user->name }}) @endif
                                     </option>
                                 @endforeach
                             </select>
@@ -452,9 +452,9 @@
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
                                     required>
                                 <option value="">{{ lexicon('label_common_SelectCharacter', '-- Select Character --') }}</option>
-                                @foreach($characters as $character)
+                                @foreach($characters as$character)
                                     <option value="{{ $character->id }}">
-                                        {{ $character->persona_name }} @if($character->insignia) ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{ $character->insignia->insignia_title }}) @endif
+                                        {{ $character->persona_name }} @if($character->insignia) ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{$character->insignia->insignia_title }}) @endif
                                     </option>
                                 @endforeach
                             </select>
@@ -471,7 +471,7 @@
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
                                     required>
                                 <option value="">{{ lexicon('label_ServiceRecords_OptSelectRank', '-- Select Rank --') }}</option>
-                                @foreach($ranks as $rank)
+                                @foreach($ranks as$rank)
                                     <option value="{{ $rank->id }}">{{ $rank->insignia_title }}</option>
                                 @endforeach
                             </select>
@@ -513,9 +513,9 @@
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
                                     required>
                                 <option value="">{{ lexicon('label_common_SelectCharacter', '-- Select Character --') }}</option>
-                                @foreach($characters as $character)
+                                @foreach($characters as$character)
                                     <option value="{{ $character->id }}">
-                                        {{ $character->persona_name }} @if($character->assignment) ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{ $character->assignment->assignment_title }}) @endif
+                                        {{ $character->persona_name }} @if($character->assignment) ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{$character->assignment->assignment_title }}) @endif
                                     </option>
                                 @endforeach
                             </select>
@@ -532,9 +532,9 @@
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
                                     required>
                                 <option value="">{{ lexicon('label_ServiceRecords_OptSelectPosition', '-- Select Position --') }}</option>
-                                @foreach($positions as $position)
+                                @foreach($positions as$position)
                                     <option value="{{ $position->id }}">
-                                        {{ $position->assignment_title }} @if($position->division) ({{ $position->division->division_title }}) @endif
+                                        {{ $position->assignment_title }} @if($position->division) ({{$position->division->division_title }}) @endif
                                     </option>
                                 @endforeach
                             </select>
@@ -576,9 +576,9 @@
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
                                     required>
                                 <option value="">{{ lexicon('label_common_SelectCharacter', '-- Select Character --') }}</option>
-                                @foreach($characters as $character)
+                                @foreach($characters as$character)
                                     <option value="{{ $character->id }}">
-                                        {{ $character->persona_name }} ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{ strtoupper(str_replace('_', ' ', $character->persona_status)) }})
+                                        {{ $character->persona_name }} ({{ lexicon('label_ServiceRecords_Current', 'Current:') }} {{ strtoupper(str_replace('_', ' ',$character->persona_status)) }})
                                     </option>
                                 @endforeach
                             </select>
@@ -639,7 +639,7 @@
                                     class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent" 
                                     required>
                                 <option value="">{{ lexicon('label_common_SelectCharacter', '-- Select Character --') }}</option>
-                                @foreach($characters as $character)
+                                @foreach($characters as$character)
                                     <option value="{{ $character->id }}">{{ $character->persona_name }}</option>
                                 @endforeach
                             </select>
@@ -656,10 +656,10 @@
                                         x-tooltip="'{{ addslashes(lexicon('tooltip_ServiceRecords_SelectEventType', 'Select service record event category')) }}'"
                                         class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent"
                                         required>
-                                    @foreach($eventTypeGroups as $groupKey => $groupData)
+                                    @foreach($eventTypeGroups as $groupKey =>$groupData)
                                         <optgroup label="{{ $groupData['label'] }}">
-                                            @foreach($groupData['types'] as $typeKey => $typeLabel)
-                                                <option value="{{ $typeKey }}" @selected($typeKey === 'manual_entry')>{{ $typeLabel }}</option>
+                                            @foreach($groupData['types'] as $typeKey =>$typeLabel)
+                                                <option value="{{ $typeKey }}" @selected($typeKey === 'manual_entry')>{{$typeLabel }}</option>
                                             @endforeach
                                         </optgroup>
                                     @endforeach

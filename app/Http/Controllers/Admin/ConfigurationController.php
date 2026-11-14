@@ -53,8 +53,10 @@ class ConfigurationController extends Controller
             $settings['mail_mailer'] = 'smtp';
         }
 
+        $updatedConfigurations = [];
+
         foreach ($settings as $token => $value) {
-            Configuration::updateOrCreate(
+            $updatedConfigurations[$token] = Configuration::updateOrCreate(
                 ['configuration_token' => $token],
                 ['configuration_payload' => is_array($value) ? json_encode($value) : $value]
             );
@@ -66,9 +68,10 @@ class ConfigurationController extends Controller
         Cache::forget('mows_lexicon');
 
         return response()->json([
-            'status'  => 'success',
-            'success' => true,
-            'message' => lexicon('msg_Settings_Updated', 'Global settings updated successfully.'),
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Settings_Updated', 'Global settings updated successfully.'),
+            'data'     => $updatedConfigurations,
+            'redirect' => null,
+        ], 200);
     }
 }

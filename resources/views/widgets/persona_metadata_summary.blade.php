@@ -10,15 +10,16 @@
 --}}
 @php
     $options = is_string($widget->pivot->instance_options) ? json_decode($widget->pivot->instance_options, true) : ($widget->pivot->instance_options ?? []);
-    $rawTitle = trim($options['title'] ?? '');$title = $rawTitle !== '' ?$rawTitle : lexicon('label_PersonaSummary_DefaultTitle', 'Persona Metadata Summary');
+    $rawTitle = trim($options['title'] ?? '');
+    $title = $rawTitle !== '' ? $rawTitle : lexicon('label_PersonaSummary_DefaultTitle', 'Persona Metadata Summary');
 
     // Retrieve eager-loaded candidate petition entries linked to this persona without N+1 queries
-    $targetPersona = $persona ?? $character ?? null;
+    $targetPersona = $persona ?? null;
     $petition = null;
 
     if ($targetPersona) {
         if ($targetPersona->relationLoaded('petition')) {
-            $petition =$targetPersona->petition;
+            $petition = $targetPersona->petition;
         } else {
             $petition = \App\Models\CandidatePetition::with('entries')
                 ->where('persona_id', $targetPersona->id)
@@ -26,11 +27,11 @@
         }
     }
 
-    // Account, Writer & Duty Status Vitals (Merged from legacy character_sidebar_meta)
-    $user =$targetPersona?->user;
-    $status = strtolower($targetPersona?->persona_status ?? $targetPersona?->status ?? 'active');
+    // Account, Writer & Duty Status Vitals
+    $user = $targetPersona?->user;
+    $personaStatus = strtolower($targetPersona?->persona_status ?? 'active');
 
-    $statusBadge = match($status) {
+    $statusBadge = match($personaStatus) {
         'active'                    => 'success',
         'loa'                       => 'warning',
         'eloa'                      => 'danger',
@@ -38,17 +39,17 @@
         default                     => 'primary'
     };
 
-    $statusLabel = match($status) {
+    $statusLabel = match($personaStatus) {
         'active'        => lexicon('label_ServiceRecords_StatusActive', 'Active'),
         'loa'           => lexicon('label_ServiceRecords_StatusLoa', 'Leave of Absence (LOA)'),
         'eloa'          => lexicon('label_ServiceRecords_StatusEloa', 'Extended Leave of Absence (ELOA)'),
         'honoured_dead' => lexicon('label_ServiceRecords_StatusHonouredDead', 'Honoured Dead'),
         'memorial'      => lexicon('label_ServiceRecords_StatusMemorial', 'Memorial'),
-        default         => strtoupper(str_replace('_', ' ', $status))
+        default         => strtoupper(str_replace('_', ' ', $personaStatus))
     };
 
-    $twitter =$user?->twitter_handle ?? null;
-    $facebook =$user?->facebook_handle ?? null;
+    $twitter = $user?->twitter_handle ?? null;
+    $facebook = $user?->facebook_handle ?? null;
     $facebookUrl = $facebook && \Illuminate\Support\Str::startsWith($facebook, ['http://', 'https://'])
         ? $facebook
         : ($facebook ? 'https://facebook.com/' . ltrim($facebook, '/') : null);
@@ -56,30 +57,30 @@
     $entriesCollection = collect();
     if ($petition) {
         if ($petition->relationLoaded('entries')) {
-            $entriesCollection =$petition->entries;
+            $entriesCollection = $petition->entries;
         } elseif ($petition->relationLoaded('answers')) {
-            $entriesCollection =$petition->answers;
-        } elseif (method_exists($petition, 'entries')) {
-            $entriesCollection =$petition->entries()->get();
-        } elseif (method_exists($petition, 'answers')) {
-            $entriesCollection =$petition->answers()->get();
+            $entriesCollection = $petition->answers;
+        } else {
+            $entriesCollection = $petition->entries()->get();
         }
     }
 
     $metadataMap = \App\Models\Metadata::all()->keyBy('id');
 
-    $entriesByKey = $entriesCollection->keyBy(function ($item) use ($metadataMap) {$meta = ($item->relationLoaded('metadata') ?$item->metadata : null)
+    $entriesByKey = $entriesCollection->keyBy(function ($item) use ($metadataMap) {
+        $meta = ($item->relationLoaded('metadata') ? $item->metadata : null)
             ?? $metadataMap->get($item->metadata_id);
 
-        $fieldName =$meta->metadata_title ?? $meta->metadata_label ?? $meta->metadata_key ?? '';
+        $fieldName = $meta->metadata_title ?? $meta->metadata_label ?? $meta->metadata_key ?? '';
         return strtolower(trim($fieldName));
     });
 
     $getEntryValue = function ($names) use ($entriesByKey) {
-        foreach ((array) $names as$name) {
+        foreach ((array) $names as $name) {
             $key = strtolower(trim($name));
-            if ($entriesByKey->has($key)) {$entry = $entriesByKey[$key];
-                $val =$entry->petition_answer ?? null;
+            if ($entriesByKey->has($key)) {
+                $entry = $entriesByKey[$key];
+                $val = $entry->petition_answer ?? null;
                 if (filled($val)) {
                     return $val;
                 }
@@ -91,16 +92,16 @@
     $notSpecified = lexicon('label_common_NotSpecified', 'Not Specified');
     $noData = lexicon('msg_common_NoData', 'No information provided.');
 
-    $personaName = $targetPersona?->persona_name ?? $targetPersona?->persona_designation ?? $petition?->proposed_persona_name ?? $getEntryValue(['Persona Name', 'Name']) ?? $notSpecified;
-    $insigniaName =$targetPersona?->insignia?->insignia_title ?? lexicon('label_Demographics_Unranked', 'Unranked');
-    $assignmentName =$targetPersona?->assignment?->assignment_title ?? lexicon('label_Demographics_Unassigned', 'Unassigned');
+    $personaName = $targetPersona?->persona_name ?? $petition?->proposed_persona_name ?? $getEntryValue(['Persona Name', 'Name']) ?? $notSpecified;
+    $insigniaName = $targetPersona?->insignia?->insignia_title ?? lexicon('label_Demographics_Unranked', 'Unranked');
+    $assignmentName = $targetPersona?->assignment?->assignment_title ?? lexicon('label_Demographics_Unassigned', 'Unassigned');
 
-    $species =$getEntryValue(['Species / Heritage', 'Species', 'Heritage']) ?? $notSpecified;
-    $age =$getEntryValue(['Age']) ?? $notSpecified;
-    $gender =$getEntryValue(['Gender']) ?? $notSpecified;
-    $origin =$getEntryValue(['Place of Origin', 'Origin']) ?? $notSpecified;
-    $height =$getEntryValue(['Height & Build', 'Height']) ?? $notSpecified;
-    $appearance =$getEntryValue(['Hair & Eye Colour', 'Hair & Eye Color', 'Hair & Eyes']) ?? $notSpecified;
+    $species = $getEntryValue(['Species / Heritage', 'Species', 'Heritage']) ?? $notSpecified;
+    $age = $getEntryValue(['Age']) ?? $notSpecified;
+    $gender = $getEntryValue(['Gender']) ?? $notSpecified;
+    $origin = $getEntryValue(['Place of Origin', 'Origin']) ?? $notSpecified;
+    $height = $getEntryValue(['Height & Build', 'Height']) ?? $notSpecified;
+    $appearance = $getEntryValue(['Hair & Eye Colour', 'Hair & Eyes']) ?? $notSpecified;
 
     $personality = $getEntryValue(['Personality & Traits', 'Personality', 'Traits']) ?? $noData;
     $strengths = $getEntryValue(['Strengths & Weaknesses', 'Strengths', 'Weaknesses']) ?? $noData;
@@ -150,7 +151,7 @@
         </div>
 
         {{-- Account Writer & Social Channels Row --}}
-        @if($user || $twitter \vert{}\vert{}$facebookUrl)
+        @if($user || $twitter || $facebookUrl)
             <div class="grid grid-cols-1 md-grid-cols-2 gap-md w-full">
                 @if($user)
                     <div class="bg-panel-sub border-panel rounded-panel p-3 flex flex-col gap-xs">
@@ -159,7 +160,7 @@
                     </div>
                 @endif
 
-                @if($twitter \vert{}\vert{}$facebookUrl)
+                @if($twitter || $facebookUrl)
                     <div class="bg-panel-sub border-panel rounded-panel p-3 flex flex-col gap-xs">
                         <span class="text-xs font-bold text-input-muted uppercase tracking-wider">{{ lexicon('label_Sidebar_Socials', 'Social Channels') }}</span>
                         <div class="flex flex-row flex-wrap gap-sm items-center mt-1">

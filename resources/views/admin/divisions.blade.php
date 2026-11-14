@@ -184,9 +184,9 @@
                         <div class="grid grid-cols-1 lg-grid-cols-3 gap-md w-full">
                             @foreach($assignmentsCollection as $pos)
                             @php
-                            $assignedCount = $pos->characters ? $pos->characters->count() : 0;
-                            $slotsAvailable = max(0, $pos->max_assignees - $assignedCount);
-                            $isOpen = (bool) ($pos->is_open ?? true);
+                            $assignedCount = $pos->personae ? $pos->personae->count() : 0;
+                            $slotsAvailable = max(0, $pos->maximum_occupants - $assignedCount);
+                            $isRecruitmentOpen = (bool) ($pos->is_recruitment_open ?? true);
                             @endphp
                             <div class="bg-panel-sub border border-panel rounded-panel p-3 flex flex-row flex-wrap justify-between items-start gap-sm"
                                 x-show="isItemVisible('{{ addslashes($pos->assignment_title) }}', '{{ addslashes($pos->assignment_description ?? '') }}', '{{ addslashes($sec->division_title) }}')">
@@ -201,7 +201,7 @@
                                     <span class="text-xs text-muted block">{{ $pos->assignment_description }}</span>
                                     @endif
                                     <div class="flex flex-row flex-wrap items-center gap-xs mt-1">
-                                        @if(!$isOpen)
+                                        @if(!$isRecruitmentOpen)
                                         <x-badge variant="warning"
                                             aria-label="{{ lexicon('tooltip_SectionsPositions_PositionClosed', 'This position is currently closed to applications') }}"
                                             x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_PositionClosed', 'This position is currently closed to applications')) }}'">
@@ -216,9 +216,9 @@
                                         </x-badge>
                                         @endif
                                         <span class="text-xs text-muted"
-                                            aria-label="{{ lexicon('tooltip_SectionsPositions_AssignedVsCapacity', 'Active characters assigned versus maximum capacity') }}"
-                                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_AssignedVsCapacity', 'Active characters assigned versus maximum capacity')) }}'">
-                                            ({{ $assignedCount }}/{{ $pos->max_assignees }})
+                                            aria-label="{{ lexicon('tooltip_SectionsPositions_AssignedVsCapacity', 'Active personae assigned versus maximum capacity') }}"
+                                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_AssignedVsCapacity', 'Active personae assigned versus maximum capacity')) }}'">
+                                            ({{ $assignedCount }}/{{ $pos->maximum_occupants }})
                                         </span>
                                     </div>
                                 </div>
@@ -227,7 +227,7 @@
                                     <x-button type="button"
                                         variant="text"
                                         class="text-xs text-warning hover-text-h p-0 flex items-center gap-xs"
-                                        @click="openModal('edit', { id: {{ $pos->id }}, division_id: '{{ $pos->division_id }}', assignment_title: '{{ addslashes($pos->assignment_title) }}', assignment_description: '{{ addslashes($pos->assignment_description) }}', max_assignees: {{ $pos->max_assignees ?? 1 }}, is_open: {{ $isOpen ? 'true' : 'false' }}, is_visible: {{ $pos->is_visible ? 'true' : 'false' }} }, 'assignment')"
+                                        @click="openModal('edit', { id: {{ $pos->id }}, division_id: '{{ $pos->division_id }}', assignment_title: '{{ addslashes($pos->assignment_title) }}', assignment_description: '{{ addslashes($pos->assignment_description) }}', maximum_occupants: {{ $pos->maximum_occupants ?? 1 }}, is_recruitment_open: {{ $isRecruitmentOpen ? 'true' : 'false' }}, is_visible: {{ $pos->is_visible ? 'true' : 'false' }} }, 'assignment')"
                                         aria-label="{{ lexicon('tooltip_SectionsPositions_EditPosition', 'Edit this position') }}"
                                         x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_EditPosition', 'Edit this position')) }}'">
                                         <i class="bi bi-pencil" aria-hidden="true"></i>
@@ -490,30 +490,30 @@
                             :tooltip="lexicon('tooltip_SectionsPositions_PositionNameInput', 'Enter the role or duty title')"
                             :required="true" />
 
-                        <x-form-input name="max_assignees"
+                        <x-form-input name="maximum_occupants"
                             id="create_assignment_capacity"
                             type="number"
                             min="1"
                             max="999"
-                            xModel="position.max_assignees"
+                            xModel="position.maximum_occupants"
                             class="text-center"
                             :label="lexicon('label_SectionsPositions_Capacity', 'Max Capacity')"
-                            :tooltip="lexicon('tooltip_SectionsPositions_CapacityInput', 'Maximum number of active characters that can hold this position')"
+                            :tooltip="lexicon('tooltip_SectionsPositions_CapacityInput', 'Maximum number of active personae that can hold this position')"
                             :required="true" />
                     </div>
 
                     <div class="grid grid-cols-1 md-grid-cols-2 gap-md bg-panel-sub border border-panel rounded-panel p-3 items-center">
                         <div class="flex flex-row flex-wrap items-center gap-sm">
-                            <input type="hidden" name="is_open" value="0">
+                            <input type="hidden" name="is_recruitment_open" value="0">
                             <input type="checkbox"
-                                id="create_assignment_is_open"
-                                name="is_open"
+                                id="create_assignment_is_recruitment_open"
+                                name="is_recruitment_open"
                                 value="1"
-                                x-model="position.is_open"
+                                x-model="position.is_recruitment_open"
                                 aria-label="{{ lexicon('label_SectionsPositions_IsOpen', 'Open for Applications') }}"
                                 x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_IsOpenToggle', 'Allow applicants to apply for vacant slots in this position')) }}'"
                                 class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
-                            <label for="create_assignment_is_open" class="text-xs font-bold text-input-muted cursor-pointer">
+                            <label for="create_assignment_is_recruitment_open" class="text-xs font-bold text-input-muted cursor-pointer">
                                 {{ lexicon('label_SectionsPositions_IsOpen', 'Open for Applications') }}
                             </label>
                         </div>
@@ -597,30 +597,30 @@
                             :tooltip="lexicon('tooltip_SectionsPositions_PositionNameInput', 'Enter the role or duty title')"
                             :required="true" />
 
-                        <x-form-input name="max_assignees"
+                        <x-form-input name="maximum_occupants"
                             id="edit_assignment_capacity"
                             type="number"
                             min="1"
                             max="999"
-                            xModel="position.max_assignees"
+                            xModel="position.maximum_occupants"
                             class="text-center"
                             :label="lexicon('label_SectionsPositions_Capacity', 'Max Capacity')"
-                            :tooltip="lexicon('tooltip_SectionsPositions_CapacityInput', 'Maximum number of active characters that can hold this position')"
+                            :tooltip="lexicon('tooltip_SectionsPositions_CapacityInput', 'Maximum number of active personae that can hold this position')"
                             :required="true" />
                     </div>
 
                     <div class="grid grid-cols-1 md-grid-cols-2 gap-md bg-panel-sub border border-panel rounded-panel p-3 items-center">
                         <div class="flex flex-row flex-wrap items-center gap-sm">
-                            <input type="hidden" name="is_open" value="0">
+                            <input type="hidden" name="is_recruitment_open" value="0">
                             <input type="checkbox"
-                                id="edit_assignment_is_open"
-                                name="is_open"
+                                id="edit_assignment_is_recruitment_open"
+                                name="is_recruitment_open"
                                 value="1"
-                                x-model="position.is_open"
+                                x-model="position.is_recruitment_open"
                                 aria-label="{{ lexicon('label_SectionsPositions_IsOpen', 'Open for Applications') }}"
                                 x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_IsOpenToggle', 'Allow applicants to apply for vacant slots in this position')) }}'"
                                 class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
-                            <label for="edit_assignment_is_open" class="text-xs font-bold text-input-muted cursor-pointer">
+                            <label for="edit_assignment_is_recruitment_open" class="text-xs font-bold text-input-muted cursor-pointer">
                                 {{ lexicon('label_SectionsPositions_IsOpen', 'Open for Applications') }}
                             </label>
                         </div>

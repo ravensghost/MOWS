@@ -16,31 +16,18 @@
     $rawTitle = trim($options['title'] ?? '');
     $title = $rawTitle !== '' ? $rawTitle : lexicon('label_PersonaRegister_DefaultTitle', 'Chronological Register');
 
-    $targetPersona = $persona ?? $character ?? null;
+    $targetPersona = $persona ?? null;
     $registerEntries = collect();
 
     if ($targetPersona) {
-        if ($targetPersona->relationLoaded('chronologicalRegister')) {
+        if ($targetPersona->relationLoaded('chronologicalRegisters')) {
+            $registerEntries = $targetPersona->chronologicalRegisters;
+        } elseif ($targetPersona->relationLoaded('chronologicalRegister')) {
             $registerEntries = $targetPersona->chronologicalRegister;
-        } elseif ($targetPersona->relationLoaded('registers')) {
-            $registerEntries = $targetPersona->registers;
-        } elseif ($targetPersona->relationLoaded('serviceRecords')) {
-            $registerEntries = $targetPersona->serviceRecords;
+        } elseif (method_exists($targetPersona, 'chronologicalRegisters')) {
+            $registerEntries = $targetPersona->chronologicalRegisters()->latest()->get();
         } elseif (method_exists($targetPersona, 'chronologicalRegister')) {
             $registerEntries = $targetPersona->chronologicalRegister()->latest()->get();
-        } elseif (method_exists($targetPersona, 'registers')) {
-            $registerEntries = $targetPersona->registers()->latest()->get();
-        } elseif (method_exists($targetPersona, 'serviceRecords')) {
-            $registerEntries = $targetPersona->serviceRecords()->latest()->get();
-        } elseif (method_exists($targetPersona, 'metadata')) {
-            $metaCollection = $targetPersona->relationLoaded('metadata')
-                ? $targetPersona->metadata
-                : $targetPersona->metadata()->get();
-
-            $registerEntries = $metaCollection->filter(function ($item) {
-                $key = $item->metadata_key ?? $item->key ?? '';
-                return in_array($key, ['register_entry', 'service_record', 'chronological_entry'], true);
-            })->values();
         }
     }
 @endphp
@@ -63,20 +50,17 @@
             <div class="flex flex-col gap-sm">
                 @foreach($registerEntries as $entry)
                     @php
-                        $entryTitle = $entry->register_title ?? $entry->title ?? $entry->event_type ?? lexicon('label_PersonaRegister_Entry', 'Register Entry');
-                        $entryDetails = $entry->register_notes ?? $entry->description ?? $entry->notes ?? $entry->metadata_value ?? $entry->value ?? '';
-                        $entryStardate = $entry->stardate ?? $entry->register_stardate ?? null;
-                        $entryDate = $entry->recorded_at ?? $entry->created_at ?? null;
+                        $entryTitle = optional($entry->distinction)->distinction_title
+                            ?? (! empty($entry->register_event_mode) ? \Illuminate\Support\Str::title(str_replace('_', ' ', $entry->register_event_mode)) : lexicon('label_PersonaRegister_Entry', 'Register Entry'));
+                        $entryDetails = $entry->chronicle_text ?? '';
+                        $entryDate = $entry->created_at ?? null;
                     @endphp
                     <div class="bg-panel-sub border border-panel rounded-panel p-3 flex flex-col gap-xs">
                         <div class="flex flex-row flex-wrap justify-between items-center gap-sm">
                             <span class="text-sm font-bold text-h">{{ $entryTitle }}</span>
                             <div class="flex flex-row items-center gap-xs text-xs text-muted">
-                                @if($entryStardate)
-                                    <span class="font-bold text-accent">{{ $entryStardate }}</span>
-                                @endif
                                 @if($entryDate)
-                                    <span>{{ $entryDate instanceof \Carbon\CarbonInterface ? $entryDate->format('d M Y') : $entryDate }}</span>
+                                    <span>{{ function_exists('world_date') ? world_date($entryDate) : ($entryDate instanceof \Carbon\CarbonInterface ? $entryDate->format('d M Y') : $entryDate) }}</span>
                                 @endif
                             </div>
                         </div>

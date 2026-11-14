@@ -180,6 +180,7 @@ class FolioAuthoringController extends Controller
 
         if (! empty($attachedCharacterIds) && $primaryFolio) {
             $taggedCharacters = Persona::whereIn('id', $attachedCharacterIds)->with('user')->get();
+            $authorHandle = (string) data_get(auth()->user(), 'user_handle', 'Another writer');
 
             foreach ($taggedCharacters as $char) {
                 if ($char->user_id && (int)$char->user_id !== (int) $userId && $char->user) {
@@ -187,13 +188,14 @@ class FolioAuthoringController extends Controller
                         ->where('key', 'discord_id')
                         ->value('value');
 
-                    $userMention = ! empty($discordId) ? "<@{$discordId}>" : $char->user->name;
+                    $recipientHandle = (string) data_get($char->user, 'user_handle', 'Writer');
+                    $userMention = ! empty($discordId) ? "<@{$discordId}>" : $recipientHandle;
                     $folioUrl = url('/dashboard');
                     $folioLink = "[Folio #{$primaryFolio->id}]({$folioUrl})";
 
                     NotificationService::sendDiscord(
                         'alerts',
-                        "🏷️ **Writer Tagged:** Persona **{$char->persona_name}** ({$userMention}) was added as present in {$folioLink} (*{$primaryFolio->scene_location}*) by " . auth()->user()->name . "."
+                        "🏷️ **Writer Tagged:** Persona **{$char->persona_name}** ({$userMention}) was added as present in {$folioLink} (*{$primaryFolio->scene_location}*) by {$authorHandle}."
                     );
                 }
             }
@@ -208,11 +210,12 @@ class FolioAuthoringController extends Controller
 
         return response()->json([
             'status'   => 'success',
+            'message'  => lexicon('msg_WriteChapter_SavedSuccess', 'Folio successfully saved!'),
+            'data'     => $primaryFolio,
+            'redirect' => '/dashboard',
             'success'  => true,
             'folio_id' => $primaryFolio?->id,
-            'message'  => lexicon('msg_WriteChapter_SavedSuccess', 'Folio successfully saved!'),
-            'redirect' => '/dashboard',
-        ]);
+        ], 200);
     }
 
     public function autoSave(Request $request, ?Folio $folio = null)
@@ -235,7 +238,12 @@ class FolioAuthoringController extends Controller
         ]);
 
         if (empty($validated['volume_id'])) {
-            return response()->json(['status' => 'waiting_for_volume'], 200);
+            return response()->json([
+                'status'   => 'waiting_for_volume',
+                'message'  => lexicon('msg_WriteChapter_WaitingForVolume', 'Waiting for volume selection.'),
+                'data'     => null,
+                'redirect' => null,
+            ], 200);
         }
 
         $rawCharacterIds = $validated['character_ids'] ?? [];
@@ -253,7 +261,12 @@ class FolioAuthoringController extends Controller
         if ($folioId) {
             $existingFolio = Folio::find($folioId);
             if ($existingFolio && !$existingFolio->isAccessibleBy(auth()->user())) {
-                return response()->json(['status' => 'unauthorised'], 403);
+                return response()->json([
+                    'status'   => 'unauthorised',
+                    'message'  => lexicon('msg_WriteChapter_Unauthorised', 'Unauthorised access to this draft folio.'),
+                    'data'     => null,
+                    'redirect' => null,
+                ], 403);
             }
             $folio = $existingFolio;
             $folio->update($validated);
@@ -270,11 +283,13 @@ class FolioAuthoringController extends Controller
 
         return response()->json([
             'status'    => 'success',
+            'message'   => lexicon('msg_WriteChapter_AutoSaved', 'Draft auto-saved successfully.'),
+            'data'      => $folio,
+            'redirect'  => null,
             'success'   => true,
             'folio_id'  => $folio->id,
             'timestamp' => now()->toTimeString(),
-            'message'   => 'Draft auto-saved successfully.'
-        ]);
+        ], 200);
     }
 
     protected function resolveCharacterIds(array $rawCharacterIds): array
@@ -308,15 +323,25 @@ class FolioAuthoringController extends Controller
         if ($folio->locked_by_user_id && (int)$folio->locked_by_user_id !== (int) $userId && !$isCoAuthor) {
             if ($folio->locked_at && $folio->locked_at->diffInMinutes(now()) < 10) {
                 $lockedUser = $folio->lockedBy;
+                $lockedHandle = (string) data_get($lockedUser, 'user_handle', 'Another writer');
+
                 return response()->json([
                     'status'    => 'locked',
-                    'locked_by' => $lockedUser->name ?? 'Another writer',
-                    'message'   => 'This folio is currently locked.'
+                    'message'   => lexicon('msg_WriteChapter_Locked', 'This folio is currently locked.'),
+                    'data'      => null,
+                    'redirect'  => null,
+                    'locked_by' => $lockedHandle,
                 ], 423);
             }
         }
 
         $folio->update(['locked_by_user_id' => $userId, 'locked_at' => now()]);
-        return response()->json(['status' => 'success']);
+
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_WriteChapter_LockAcquired', 'Folio lock acquired.'),
+            'data'     => $folio,
+            'redirect' => null,
+        ], 200);
     }
 }

@@ -24,13 +24,15 @@ class ChronologicalEngineController extends Controller
             'temporal_multiplier'   => 'nullable|numeric',
         ]);
 
-        ChronologicalEngine::create($validated);
+        $chronologicalEngine = ChronologicalEngine::create($validated);
         Cache::forget('active_time_system');
 
         return response()->json([
-            'success' => true,
-            'message' => lexicon('msg_TimeSystem_Created', 'Chronological engine created successfully.'),
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_TimeSystem_Created', 'Chronological engine created successfully.'),
+            'data'     => $chronologicalEngine,
+            'redirect' => null,
+        ], 200);
     }
 
     public function update(Request $request, ChronologicalEngine $chronologicalEngine)
@@ -52,9 +54,11 @@ class ChronologicalEngineController extends Controller
         Cache::forget('active_time_system');
 
         return response()->json([
-            'success' => true,
-            'message' => lexicon('msg_TimeSystem_Updated', 'Chronological engine updated successfully.'),
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_TimeSystem_Updated', 'Chronological engine updated successfully.'),
+            'data'     => $chronologicalEngine,
+            'redirect' => null,
+        ], 200);
     }
 
     public function destroy(ChronologicalEngine $chronologicalEngine)
@@ -65,8 +69,10 @@ class ChronologicalEngineController extends Controller
         Cache::forget('active_time_system');
 
         return response()->json([
-            'success' => true,
-            'message' => lexicon('msg_TimeSystem_Deleted', 'Chronological engine deleted successfully.'),
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_TimeSystem_Deleted', 'Chronological engine deleted successfully.'),
+            'data'     => $chronologicalEngine,
+            'redirect' => null,
+        ], 200);
     }
 }

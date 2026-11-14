@@ -64,12 +64,14 @@ class VolumeReviewController extends Controller
             ?? $validated['volume_synopsis']
             ?? $volume->volume_title;
 
-        DB::transaction(function () use ($validated, $eventMode, $citationText) {
+        $createdRecords = [];
+
+        DB::transaction(function () use ($validated, $eventMode, $citationText, &$createdRecords) {
             foreach ($validated['recipients'] as $recipient) {
                 if ($recipient['type'] === 'character') {
                     $persona = Persona::find($recipient['id']);
                     if ($persona) {
-                        ChronologicalRegister::create([
+                        $createdRecords[] = ChronologicalRegister::create([
                             'persona_id'          => $persona->id,
                             'user_id'             => $persona->user_id,
                             'authorising_user_id' => auth()->id(),
@@ -81,7 +83,7 @@ class VolumeReviewController extends Controller
                 } else {
                     $user = User::find($recipient['id']);
                     if ($user) {
-                        ChronologicalRegister::create([
+                        $createdRecords[] = ChronologicalRegister::create([
                             'user_id'             => $user->id,
                             'authorising_user_id' => auth()->id(),
                             'scope_target'        => 'OOC',
@@ -94,9 +96,10 @@ class VolumeReviewController extends Controller
         });
 
         return response()->json([
-            'status'  => 'success',
-            'success' => true,
-            'message' => lexicon('msg_Story_ServiceRecordsIssued', 'Service records and milestone citations successfully issued.')
-        ]);
+            'status'   => 'success',
+            'message'  => lexicon('msg_Story_ServiceRecordsIssued', 'Service records and milestone citations successfully issued.'),
+            'data'     => $createdRecords,
+            'redirect' => null,
+        ], 200);
     }
 }

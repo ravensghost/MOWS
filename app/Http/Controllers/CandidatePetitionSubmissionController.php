@@ -39,6 +39,14 @@ class CandidatePetitionSubmissionController extends Controller
     }
 
     /**
+     * Store a newly submitted candidate petition (alias for submit).
+     */
+    public function store(Request $request,$identifier = 'application')
+    {
+        return $this->submit($request,$identifier);
+    }
+
+    /**
      * Handle AJAX submission of a candidate petition.
      */
     public function submit(Request $request,$identifier)
@@ -48,8 +56,10 @@ class CandidatePetitionSubmissionController extends Controller
                 $authMessage = lexicon('msg_auth_RequiredForApp', 'Please log in or register an account before submitting a petition.');
                 if ($request->wantsJson()) {
                     return response()->json([
-                        'success' => false,
-                        'message' => $authMessage,
+                        'status'   => 'error',
+                        'message'  => $authMessage,
+                        'data'     => null,
+                        'redirect' => null,
                     ], 401);
                 }
                 return back()->with('error', $authMessage);
@@ -80,8 +90,10 @@ class CandidatePetitionSubmissionController extends Controller
 
                     if ($request->wantsJson()) {
                         return response()->json([
-                            'success' => false,
-                            'message' => $limitMsg,
+                            'status'   => 'error',
+                            'message'  => $limitMsg,
+                            'data'     => null,
+                            'redirect' => null,
                         ], 422);
                     }
                     return back()->with('error', $limitMsg);
@@ -141,22 +153,24 @@ class CandidatePetitionSubmissionController extends Controller
                         : trim(strip_tags((string) $value));
                 }
 
-                $petition->answers()->create([
+                $petition->entries()->create([
                     'metadata_id'     => $fieldId,
                     'petition_answer' => $formattedAnswer,
                 ]);
             }
 
-            $message = lexicon('msg_FormsHub_ApplicationSuccess', 'Your candidate petition has been lodged for review!');
+            $petition->load('entries');
 
             if ($request->wantsJson()) {
                 return response()->json([
-                    'success' => true,
-                    'message' => $message,
-                ]);
+                    'status'   => 'success',
+                    'message'  => lexicon('msg_FormsHub_ApplicationSuccess', 'Your candidate petition has been lodged for review!'),
+                    'data'     => $petition,
+                    'redirect' => null,
+                ], 200);
             }
 
-            return back()->with('notice', $message);
+            return back()->with('notice', lexicon('msg_FormsHub_ApplicationSuccess', 'Your candidate petition has been lodged for review!'));
         }
 
         abort(404);

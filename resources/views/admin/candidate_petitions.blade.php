@@ -22,7 +22,7 @@
                         <span>{{ lexicon('title_Admin_CandidatePetitions', 'Candidate Petitions & Council Evaluations') }}</span>
                     </h1>
                     <p class="text-sm text-input-muted">
-                        {{ lexicon('desc_Admin_CandidatePetitions', 'Review incoming candidate petitions, record council evaluations, and approve or reassign personas.') }}
+                        {{ lexicon('desc_Admin_CandidatePetitions', 'Review incoming candidate petitions, record council evaluations, and approve or reassign personae.') }}
                     </p>
                 </div>
 
@@ -86,40 +86,40 @@
                             <th class="p-4">{{ lexicon('col_Petitions_ID', 'Petition ID') }}</th>
                             <th class="p-4">{{ lexicon('col_Petitions_PersonaName', 'Proposed Persona') }}</th>
                             <th class="p-4">{{ lexicon('col_Petitions_Applicant', 'Applicant') }}</th>
-                            <th class="p-4">{{ lexicon('col_Petitions_Status', 'Status') }}</th>
+                            <th class="p-4">{{ lexicon('col_Petitions_Status', 'Petition Status') }}</th>
                             <th class="p-4">{{ lexicon('col_Petitions_Evaluations', 'Council Evaluations') }}</th>
-                            <th class="p-4">{{ lexicon('col_Petitions_Submitted', 'Submitted') }}</th>
+                            <th class="p-4">{{ lexicon('col_Petitions_LodgedAt', 'Lodged At') }}</th>
                             <th class="p-4 text-right">{{ lexicon('col_common_Actions', 'Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody id="candidate-petitions-tbody" class="divide-y border-panel text-sm text-p">
                         @forelse($petitions ?? [] as $petition)
                             @php
-                                $petitionId =$petition->id;
-                                $personaId =$petition->persona_id;
+                                $petitionId = $petition->id;
+                                $personaId = $petition->persona_id;
                                 $personaName = $petition->persona?->persona_name ?? $petition->proposed_persona_name ?? lexicon('label_common_NotSpecified', 'Not Specified');
-                                $status = strtolower($petition->petition_status ?? $petition->status ?? 'pending');
+                                $petitionStatus = strtolower($petition->petition_status ?? 'pending');
                             @endphp
                             <tr id="petition-row-{{ $petitionId }}"
-                                x-show="(statusFilter === 'all' || statusFilter === '{{ $status }}') && (!searchQuery \vert{}\vert{} '{{ strtolower(addslashes($personaName)) }}'.includes(searchQuery.toLowerCase()))"
+                                x-show="(statusFilter === 'all' || statusFilter === '{{ $petitionStatus }}') && (!searchQuery || '{{ strtolower(addslashes($personaName)) }}'.includes(searchQuery.toLowerCase()))"
                                 class="hover-bg-panel-sub transition-colors">
                                 <td class="p-4 font-mono text-xs text-input-muted">#{{ $petitionId }}</td>
                                 <td class="p-4 font-bold text-accent">{{ $personaName }}</td>
-                                <td class="p-4">{{ $petition->user?->name ?? $petition->applicant_name ?? lexicon('label_common_Guest', 'Applicant') }}</td>
+                                <td class="p-4">{{ $petition->user?->name ?? lexicon('label_common_Guest', 'Applicant') }}</td>
                                 <td class="p-4">
                                     <span class="px-2 py-1 rounded-panel text-xs font-bold uppercase
-                                        {{ $status === 'approved' ? 'bg-success text-white' : ($status === 'rejected' ? 'bg-danger text-white' : 'bg-warning text-dark') }}">
-                                        {{ $status }}
+                                        {{ $petitionStatus === 'approved' ? 'bg-success text-white' : ($petitionStatus === 'rejected' ? 'bg-danger text-white' : 'bg-warning text-dark') }}">
+                                        {{ $petitionStatus }}
                                     </span>
                                 </td>
                                 <td class="p-4">
                                     <span class="text-xs font-bold">
-                                        {{ $petition->evaluations_count ?? ($petition->relationLoaded('evaluations') ?$petition->evaluations->count() : 0) }}
+                                        {{ $petition->evaluations_count ?? ($petition->relationLoaded('evaluations') ? $petition->evaluations->count() : 0) }}
                                         {{ lexicon('label_Petitions_VotesRecorded', 'Evaluations') }}
                                     </span>
                                 </td>
                                 <td class="p-4 text-xs text-input-muted">
-                                    {{ $petition->created_at?->format('Y-m-d H:i') ?? '—' }}
+                                    {{ $petition->lodged_at?->format('Y-m-d H:i') ?? $petition->created_at?->format('Y-m-d H:i') ?? '—' }}
                                 </td>
                                 <td class="p-4 text-right">
                                     <div class="flex flex-row justify-end items-center gap-xs">
@@ -130,8 +130,8 @@
                                                       'petitionId' => $petitionId,
                                                       'personaId' => $personaId,
                                                       'personaName' => $personaName,
-                                                      'status' => $status,
-                                                      'entries' => $petition->entries ?? $petition->answers ?? [],
+                                                      'petition_status' => $petitionStatus,
+                                                      'entries' => $petition->entries ?? [],
                                                       'evaluations' => $petition->evaluations ?? []
                                                   ]) }}, 'review')"
                                                   x-tooltip="'{{ addslashes(lexicon('tooltip_Petitions_Review', 'Review petition entries and council evaluations')) }}'"

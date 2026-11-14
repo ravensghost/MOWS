@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CandidatePetition extends Model
 {
@@ -20,22 +22,32 @@ class CandidatePetition extends Model
         'lodged_at' => 'datetime',
     ];
 
-    public function persona()
+    public function persona(): BelongsTo
     {
         return $this->belongsTo(Persona::class, 'persona_id');
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function answers()
+    public function entries(): HasMany
     {
         return $this->hasMany(PetitionEntry::class, 'candidate_petition_id');
     }
 
-    public function votes()
+    public function answers(): HasMany
+    {
+        return $this->hasMany(PetitionEntry::class, 'candidate_petition_id');
+    }
+
+    public function evaluations(): HasMany
+    {
+        return $this->hasMany(CouncilEvaluation::class, 'candidate_petition_id');
+    }
+
+    public function votes(): HasMany
     {
         return $this->hasMany(CouncilEvaluation::class, 'candidate_petition_id');
     }

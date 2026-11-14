@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use App\Models\Division;
 use App\Models\DivisionCatalogue;
 use App\Models\InsigniaCatalogue;
@@ -21,6 +22,7 @@ class DivisionController extends Controller
     private function clearDivisionCaches(): void
     {
         Cache::forget('global_section_colors');
+        Cache::forget('widget_personae_table_sections');
         Cache::forget('widget_roster_sections');
         Cache::forget('widget_manifest_sections');
     }
@@ -39,14 +41,14 @@ class DivisionController extends Controller
         $sections = Division::with([
             'insigniaCatalogue',
             'divisionCatalogue',
-            'assignments.characters' => function ($query) {
-                $query->where('status', 'active');
+            'assignments.personae' => function ($query) {
+                $query->where('persona_status', 'active');
             }
         ])->orderBy('division_sort_order')->get();
 
         $catalogues = DivisionCatalogue::with('divisions')->orderBy('catalogue_title')->get();
 
-        return view('admin.sections', compact('sections', 'catalogues', 'systemPage'));
+        return view('admin.divisions', compact('sections', 'catalogues', 'systemPage'));
     }
 
     public function store(Request $request)
@@ -63,7 +65,7 @@ class DivisionController extends Controller
             'insignia_catalogue_id' => 'nullable|exists:insignia_catalogues,id',
         ]);
 
-        $division = Division::create([
+        $model = Division::create([
             'division_title'        => $validated['division_title'],
             'division_description'  => $validated['division_description'] ?? null,
             'division_base_colour'  => $validated['division_base_colour'] ?? '#374151',
@@ -75,12 +77,7 @@ class DivisionController extends Controller
 
         $this->clearDivisionCaches();
 
-        return response()->json([
-            'status'  => 'success',
-            'success' => true,
-            'data'    => $division,
-            'message' => lexicon('msg_SectionsPositions_SectionCreated', 'Section created successfully.'),
-        ]);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_SectionsPositions_SectionCreated', 'Section created successfully.'), 'data' => $model, 'redirect' => null], 200);
     }
 
     public function update(Request $request, Division $section)
@@ -109,12 +106,7 @@ class DivisionController extends Controller
 
         $this->clearDivisionCaches();
 
-        return response()->json([
-            'status'  => 'success',
-            'success' => true,
-            'data'    => $section,
-            'message' => lexicon('msg_SectionsPositions_SectionUpdated', 'Section updated successfully.'),
-        ]);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_SectionsPositions_SectionUpdated', 'Section updated successfully.'), 'data' => $section, 'redirect' => null], 200);
     }
 
     public function destroy(Division $section)
@@ -125,11 +117,7 @@ class DivisionController extends Controller
 
         $this->clearDivisionCaches();
 
-        return response()->json([
-            'status'  => 'success',
-            'success' => true,
-            'message' => lexicon('msg_SectionsPositions_SectionDeleted', 'Section deleted successfully.'),
-        ]);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_SectionsPositions_SectionDeleted', 'Section deleted successfully.'), 'data' => $section, 'redirect' => null], 200);
     }
 
     public function generateDescription(Request $request, AILoreService $aiLoreService)
@@ -140,9 +128,9 @@ class DivisionController extends Controller
         $hint = trim((string) $request->input('prompt_hint', ''));
 
         if (empty($divisionTitle)) {
-            return response()->json([
-                'error' => lexicon('msg_SectionsPositions_EnterNameFirst', 'Please enter a Section Name first.')
-            ], 422);
+            throw ValidationException::withMessages([
+                'division_title' => [lexicon('msg_SectionsPositions_EnterNameFirst', 'Please enter a Section Name first.')],
+            ]);
         }
 
         try {
@@ -151,10 +139,11 @@ class DivisionController extends Controller
             $generatedText = "The {$divisionTitle} division is responsible for maintaining operational integrity and strategic objectives.";
         }
 
-        return response()->json([
-            'status'               => 'success',
+        $model = (object) [
             'division_description' => $generatedText,
-        ]);
+        ];
+
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_SectionsPositions_DescGenerated', 'Section description generated successfully.'), 'data' => $model, 'redirect' => null], 200);
     }
 
     public function export()
@@ -258,13 +247,14 @@ class DivisionController extends Controller
         $data = json_decode($content, true);
 
         if (!isset($data['divisions']) || !is_array($data['divisions'])) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => lexicon('msg_SectionsPositions_InvalidManifest', 'Invalid divisions manifest format.'),
-            ], 422);
+            throw ValidationException::withMessages([
+                'file' => [lexicon('msg_SectionsPositions_InvalidManifest', 'Invalid divisions manifest format.')],
+            ]);
         }
 
-        DB::transaction(function () use ($data, $request) {
+        $importedDivisions = [];
+
+        DB::transaction(function () use ($data, $request, &$importedDivisions) {
             if ($request->input('mode') === 'replace') {
                 Division::query()->delete();
             }
@@ -304,15 +294,13 @@ class DivisionController extends Controller
                         );
                     }
                 }
+
+                $importedDivisions[] = $division;
             }
         });
 
         $this->clearDivisionCaches();
 
-        return response()->json([
-            'status'  => 'success',
-            'success' => true,
-            'message' => lexicon('msg_SectionsPositions_ImportSuccess', 'Divisions and assignments imported successfully.'),
-        ]);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_SectionsPositions_ImportSuccess', 'Divisions and assignments imported successfully.'), 'data' => $importedDivisions, 'redirect' => null], 200);
     }
 }

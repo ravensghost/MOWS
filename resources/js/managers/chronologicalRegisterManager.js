@@ -12,7 +12,7 @@ export default (awardsList = []) => ({
     init() {
         this.initFuse();
         this.$watch('searchQuery', () => {
-            this.filterRecords();
+            this.performSearch();
         });
     },
 
@@ -28,7 +28,7 @@ export default (awardsList = []) => ({
         }
     },
 
-    filterRecords() {
+    performSearch() {
         const q = this.searchQuery.trim();
         if (!q || !this.searchHelperInstance) {
             this.matchedRecordIds = null;
@@ -38,12 +38,12 @@ export default (awardsList = []) => ({
         this.matchedRecordIds = results ? results.map(id => Number(id)) : [];
     },
 
-    matchesRecord(id) {
+    isItemVisible(id) {
         if (!this.searchQuery.trim() || this.matchedRecordIds === null) return true;
         return this.matchedRecordIds.includes(Number(id));
     },
 
-    openIssueModal(tab = 'award') {
+    openModal(tab = 'award') {
         this.actionTab = tab;
         this.issueModalOpen = true;
     },
