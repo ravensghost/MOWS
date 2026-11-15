@@ -2,8 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Section;
-use App\Models\Position;
+use App\Models\Division;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
@@ -12,40 +11,39 @@ class SectionsAndPositionsTest extends TestCase
 {
     use DatabaseTransactions;
 
-    public function test_admin_can_create_section_and_position(): void
+    public function test_admin_can_create_a_division_and_assignment(): void
     {
         $admin = User::factory()->create(['role' => 'webmaster']);
 
-        // 1. Create an organizational section
-        $response = $this->actingAs($admin)->postJson('/admin/sections', [
-            'name'        => 'Engineering',
-            'description' => 'Maintains station technical systems and warp drives.',
-            'color'       => '#10b981',
-            'order'       => 2,
+        $response = $this->actingAs($admin)->postJson('/admin/divisions', [
+            'division_title' => 'Engineering',
+            'division_description' => 'Maintains station technical systems and warp drives.',
+            'division_base_colour' => '#10b981',
+            'division_sort_order' => 2,
         ]);
 
-        $response->assertStatus(200);
+        $response->assertOk();
 
-        $this->assertDatabaseHas('sections', [
-            'name'  => 'Engineering',
-            'color' => '#10b981',
+        $this->assertDatabaseHas('divisions', [
+            'division_title' => 'Engineering',
+            'division_base_colour' => '#10b981',
         ]);
 
-        $section = Section::where('name', 'Engineering')->first();
+        $division = Division::where('division_title', 'Engineering')->firstOrFail();
 
-        // 2. Create a position under this section
-        $posResponse = $this->actingAs($admin)->postJson("/admin/sections/{$section->id}/positions", [
-            'name'     => 'Chief Engineer',
-            'capacity' => 1,
-            'is_open'  => 1,
+        $assignmentResponse = $this->actingAs($admin)->postJson("/admin/assignments/divisions/{$division->id}", [
+            'assignment_title' => 'Chief Engineer',
+            'maximum_occupants' => 1,
+            'is_recruitment_open' => true,
         ]);
 
-        $posResponse->assertStatus(200);
+        $assignmentResponse->assertOk();
 
-        $this->assertDatabaseHas('positions', [
-            'section_id' => $section->id,
-            'name'       => 'Chief Engineer',
-            'capacity'   => 1,
+        $this->assertDatabaseHas('assignments', [
+            'division_id' => $division->id,
+            'assignment_title' => 'Chief Engineer',
+            'maximum_occupants' => 1,
+            'is_recruitment_open' => 1,
         ]);
     }
 }

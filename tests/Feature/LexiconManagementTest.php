@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\LexiconCodex;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
@@ -14,19 +15,24 @@ class LexiconManagementTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'webmaster']);
 
-        // Submit via single term creation/edit format expected by LexiconTermController@update
-        $response = $this->actingAs($admin)->postJson('/admin/lexicon', [
-            'code_key'     => 'msg_CustomSystemNotice',
-            'translations' => [
+        $response = $this->actingAs($admin)->postJson('/admin/lexicon-codex', [
+            'semantic_token' => 'msg_CustomSystemNotice',
+            'translation_payloads' => [
                 'gb' => 'All systems operating at nominal efficiency.',
             ],
         ]);
 
-        $response->assertStatus(200);
+        $response->assertOk();
 
-        // Verify against the correct 'terms' table used by the Term model
-        $this->assertDatabaseHas('terms', [
-            'code_key' => 'msg_CustomSystemNotice',
+        $this->assertDatabaseHas('lexicon_codex', [
+            'semantic_token' => 'msg_CustomSystemNotice',
+            'default_lexicon_string' => 'All systems operating at nominal efficiency.',
         ]);
+
+        $entry = LexiconCodex::where('semantic_token', 'msg_CustomSystemNotice')->firstOrFail();
+        $this->assertSame(
+            'All systems operating at nominal efficiency.',
+            $entry->translation_payloads['gb']
+        );
     }
 }

@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Module;
 use App\Models\User;
-use App\Models\Widget;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
@@ -23,20 +23,20 @@ class WidgetManagementTest extends TestCase
         return $admin;
     }
 
-    public function test_admin_can_sync_widgets(): void
+    public function test_admin_can_sync_modules(): void
     {
         $admin = $this->createAdminUser();
 
-        $response = $this->actingAs($admin)->postJson('/admin/widgets/sync');
+        $response = $this->actingAs($admin)->postJson('/admin/modules/sync');
 
-        $response->assertStatus(200);
+        $response->assertOk();
 
         $response->assertJson([
             'status' => 'success',
         ]);
     }
 
-    public function test_widget_sync_executes_declared_schema_migrations_safely(): void
+    public function test_module_sync_executes_declared_schema_changes_safely(): void
     {
         $admin = $this->createAdminUser();
         $tempWidgetFile = resource_path('views/widgets/_test_schema_sync_widget.blade.php');
@@ -76,9 +76,9 @@ BLADE;
             File::put($tempWidgetFile, $manifestContent);
 
             // First sync: should create the table and columns
-            $response = $this->actingAs($admin)->postJson('/admin/widgets/sync');
+            $response = $this->actingAs($admin)->postJson('/admin/modules/sync');
 
-            $response->assertStatus(200)
+            $response->assertOk()
                 ->assertJson([
                     'status' => 'success',
                 ]);
@@ -125,9 +125,9 @@ BLADE;
 
             File::put($tempWidgetFile, $updatedManifestContent);
 
-            $secondResponse = $this->actingAs($admin)->postJson('/admin/widgets/sync');
+            $secondResponse = $this->actingAs($admin)->postJson('/admin/modules/sync');
 
-            $secondResponse->assertStatus(200);
+            $secondResponse->assertOk();
             $this->assertTrue(Schema::hasColumn($testTableName, 'extra_notes'));
             $this->assertContains("{$testTableName}.extra_notes", $secondResponse->json('schema_changes.columns_added'));
         } finally {
@@ -135,7 +135,7 @@ BLADE;
                 File::delete($tempWidgetFile);
             }
             Schema::dropIfExists($testTableName);
-            Widget::where('widget_key', '_test_schema_sync_widget')->delete();
+            Module::where('module_token', '_test_schema_sync_widget')->delete();
         }
     }
 }

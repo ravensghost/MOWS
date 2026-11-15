@@ -91,22 +91,22 @@ DROP TABLE IF EXISTS `book_modules`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `book_modules` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `books_id` bigint unsigned NOT NULL,
-  `modules_id` bigint unsigned NOT NULL,
-  `grids_modules_id` bigint unsigned DEFAULT NULL,
+  `book_id` bigint unsigned NOT NULL,
+  `module_id` bigint unsigned NOT NULL,
+  `grid_module_id` bigint unsigned DEFAULT NULL,
   `module_sort_order` int NOT NULL DEFAULT '0',
-  `books_config` json DEFAULT NULL,
+  `book_config` json DEFAULT NULL,
   `access_clearance` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   `is_visible` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
-  KEY `book_modules_modules_id_foreign` (`modules_id`),
-  KEY `book_modules_grids_modules_id_foreign` (`grids_modules_id`),
-  KEY `book_modules_books_id_grids_modules_id_sort_order_index` (`books_id`,`grids_modules_id`,`module_sort_order`),
-  CONSTRAINT `book_modules_books_id_foreign` FOREIGN KEY (`books_id`) REFERENCES `books` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `book_modules_grids_modules_id_foreign` FOREIGN KEY (`grids_modules_id`) REFERENCES `grid_modules` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `book_modules_modules_id_foreign` FOREIGN KEY (`modules_id`) REFERENCES `modules` (`id`) ON DELETE CASCADE
+  KEY `book_modules_modules_id_foreign` (`module_id`),
+  KEY `book_modules_grids_modules_id_foreign` (`grid_module_id`),
+  KEY `book_modules_books_id_grids_modules_id_sort_order_index` (`book_id`,`grid_module_id`,`module_sort_order`),
+  CONSTRAINT `book_modules_book_id_foreign` FOREIGN KEY (`book_id`) REFERENCES `books` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `book_modules_grid_module_id_foreign` FOREIGN KEY (`grid_module_id`) REFERENCES `grid_modules` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `book_modules_module_id_foreign` FOREIGN KEY (`module_id`) REFERENCES `modules` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `books`;
@@ -114,17 +114,16 @@ DROP TABLE IF EXISTS `books`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `books` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `books_uri` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `books_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `books_text` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `book_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `book_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `is_published` tinyint(1) NOT NULL DEFAULT '1',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `grids_id` bigint unsigned DEFAULT NULL,
+  `grid_id` bigint unsigned DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `books_books_uri_unique` (`books_uri`),
-  KEY `books_grids_id_foreign` (`grids_id`),
-  CONSTRAINT `books_grids_id_foreign` FOREIGN KEY (`grids_id`) REFERENCES `grids` (`id`) ON DELETE SET NULL
+  UNIQUE KEY `books_books_uri_unique` (`book_url`),
+  KEY `books_grids_id_foreign` (`grid_id`),
+  CONSTRAINT `books_grid_id_foreign` FOREIGN KEY (`grid_id`) REFERENCES `grids` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `bulletins`;
@@ -132,8 +131,8 @@ DROP TABLE IF EXISTS `bulletins`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `bulletins` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `bulletins_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `bulletins_text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `bulletin_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `bulletin_text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `user_id` bigint unsigned DEFAULT '1',
   `published_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `created_at` timestamp NULL DEFAULT NULL,
@@ -338,11 +337,11 @@ DROP TABLE IF EXISTS `distinctions`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `distinctions` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `distinctions_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `distinction_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `scope_target` enum('IC','OOC','BOTH') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'BOTH',
   `distinction_catalogue_id` bigint unsigned DEFAULT NULL,
-  `distinctions_description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  `distinctions_base_colour` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '#1a1a1a',
+  `distinction_description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `distinction_base_colour` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '#1a1a1a',
   `mid_layer_mode` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'css',
   `mid_layer_asset` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `mid_layer_modifier` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -363,6 +362,7 @@ CREATE TABLE `division_catalogues` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `catalogue_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `catalogue_description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `is_visible` enum('Yes','No') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
@@ -395,14 +395,14 @@ DROP TABLE IF EXISTS `encyclopedia_codex`;
 CREATE TABLE `encyclopedia_codex` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `article_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `article_uri` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `article_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `article_category` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'General',
   `article_text` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `is_visible` tinyint(1) NOT NULL DEFAULT '1',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `wiki_articles_slug_unique` (`article_uri`)
+  UNIQUE KEY `wiki_articles_slug_unique` (`article_url`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `failed_jobs`;
@@ -491,16 +491,16 @@ DROP TABLE IF EXISTS `grid_modules`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `grid_modules` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `grids_id` bigint unsigned NOT NULL,
-  `grid_modules_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `grid_id` bigint unsigned NOT NULL,
+  `grid_module_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `column_span` int NOT NULL DEFAULT '12',
   `row_span` int NOT NULL DEFAULT '1',
   `grid_module_sort_order` int NOT NULL DEFAULT '0',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `grid_modules_grids_id_foreign` (`grids_id`),
-  CONSTRAINT `grid_modules_grids_id_foreign` FOREIGN KEY (`grids_id`) REFERENCES `grids` (`id`) ON DELETE CASCADE
+  KEY `grid_modules_grids_id_foreign` (`grid_id`),
+  CONSTRAINT `grid_modules_grid_id_foreign` FOREIGN KEY (`grid_id`) REFERENCES `grids` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `grids`;
@@ -508,8 +508,8 @@ DROP TABLE IF EXISTS `grids`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `grids` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `grids_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `grids_synopsis` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `grid_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `grid_synopsis` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
@@ -591,8 +591,8 @@ DROP TABLE IF EXISTS `lexicon_codex`;
 CREATE TABLE `lexicon_codex` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `semantic_token` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `prefix_group_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'General',
-  `group_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'general',
+  `prefix_group_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'NotDefinedRight',
+  `group_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'NotDefinedRight',
   `default_lexicon_string` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `translation_payloads` json DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
@@ -609,7 +609,7 @@ CREATE TABLE `metadata` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `metadata_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `metadata_mode` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `metadata_namespace_mode` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'application',
+  `meta_mode` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'application',
   `linked_metadata` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `metadata_payloads` json DEFAULT NULL,
   `is_required` tinyint(1) NOT NULL DEFAULT '0',
@@ -659,13 +659,13 @@ DROP TABLE IF EXISTS `modules`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `modules` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
-  `modules_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `modules_token` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `modules_default_settings` json DEFAULT NULL,
+  `module_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `module_token` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `module_default_settings` json DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `widgets_widget_key_unique` (`modules_token`)
+  UNIQUE KEY `widgets_widget_key_unique` (`module_token`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `password_reset_tokens`;
@@ -717,7 +717,7 @@ CREATE TABLE `personae` (
   `persona_mode` enum('PC','SC','NPC') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `persona_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `persona_status` enum('active','loa','eloa','honoured_dead','memorial') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
-  `primary_portrait_uri` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `primary_portrait_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `last_logged_location` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL,
@@ -834,7 +834,7 @@ DROP TABLE IF EXISTS `table_of_contents`;
 CREATE TABLE `table_of_contents` (
   `id` bigint unsigned NOT NULL AUTO_INCREMENT,
   `translation_code_key` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `destination_uri` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `destination_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `group_title` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `group_sort_order` int NOT NULL DEFAULT '0',
   `display_location` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'primary',

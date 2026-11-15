@@ -2,8 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Application;
-use App\Models\FormField;
+use App\Models\CandidatePetition;
+use App\Models\Metadata;
+use App\Models\PetitionEntry;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
@@ -12,54 +13,50 @@ class FormSubmissionAndAnswersTest extends TestCase
 {
     use DatabaseTransactions;
 
-    public function test_application_submission_saves_associated_answers(): void
+    public function test_candidate_petition_submission_saves_metadata_answers(): void
     {
         $user = User::factory()->create(['role' => 'user']);
 
-        // Ensure target form and fields exist
-        FormField::firstOrCreate(
-            ['id' => 25],
-            ['name' => 'Application', 'type' => 'widget_form', 'form_type' => 'form', 'is_required' => 0]
+        $nameField = Metadata::updateOrCreate(['id' => 1], [
+            'metadata_title' => 'Persona Name',
+            'metadata_mode' => 'text',
+            'meta_mode' => 'application',
+            'linked_metadata' => '25',
+            'metadata_sort_order' => 1,
+        ]);
+        $heritageField = Metadata::create([
+            'metadata_title' => 'Heritage',
+            'metadata_mode' => 'text',
+            'meta_mode' => 'application',
+            'linked_metadata' => '25',
+            'metadata_sort_order' => 2,
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/form/submit/application', [
+            'field_1' => 'Ensign Commander Test',
+            'field_'.$heritageField->id => 'Vulcan',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.proposed_persona_name', 'Ensign Commander Test');
+
+        $petition = CandidatePetition::where('user_id', $user->id)->latest('id')->firstOrFail();
+        $this->assertDatabaseHas('candidate_petitions', [
+            'id' => $petition->id,
+            'petition_status' => 'Pending',
+        ]);
+
+        $this->assertSame(
+            'Ensign Commander Test',
+            PetitionEntry::where('candidate_petition_id', $petition->id)
+                ->where('metadata_id', $nameField->id)
+                ->value('petition_answer')
         );
-
-        $nameField = FormField::firstOrCreate(
-            ['id' => 1],
-            ['name' => 'Character Name', 'type' => 'text', 'form_type' => 'application', 'form_linked' => '25', 'is_required' => 1]
+        $this->assertSame(
+            'Vulcan',
+            PetitionEntry::where('candidate_petition_id', $petition->id)
+                ->where('metadata_id', $heritageField->id)
+                ->value('petition_answer')
         );
-
-        $speciesField = FormField::firstOrCreate(
-            ['id' => 34],
-            ['name' => 'Species / Heritage', 'type' => 'text', 'form_type' => 'application', 'form_linked' => '25', 'is_required' => 1]
-        );
-
-        // Submit application via the PublicFormController endpoint
-        $response = $this->actingAs($user)->post('/form/submit/25', [
-            'field_1'  => 'Ensign Commander Test',
-            'field_34' => 'Vulcan',
-        ]);
-
-        $response->assertSessionHasNoErrors();
-
-        // Verify the main application record was created
-        $this->assertDatabaseHas('applications', [
-            'user_id'        => $user->id,
-            'character_name' => 'Ensign Commander Test',
-            'status'         => 'Pending',
-        ]);
-
-        $application = Application::where('user_id', $user->id)->latest('id')->first();
-
-        // Verify individual form field answers were stored in application_answers
-        $this->assertDatabaseHas('application_answers', [
-            'application_id' => $application->id,
-            'form_field_id'  => $nameField->id,
-            'answer'         => 'Ensign Commander Test',
-        ]);
-
-        $this->assertDatabaseHas('application_answers', [
-            'application_id' => $application->id,
-            'form_field_id'  => $speciesField->id,
-            'answer'         => 'Vulcan',
-        ]);
     }
 }

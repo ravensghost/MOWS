@@ -10,16 +10,16 @@ class MowsSecurityAndProfileTest extends TestCase
 {
     use DatabaseTransactions;
 
-    public function test_unauthenticated_guests_cannot_access_dashboard_or_admin()
+    public function test_unauthenticated_guests_are_redirected_from_dashboard_and_command_centre(): void
     {
         $this->get('/dashboard')->assertRedirect('/login');
-        $this->get('/admin')->assertRedirect('/login');
+        $this->get('/admin/command-centre')->assertRedirect('/login');
     }
 
-    public function test_user_can_update_profile_including_social_handles()
+    public function test_user_can_update_profile_including_social_handles(): void
     {
         $user = User::factory()->create([
-            'role' => 'user'
+            'role' => 'user',
         ]);
 
         $response = $this
@@ -41,26 +41,23 @@ class MowsSecurityAndProfileTest extends TestCase
         $this->assertSame('testprofile', $user->facebook_handle);
     }
 
-    public function test_standard_users_cannot_access_admin_command_centre()
+    public function test_standard_users_cannot_access_admin_command_centre(): void
     {
         $user = User::factory()->create([
-            'role' => 'user'
+            'role' => 'user',
         ]);
 
-        $response = $this->actingAs($user)->get('/admin');
+        $response = $this->actingAs($user)->get('/admin/command-centre');
 
-        $response->assertStatus(403);
+        $response->assertForbidden();
     }
 
-    public function test_webmaster_or_authorized_roles_can_access_admin_command_centre()
+    public function test_webmaster_can_access_admin_command_centre(): void
     {
-        $admin = User::factory()->create([
-            'role' => 'webmaster',
-        ]);
-        $admin->assignRole('webmaster');
+        $admin = User::factory()->create(['role' => 'webmaster']);
 
-        $response = $this->actingAs($admin)->get('/admin');
+        $response = $this->actingAs($admin)->get('/admin/command-centre');
 
-        $response->assertStatus(200);
+        $response->assertOk();
     }
 }

@@ -2,16 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\Book;
-use App\Models\Bookcase;
-use App\Models\BookStatus;
-use App\Models\Chapter;
-use App\Models\Character;
-use App\Models\Position;
-use App\Models\Ranks;
-use App\Models\RankSet;
-use App\Models\Section;
+use App\Models\Folio;
+use App\Models\Persona;
+use App\Models\PublicationState;
+use App\Models\Shelf;
 use App\Models\User;
+use App\Models\Volume;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -19,57 +15,53 @@ class StoryAndSanitisationTest extends TestCase
 {
     use DatabaseTransactions;
 
-    public function test_chapter_content_is_sanitised_for_xss(): void
+    public function test_folio_content_is_sanitised_before_it_is_saved(): void
     {
         $user = User::factory()->create(['role' => 'user']);
-
-        $bookcase = Bookcase::firstOrCreate(['name' => 'Test Bookcase']);
-        $status = BookStatus::firstOrCreate(['slug' => 'active'], ['name' => 'Active', 'sort_order' => 1]);
-        $book = Book::firstOrCreate(['title' => 'Test Book'], ['bookcase_id' => $bookcase->id, 'status_id' => $status->id]);
-
-        $rankSet = RankSet::firstOrCreate(['name' => 'writers']);
-        $section = Section::firstOrCreate(['name' => 'Writers'], ['color' => '#dc2626', 'order' => 1]);
-        $position = Position::firstOrCreate(['name' => 'Writer', 'section_id' => $section->id]);
-        $rank = Ranks::firstOrCreate(['name' => 'Head Writer', 'rank_set_id' => $rankSet->id], ['short_name' => 'HW']);
-
-        $character = Character::create([
-            'user_id'        => $user->id,
-            'position_id'    => $position->id,
-            'rank_id'        => $rank->id,
-            'character_type' => 'PC',
-            'name'           => 'Writer Character',
-            'status'         => 'active',
+        $persona = Persona::create([
+            'user_id' => $user->id,
+            'persona_name' => 'Writer Persona',
+            'persona_status' => 'active',
+        ]);
+        $shelf = Shelf::create(['shelf_title' => 'Test Shelf', 'shelf_sort_order' => 1]);
+        $publicationState = PublicationState::create([
+            'state_title' => 'Active',
+            'book_url' => 'active',
+            'state_sort_order' => 1,
+        ]);
+        $volume = Volume::create([
+            'shelf_id' => $shelf->id,
+            'publication_state_id' => $publicationState->id,
+            'volume_title' => 'Test Volume',
+            'volume_sort_order' => 1,
         ]);
 
         $maliciousContent = "<script>alert('xss_attack');</script><p>Safe story paragraph text.</p>";
 
-        // Use postJson and provide all fields required by WriteController validation
-        $response = $this->actingAs($user)->postJson('/chapters', [
-            'book_id'             => $book->id,
-            'active_character_id' => $character->id,
-            'chapter_type'        => 'mission',
-            'ic_day'              => '1', // Must be string per WriteController validation
-            'ic_time'             => '0800',
-            'location'            => 'Bridge Hub', // Required by validation
-            'rating_l'            => 1,
-            'rating_s'            => 1,
-            'rating_v'            => 1,
-            'content'             => $maliciousContent,
-            'status'              => 'draft',
+        $response = $this->actingAs($user)->postJson('/folios', [
+            'volume_id' => $volume->id,
+            'active_persona_id' => $persona->id,
+            'folio_mode' => 'mission',
+            'ic_day' => 1,
+            'ic_time' => '0800',
+            'scene_location' => 'Bridge Hub',
+            'content_tier_l' => 1,
+            'content_tier_s' => 1,
+            'content_tier_v' => 1,
+            'folio_text' => $maliciousContent,
+            'folio_status' => 'draft',
         ]);
 
-        $response->assertStatus(200);
+        $response->assertOk();
 
-        // Assert chapter was created successfully
-        $this->assertDatabaseHas('chapters', [
-            'book_id' => $book->id,
-            'status'  => 'draft',
+        $folio = Folio::findOrFail($response->json('data.id'));
+        $this->assertDatabaseHas('folios', [
+            'id' => $folio->id,
+            'volume_id' => $volume->id,
+            'folio_status' => 'draft',
         ]);
 
-        $chapter = Chapter::latest('id')->first();
-
-        // Verify that the <script> tag was stripped out, but the safe <p> tag remained
-        $this->assertStringNotContainsString('<script>', $chapter->content);
-        $this->assertStringContainsString('<p>Safe story paragraph text.</p>', $chapter->content);
+        $this->assertStringNotContainsString('<script>', $folio->folio_text);
+        $this->assertStringContainsString('<p>Safe story paragraph text.</p>', $folio->folio_text);
     }
 }

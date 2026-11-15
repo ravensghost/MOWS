@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\TableOfContentParameter;
 use App\Models\User;
-use App\Models\NavigationOption;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -11,35 +11,38 @@ class NavigationManagementTest extends TestCase
 {
     use DatabaseTransactions;
 
-    public function test_admin_can_create_navigation_link(): void
+    public function test_admin_can_create_a_table_of_contents_entry(): void
     {
         $admin = User::factory()->create(['role' => 'webmaster']);
 
-        // Ensure valid options exist for location and visibility validation
-        NavigationOption::firstOrCreate(
-            ['option_type' => 'location', 'value' => 'primary'],
-            ['label' => 'Primary']
-        );
-        NavigationOption::firstOrCreate(
-            ['option_type' => 'visibility', 'value' => 'public'],
-            ['label' => 'Public']
-        );
-
-        $response = $this->actingAs($admin)->postJson('/admin/navigation', [
-            'lexicon_key' => 'nav_fleet_roster',
-            'url'         => '/roster',
-            'location'    => 'primary',
-            'visibility'  => 'public',
-            'target'      => '_self',
-            'order'       => 10,
+        TableOfContentParameter::create([
+            'parameter_mode' => 'display_location',
+            'parameter_value' => 'primary',
+            'parameter_label' => 'Primary',
+        ]);
+        TableOfContentParameter::create([
+            'parameter_mode' => 'access_clearance',
+            'parameter_value' => 'public',
+            'parameter_label' => 'Public',
         ]);
 
-        $response->assertStatus(200);
+        $response = $this->actingAs($admin)->postJson('/admin/table-of-contents', [
+            'translation_code_key' => 'nav_fleet_roster',
+            'destination_url' => '/roster',
+            'display_location' => 'primary',
+            'access_clearance' => 'public',
+            'window_target' => '_self',
+            'entry_sort_order' => 10,
+            'is_visible' => true,
+        ]);
 
-        $this->assertDatabaseHas('navigation_links', [
-            'lexicon_key' => 'nav_fleet_roster',
-            'url'         => '/roster',
-            'location'    => 'primary',
+        $response->assertOk();
+
+        $this->assertDatabaseHas('table_of_contents', [
+            'translation_code_key' => 'nav_fleet_roster',
+            'destination_url' => '/roster',
+            'display_location' => 'primary',
+            'access_clearance' => 'public',
         ]);
     }
 }

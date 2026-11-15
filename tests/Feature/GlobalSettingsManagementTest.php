@@ -14,17 +14,18 @@ class GlobalSettingsManagementTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'webmaster']);
 
-        $response = $this->actingAs($admin)->postJson('/admin/settings/update', [
+        $response = $this->actingAs($admin)->postJson('/admin/configurations/update', [
             'settings' => [
                 'site_name' => 'Starbase Alpha - MOWS Engine',
             ],
         ]);
 
-        $response->assertStatus(200);
+        $response->assertOk();
 
-        $this->assertDatabaseHas('settings', [
-            'key'   => 'site_name',
-            'value' => 'Starbase Alpha - MOWS Engine',
+        $this->assertDatabaseHas('configurations', [
+            'configuration_token' => 'site_name',
+            'configuration_payload' => 'Starbase Alpha - MOWS Engine',
         ]);
+
     }
 }

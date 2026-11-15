@@ -2,10 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\CorrespondenceEntry;
+use App\Models\CorrespondenceThread;
 use App\Models\User;
-use App\Models\Thread;
-use App\Models\Message;
-use App\Models\ThreadParticipant;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -13,29 +12,34 @@ class MessagingSecurityTest extends TestCase
 {
     use DatabaseTransactions;
 
-    public function test_user_can_start_new_conversation(): void
+    public function test_user_can_start_correspondence_with_another_user(): void
     {
         $sender = User::factory()->create(['role' => 'user']);
         $recipient = User::factory()->create(['role' => 'user']);
 
-        $response = $this->actingAs($sender)->postJson('/messenger/new', [
+        $response = $this->actingAs($sender)->postJson('/correspondence/new', [
+            'thread_mode' => 'OOC',
             'recipients' => [$recipient->id],
-            'subject'    => 'Classified Briefing',
-            'body'       => 'Meet me in sector four.',
-            'type'       => 'OOC', // Matches MessengerController validation rule
+            'thread_title' => 'Classified Briefing',
+            'correspondence_text' => 'Meet me in sector four.',
         ]);
 
-        $response->assertStatus(200);
+        $response->assertOk()
+            ->assertJsonPath('data.thread_title', 'Classified Briefing');
 
-        // Verify thread and message were created in the database
-        $this->assertDatabaseHas('threads', [
-            'title' => 'Classified Briefing',
-            'type'  => 'OOC',
+        $thread = CorrespondenceThread::where('thread_title', 'Classified Briefing')->firstOrFail();
+        $this->assertDatabaseHas('correspondence_threads', [
+            'id' => $thread->id,
+            'thread_mode' => 'OOC',
         ]);
-
-        $this->assertDatabaseHas('messages', [
-            'body'    => 'Meet me in sector four.',
+        $this->assertDatabaseHas('correspondence_entries', [
+            'correspondence_thread_id' => $thread->id,
             'user_id' => $sender->id,
+            'correspondence_text' => 'Meet me in sector four.',
+        ]);
+        $this->assertDatabaseHas('correspondence_participants', [
+            'correspondence_thread_id' => $thread->id,
+            'user_id' => $recipient->id,
         ]);
     }
 }

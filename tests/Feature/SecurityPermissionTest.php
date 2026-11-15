@@ -2,12 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\LayoutBlock;
-use App\Models\Page;
 use App\Models\User;
-use App\Models\Widget;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Blade;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -18,8 +15,8 @@ class SecurityPermissionTest extends TestCase
     public function test_guests_are_redirected_away_from_protected_pages(): void
     {
         $this->get('/dashboard')->assertRedirect('/login');
-        $this->get('/admin')->assertRedirect('/login');
-        $this->get('/admin/applications')->assertRedirect('/login');
+        $this->get('/admin/command-centre')->assertRedirect('/login');
+        $this->get('/admin/candidate-petitions')->assertRedirect('/login');
     }
 
     public function test_authenticated_users_can_view_their_dashboard(): void
@@ -31,7 +28,7 @@ class SecurityPermissionTest extends TestCase
 
         $response = $this->actingAs($user)->get('/dashboard');
 
-        $response->assertStatus(200);
+        $response->assertOk();
     }
 
     public function test_standard_users_cannot_access_any_admin_routes(): void
@@ -41,80 +38,71 @@ class SecurityPermissionTest extends TestCase
         ]);
         $user->assignRole('user');
 
-        $this->actingAs($user)->get('/admin')->assertStatus(403);
-        $this->actingAs($user)->get('/admin/applications')->assertStatus(403);
-        $this->actingAs($user)->get('/admin/settings')->assertStatus(403);
-        $this->actingAs($user)->get('/admin/users')->assertStatus(403);
+        $this->actingAs($user)->get('/admin/command-centre')->assertForbidden();
+        $this->actingAs($user)->get('/admin/candidate-petitions')->assertForbidden();
+        $this->actingAs($user)->get('/admin/users')->assertForbidden();
+        $this->actingAs($user)
+            ->postJson('/admin/configurations/update', ['settings' => ['site_name' => 'Blocked']])
+            ->assertForbidden();
     }
 
-    public function test_staff_with_granular_permissions_can_only_access_permitted_admin_hubs(): void
+    public function test_petition_reviewers_can_access_the_petition_queue_without_user_or_settings_access(): void
     {
-        // Create a custom staff role that ONLY has access to the Admin Hub and Applications Queue
+        // Grant queue access without user-management or settings permissions.
         $reviewerRole = Role::firstOrCreate([
             'name' => 'app_reviewer',
             'guard_name' => 'web',
         ]);
-        $reviewerRole->syncPermissions(['access-admin', 'applications_view']);
+        $reviewerRole->syncPermissions(['applications_vote']);
 
         $staffUser = User::factory()->create([
-            'role' => 'senior user',
+            'role' => 'user',
         ]);
-        $staffUser->assignRole($reviewerRole);
+        $staffUser->syncRoles([$reviewerRole]);
 
-        // Allowed routes (has 'access-admin' and 'applications_view')
-        $this->actingAs($staffUser)->get('/admin')->assertStatus(200);
-        $this->actingAs($staffUser)->get('/admin/applications')->assertStatus(200);
+        $this->actingAs($staffUser)->get('/admin/candidate-petitions')->assertOk();
 
-        // Restricted routes (lacks 'manage_settings' and 'manage_users')
-        $this->actingAs($staffUser)->get('/admin/settings')->assertStatus(403);
-        $this->actingAs($staffUser)->get('/admin/users')->assertStatus(403);
+        $this->actingAs($staffUser)->get('/admin/users')->assertForbidden();
+        $this->actingAs($staffUser)
+            ->postJson('/admin/configurations/update', ['settings' => ['site_name' => 'Blocked']])
+            ->assertForbidden();
     }
 
-    public function test_page_widgets_respect_required_permission_column(): void
+    public function test_book_modules_require_their_configured_access_clearance(): void
     {
-        // 1. Grab the Landing page ('/') and its first Layout Block
-        $landingPage = Page::where('slug', '/')->firstOrFail();
-        $block = LayoutBlock::where('layout_id', $landingPage->layout_id)->firstOrFail();
-
-        // 2. Ensure the Rich Text Document widget exists
-        $docWidget = Widget::firstOrCreate(
-            ['widget_key' => 'document'],
-            [
-                'name' => 'Rich Text Document',
-                'default_options' => json_encode(['title' => '', 'content' => '<p>Start typing here...</p>']),
-            ]
-        );
-
-        // 3. Attach a restricted widget to the Landing Page requiring 'applications_view'
         $secretText = 'CLASSIFIED_COUNCIL_EYES_ONLY_WIDGET_TEXT';
+        $gridModule = (object) [
+            'id' => 1,
+            'grid_module_title' => 'Content',
+            'column_span' => 12,
+            'row_span' => 1,
+        ];
+        $module = (object) [
+            'module_token' => 'document',
+            'module_default_settings' => [],
+            'pivot' => (object) [
+                'is_visible' => true,
+                'grid_module_id' => 1,
+                'module_sort_order' => 0,
+                'access_clearance' => 'applications_view',
+                'book_config' => [],
+                'instance_options' => ['title' => 'Council Box', 'content' => "<p>{$secretText}</p>"],
+            ],
+        ];
+        $book = (object) [
+            'grid' => (object) ['gridModules' => collect([$gridModule])],
+            'modules' => collect([$module]),
+        ];
 
-        DB::table('page_widget')->insert([
-            'page_id' => $landingPage->id,
-            'widget_id' => $docWidget->id,
-            'layout_block_id' => $block->id,
-            'sort_order' => 99,
-            'instance_options' => json_encode(['title' => 'Council Box', 'content' => "<p>{$secretText}</p>"]),
-            'required_permission' => 'applications_view',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        // 4. A standard user visiting '/' should NOT see the restricted widget text
         $standardUser = User::factory()->create(['role' => 'user']);
-        $standardUser->assignRole('user');
+        $this->actingAs($standardUser);
+        $hiddenContent = Blade::render('<x-grid-wrapper :book="$book" />', ['book' => $book]);
+        $this->assertStringNotContainsString($secretText, $hiddenContent);
 
-        $this->actingAs($standardUser)
-            ->get('/')
-            ->assertStatus(200)
-            ->assertDontSee($secretText);
-
-        // 5. A user WITH 'applications_view' visiting '/' SHOULD see the restricted widget text
-        $councilUser = User::factory()->create(['role' => 'senior user']);
+        $councilUser = User::factory()->create(['role' => 'user']);
         $councilUser->givePermissionTo('applications_view');
-
-        $this->actingAs($councilUser)
-            ->get('/')
-            ->assertStatus(200)
-            ->assertSee($secretText);
+        $this->actingAs($councilUser);
+        $visibleContent = Blade::render('<x-grid-wrapper :book="$book" />', ['book' => $book]);
+        $this->assertStringContainsString($secretText, $visibleContent);
     }
 }

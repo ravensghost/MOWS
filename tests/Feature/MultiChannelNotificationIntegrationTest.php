@@ -3,7 +3,8 @@
 namespace Tests\Feature;
 
 use App\Mail\MowsNotificationMail;
-use App\Models\Setting;
+use App\Models\Configuration;
+use App\Models\CorrespondenceThread;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Http;
@@ -14,44 +15,47 @@ class MultiChannelNotificationIntegrationTest extends TestCase
 {
     use DatabaseTransactions;
 
-    public function test_private_message_dispatches_across_all_channels_when_enabled(): void
+    public function test_correspondence_dispatches_email_and_discord_notifications_when_enabled(): void
     {
         Http::fake();
         Mail::fake();
 
-        Setting::updateOrCreate(['key' => 'notifications_discord_enabled'], ['value' => '1']);
-        Setting::updateOrCreate(['key' => 'notifications_email_enabled'], ['value' => '1']);
-        Setting::updateOrCreate(['key' => 'notifications_pm_enabled'], ['value' => '1']);
-        Setting::updateOrCreate(['key' => 'discord_webhook_alerts'], ['value' => 'https://discord.com/api/webhooks/test/alerts']);
+        Configuration::updateOrCreate(
+            ['configuration_token' => 'notifications_discord_enabled'],
+            ['configuration_payload' => '1']
+        );
+        Configuration::updateOrCreate(
+            ['configuration_token' => 'notifications_email_enabled'],
+            ['configuration_payload' => '1']
+        );
+        Configuration::updateOrCreate(
+            ['configuration_token' => 'discord_webhook_alerts'],
+            ['configuration_payload' => 'https://discord.com/api/webhooks/test/alerts']
+        );
 
         $sender = User::factory()->create();
         $recipient = User::factory()->create();
 
-        $response = $this->actingAs($sender)->postJson('/messenger/new', [
-            'type'       => 'OOC',
+        $response = $this->actingAs($sender)->postJson('/correspondence/new', [
+            'thread_mode' => 'OOC',
             'recipients' => [$recipient->id],
-            'subject'    => 'Urgent Briefing',
-            'body'       => 'Please review the attached manifest.',
+            'thread_title' => 'Urgent Briefing',
+            'correspondence_text' => 'Please review the attached manifest.',
         ]);
 
-        $response->assertStatus(200);
+        $response->assertOk()
+            ->assertJsonPath('status', 'success');
 
-        // 1. Verify On-site thread & participant were created in database
-        $this->assertDatabaseHas('threads', [
-            'type'  => 'OOC',
-            'title' => 'Urgent Briefing',
-        ]);
-
-        $this->assertDatabaseHas('thread_participants', [
+        $thread = CorrespondenceThread::where('thread_title', 'Urgent Briefing')->firstOrFail();
+        $this->assertDatabaseHas('correspondence_participants', [
+            'correspondence_thread_id' => $thread->id,
             'user_id' => $recipient->id,
         ]);
 
-        // 2. Verify Email notification was dispatched
         Mail::assertSent(MowsNotificationMail::class, function ($mail) use ($recipient) {
             return $mail->hasTo($recipient->email);
         });
 
-        // 3. Verify Discord webhook alert was fired
         Http::assertSent(function ($request) {
             return str_contains($request->url(), 'discord.com/api/webhooks');
         });
@@ -62,22 +66,31 @@ class MultiChannelNotificationIntegrationTest extends TestCase
         Http::fake();
         Mail::fake();
 
-        Setting::updateOrCreate(['key' => 'notifications_discord_enabled'], ['value' => '0']);
-        Setting::updateOrCreate(['key' => 'notifications_email_enabled'], ['value' => '0']);
-        Setting::updateOrCreate(['key' => 'notifications_pm_enabled'], ['value' => '0']);
+        Configuration::updateOrCreate(
+            ['configuration_token' => 'notifications_discord_enabled'],
+            ['configuration_payload' => '0']
+        );
+        Configuration::updateOrCreate(
+            ['configuration_token' => 'notifications_email_enabled'],
+            ['configuration_payload' => '0']
+        );
 
         $sender = User::factory()->create();
         $recipient = User::factory()->create();
 
-        $response = $this->actingAs($sender)->postJson('/messenger/new', [
-            'type'       => 'OOC',
+        $response = $this->actingAs($sender)->postJson('/correspondence/new', [
+            'thread_mode' => 'OOC',
             'recipients' => [$recipient->id],
-            'subject'    => 'Silent Briefing',
-            'body'       => 'No external pings should fire.',
+            'thread_title' => 'Silent Briefing',
+            'correspondence_text' => 'No external pings should fire.',
         ]);
 
-        $response->assertStatus(200);
+        $response->assertOk();
 
+        $this->assertDatabaseHas('correspondence_threads', [
+            'thread_title' => 'Silent Briefing',
+            'thread_mode' => 'OOC',
+        ]);
         Mail::assertNothingSent();
         Http::assertNothingSent();
     }
