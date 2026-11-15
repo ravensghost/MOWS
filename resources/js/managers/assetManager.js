@@ -1,31 +1,66 @@
 // resources/js/managers/assetManager.js
-
 /**
  * Asset Manager Component
  * Handles loading, copying URLs, uploading, and deleting general media assets.
  */
 export default () => ({
-    // 1. State Properties Upfront
+    // 1. State Properties Upfront (Unified Modals & Search Contract)
+    modals: {
+        upload: {
+            open: false,
+            mode: 'create',
+            id: '',
+            action: '/admin/general-images',
+            method: 'POST'
+        }
+    },
     images: [],
     isLoading: false,
-    uploadModalOpen: false,
+    searchQuery: '',
+    searchHelperInstance: null,
+    filteredIds: null,
 
     // 2. Lifecycle Hook
     init() {
         this.loadImages();
+        this.initSearch();
     },
 
-    // 3. Data Loading / Fetch Operations
+    // 3. Search & Filtering (Fuse.js Integration)
+    initSearch() {
+        if (window.Search && this.$el && this.$el.querySelector('[data-asset-item]')) {
+            try {
+                this.searchHelperInstance = window.Search.create(
+                    '[data-asset-item]',
+                    ['filename', 'url'],
+                    { threshold: 0.35 }
+                );
+            } catch (e) {
+                this.searchHelperInstance = null;
+            }
+        }
+        this.$watch('searchQuery', (val) => {
+            if (!val.trim() || !this.searchHelperInstance) {
+                this.filteredIds = null;
+                return;
+            }
+            const results = this.searchHelperInstance.search(val.trim());
+            this.filteredIds = results ? results.map(id => Number(id)) : [];
+        });
+    },
+
+    isItemVisible(id) {
+        if (!this.searchQuery.trim() || this.filteredIds === null) return true;
+        return this.filteredIds.includes(Number(id));
+    },
+
+    // Data Loading / Fetch Operations
     async loadImages() {
         this.isLoading = true;
         try {
-            const { ok, data } = await window.Fetch.get('/admin/assets', {
-                loading: false,
-                showError: false
-            });
-
+            const { ok, data } = await window.Fetch.get('/admin/general-images', { loading: false, showError: false });
             if (ok && data) {
-                this.images = data.images || data.data || [];
+                this.images = data.images || [];
             } else {
                 this.images = [];
             }
@@ -36,24 +71,26 @@ export default () => ({
         }
     },
 
-    // 4. Utility Actions
+    // Utility Actions
     copyUrl(url) {
         if (typeof window.copyToClipboard === 'function') {
             window.copyToClipboard(url, 'Asset URL copied to clipboard!');
         }
     },
 
-    // 5. Modal Handlers
+    // 4. Modal Handlers (Using window.Modal utility)
     openUploadModal() {
-        this.uploadModalOpen = true;
+        window.Modal.create(this.modals.upload, {}, '/admin/general-images');
+        this.modals.upload.open = true;
     },
 
     closeUploadModal() {
-        this.uploadModalOpen = false;
+        window.Modal.close(this.modals.upload);
+        this.modals.upload.open = false;
         this.loadImages();
     },
 
-    // 6. CRUD Deletion Handler
+    // CRUD Deletion Handler
     async deleteImage(filename) {
         const confirmResult = await window.Swal.confirm(
             'Delete Asset?',
@@ -64,13 +101,13 @@ export default () => ({
         if (!confirmResult.isConfirmed) return;
 
         try {
-            const { ok, data } = await window.Fetch.delete('/admin/assets', { filename: filename }, {
+            const { ok, data } = await window.Fetch.delete('/admin/general-images', { filename: filename }, {
                 loading: false,
                 showError: true
             });
 
             if (ok) {
-                this.loadImages();
+                await this.refreshDOM();
                 if (window.Swal && typeof window.Swal.toast === 'function') {
                     window.Swal.toast('success', data.message || 'Asset deleted successfully.');
                 }
@@ -79,6 +116,21 @@ export default () => ({
             }
         } catch (err) {
             // Network errors handled by window.Fetch
+        }
+    },
+
+    // 5. DOM Refresh Handler (sanitize = false)
+    async refreshDOM() {
+        this.closeUploadModal();
+        if (typeof window.updateDOM === 'function') {
+            await window.updateDOM(this.$refs, ['assetsTableContent'], () => {
+                this.loadImages();
+                this.$nextTick(() => {
+                    this.initSearch();
+                });
+            }, false);
+        } else {
+            this.loadImages();
         }
     }
 });

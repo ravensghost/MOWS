@@ -1,24 +1,7 @@
 // resources/js/managers/distinctionManager.js
 export default function distinctionManager() {
     return {
-        modalOpen: false,
-        catalogueModalOpen: false,
-        isEdit: false,
-        id: null,
-        distinction_title: '',
-        distinction_description: '',
-
-        scope_target: 'BOTH',
-        distinction_catalogue_id: '',
-
-        distinction_base_colour: '#1a1a1a',
-        mid_layer_mode: 'css',
-        mid_layer_asset: '',
-        mid_layer_modifier: 'original',
-        top_layer_mode: '',
-        top_layer_asset: '',
-        top_layer_modifier: '',
-
+        // 1. State Properties Upfront (Unified Modals & State Contract)
         modals: {
             distinction: {
                 open: false,
@@ -34,35 +17,82 @@ export default function distinctionManager() {
                 mid_layer_modifier: 'original',
                 top_layer_mode: '',
                 top_layer_asset: '',
-                top_layer_modifier: ''
+                top_layer_modifier: '',
+                action: '/admin/distinctions',
+                method: 'POST'
             },
             catalogue: {
                 open: false,
                 mode: 'create',
                 id: null,
-                catalogue_title: ''
+                catalogue_title: '',
+                action: '/admin/distinctions/catalogues',
+                method: 'POST'
             }
         },
-
+        modalOpen: false,
+        catalogueModalOpen: false,
+        isEdit: false,
+        id: null,
+        distinction_title: '',
+        distinction_description: '',
+        scope_target: 'BOTH',
+        distinction_catalogue_id: '',
+        distinction_base_colour: '#1a1a1a',
+        mid_layer_mode: 'css',
+        mid_layer_asset: '',
+        mid_layer_modifier: 'original',
+        top_layer_mode: '',
+        top_layer_asset: '',
+        top_layer_modifier: '',
         available_images: [],
         active_skin: 'default',
         loading_images: false,
+        searchQuery: '',
+        searchHelperInstance: null,
+        filteredIds: null,
 
+        // 2. Lifecycle Hook
         init() {
             this.loadImages();
+            this.initSearch();
         },
 
-        updateColourFromPicker(model, value) {
+        // 3. Search & Filtering (Fuse.js Integration)
+        initSearch() {
+            if (window.Search && this.$el && this.$el.querySelector('[data-distinction-item]')) {
+                try {
+                    this.searchHelperInstance = window.Search.create(
+                        '[data-distinction-item]',
+                        ['distinction_title', 'distinction_description'],
+                        { threshold: 0.35 }
+                    );
+                } catch (e) {
+                    this.searchHelperInstance = null;
+                }
+            }
+            this.$watch('searchQuery', (val) => {
+                if (!val.trim() || !this.searchHelperInstance) {
+                    this.filteredIds = null;
+                    return;
+                }
+                const results = this.searchHelperInstance.search(val.trim());
+                this.filteredIds = results ? results.map(id => Number(id)) : [];
+            });
+        },
+
+        isItemVisible(id) {
+            if (!this.searchQuery.trim() || this.filteredIds === null) return true;
+            return this.filteredIds.includes(Number(id));
+        },
+
+        updateColorFromPicker(model, value) {
             if (typeof this[model] !== 'undefined') {
                 this[model] = value;
             }
             if (this.modals.distinction && typeof this.modals.distinction[model] !== 'undefined') {
                 this.modals.distinction[model] = value;
             }
-        },
-
-        updateColorFromPicker(model, value) {
-            this.updateColourFromPicker(model, value);
         },
 
         async loadImages() {
@@ -74,9 +104,8 @@ export default function distinctionManager() {
                 });
 
                 if (ok && data) {
-                    const payload = data.data || data;
-                    this.available_images = payload.images || [];
-                    this.active_skin = payload.active_skin || 'default';
+                    this.available_images = data.images || [];
+                    this.active_skin = data.active_skin || 'default';
                 } else {
                     this.available_images = [];
                     this.active_skin = 'default';
@@ -89,18 +118,25 @@ export default function distinctionManager() {
             }
         },
 
+        // 4. Modal Handlers (Using window.Modal utility)
         openModal(mode = 'create', data = {}, target = 'distinction') {
             this.isEdit = mode === 'edit';
 
             if (target === 'catalogue') {
-                this.modals.catalogue.mode = mode;
-                this.modals.catalogue.id = mode === 'edit' ? (data.id || null) : null;
-                this.modals.catalogue.catalogue_title = mode === 'edit' ? (data.catalogue_title || '') : '';
+                const baseUrl = '/admin/distinctions/catalogues';
+                if (mode === 'edit') {
+                    window.Modal.edit(this.modals.catalogue, data, (id) => `${baseUrl}/${id}`);
+                    this.modals.catalogue.method = 'PUT';
+                } else {
+                    window.Modal.create(this.modals.catalogue, { catalogue_title: '' }, baseUrl);
+                    this.modals.catalogue.method = 'POST';
+                }
                 this.modals.catalogue.open = true;
                 this.catalogueModalOpen = true;
                 return;
             }
 
+            const baseUrl = '/admin/distinctions';
             const record = mode === 'edit' ? data : {};
 
             this.id = record.id || null;
@@ -116,34 +152,49 @@ export default function distinctionManager() {
             this.top_layer_asset = record.top_layer_asset || '';
             this.top_layer_modifier = record.top_layer_modifier || '';
 
-            this.modals.distinction = {
-                open: true,
-                mode: mode,
-                id: this.id,
-                distinction_title: this.distinction_title,
-                distinction_description: this.distinction_description,
-                scope_target: this.scope_target,
-                distinction_catalogue_id: this.distinction_catalogue_id,
-                distinction_base_colour: this.distinction_base_colour,
-                mid_layer_mode: this.mid_layer_mode,
-                mid_layer_asset: this.mid_layer_asset,
-                mid_layer_modifier: this.mid_layer_modifier,
-                top_layer_mode: this.top_layer_mode,
-                top_layer_asset: this.top_layer_asset,
-                top_layer_modifier: this.top_layer_modifier
-            };
+            if (mode === 'edit') {
+                window.Modal.edit(this.modals.distinction, record, (id) => `${baseUrl}/${id}`);
+                this.modals.distinction.method = 'PUT';
+            } else {
+                window.Modal.create(this.modals.distinction, {
+                    scope_target: 'BOTH',
+                    distinction_base_colour: '#1a1a1a',
+                    mid_layer_mode: 'css',
+                    mid_layer_modifier: 'original'
+                }, baseUrl);
+                this.modals.distinction.method = 'POST';
+            }
 
+            this.modals.distinction.open = true;
             this.modalOpen = true;
         },
 
         closeModal(target = 'distinction') {
             if (target === 'catalogue') {
+                window.Modal.close(this.modals.catalogue);
                 this.modals.catalogue.open = false;
                 this.catalogueModalOpen = false;
                 return;
             }
+            window.Modal.close(this.modals.distinction);
             this.modals.distinction.open = false;
             this.modalOpen = false;
+        },
+
+        // 5. DOM Refresh Handler (sanitize = false)
+        async refreshDOM() {
+            if (typeof window.updateDOM === 'function') {
+                await window.updateDOM(this.$refs, ['distinctionsTableWrapper'], () => {
+                    this.closeModal('distinction');
+                    this.closeModal('catalogue');
+                    this.$nextTick(() => {
+                        this.initSearch();
+                    });
+                }, false);
+            } else {
+                this.closeModal('distinction');
+                this.closeModal('catalogue');
+            }
         }
     };
 }

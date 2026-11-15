@@ -1,21 +1,74 @@
 // resources/js/managers/loaHubManager.js
 export default () => ({
-    loaModal: {
-        open: false,
-        userId: null,
-        userName: '',
-        is_on_loa: '1',
-        loa_return_date: '',
-        reason: '',
+    // 1. State Properties Upfront (Unified Modals & State Contract)
+    modals: {
+        loa: {
+            open: false,
+            mode: 'edit',
+            userId: null,
+            userName: '',
+            is_on_loa: '1',
+            loa_return_date: '',
+            reason: '',
+            action: '',
+            method: 'PUT'
+        }
+    },
+    searchQuery: '',
+    searchHelperInstance: null,
+    filteredIds: null,
+
+    // 2. Lifecycle Hook
+    init() {
+        this.initSearch();
     },
 
+    // 3. Search & Filtering (Fuse.js Integration)
+    initSearch() {
+        if (window.Search && this.$el && this.$el.querySelector('[data-loa-user-item]')) {
+            try {
+                this.searchHelperInstance = window.Search.create(
+                    '[data-loa-user-item]',
+                    ['username', 'name', 'reason'],
+                    { threshold: 0.35 }
+                );
+            } catch (e) {
+                this.searchHelperInstance = null;
+            }
+        }
+        this.$watch('searchQuery', (val) => {
+            if (!val.trim() || !this.searchHelperInstance) {
+                this.filteredIds = null;
+                return;
+            }
+            const results = this.searchHelperInstance.search(val.trim());
+            this.filteredIds = results ? results.map(id => Number(id)) : [];
+        });
+    },
+
+    isItemVisible(id) {
+        if (!this.searchQuery.trim() || this.filteredIds === null) return true;
+        return this.filteredIds.includes(Number(id));
+    },
+
+    // 4. Modal Handlers (Using window.Modal utility)
     openLoaModal(userId, userName, isOnLoa = true, returnDate = '') {
-        this.loaModal.userId = userId;
-        this.loaModal.userName = userName;
-        this.loaModal.is_on_loa = isOnLoa ? '1' : '0';
-        this.loaModal.loa_return_date = returnDate || '';
-        this.loaModal.reason = '';
-        this.loaModal.open = true;
+        const baseUrl = `/admin/users/${userId}/loa`;
+        window.Modal.edit(this.modals.loa, {
+            userId,
+            userName,
+            is_on_loa: isOnLoa ? '1' : '0',
+            loa_return_date: returnDate || '',
+            reason: ''
+        }, baseUrl);
+        this.modals.loa.method = 'PUT';
+        this.modals.loa.action = baseUrl;
+        this.modals.loa.open = true;
+    },
+
+    closeLoaModal() {
+        window.Modal.close(this.modals.loa);
+        this.modals.loa.open = false;
     },
 
     async quickClearLoa(userId, userName) {
@@ -49,11 +102,7 @@ export default () => ({
                     });
                 }
 
-                if (typeof window.refreshDOM === 'function') {
-                    await window.refreshDOM('.table-wrapper', '/admin/command-centre', false);
-                } else {
-                    window.location.reload();
-                }
+                await this.refreshDOM();
             } else {
                 window.Swal.error('Error', data.message || 'Failed to update LOA status.');
             }
@@ -102,6 +151,21 @@ export default () => ({
             }
         } catch (error) {
             console.error(error);
+        }
+    },
+
+    // 5. DOM Refresh Handler (sanitize = false)
+    async refreshDOM() {
+        if (typeof window.updateDOM === 'function') {
+            await window.updateDOM(this.$refs, ['loaHubTableContent', 'table-wrapper'], () => {
+                this.closeLoaModal();
+                this.$nextTick(() => {
+                    this.initSearch();
+                });
+            }, false);
+        } else {
+            this.closeLoaModal();
+            window.location.reload();
         }
     }
 });

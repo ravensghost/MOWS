@@ -1,12 +1,19 @@
 // resources/js/managers/tableOfContentParametersManager.js
 export default () => ({
-    // 1. State Properties Upfront
-    formMode: 'create',
-    parameterId: null,
-    parameter_mode: 'group',
-    parameter_value: '',
-    parameter_label: '',
-    parameter_sort_order: 0,
+    // 1. State Properties Upfront (Unified Modals & Search Contract)
+    modals: {
+        parameter: {
+            open: false,
+            mode: 'create',
+            parameterId: null,
+            parameter_mode: 'group',
+            parameter_value: '',
+            parameter_label: '',
+            parameter_sort_order: 0,
+            action: '/admin/toc-parameters',
+            method: 'POST'
+        }
+    },
     isSubmitting: false,
     searchQuery: '',
     searchHelperInstance: null,
@@ -19,11 +26,11 @@ export default () => ({
 
     // 3. Search & Filtering (Fuse.js Integration)
     initSearch() {
-        if (window.Search && this.$el.querySelector('[data-search-item]')) {
+        if (window.Search && this.$el && this.$el.querySelector('[data-toc-parameter-item]')) {
             try {
                 this.searchHelperInstance = window.Search.create(
-                    '[data-search-item]',
-                    ['parameter_mode', 'parameter_value', 'parameter_label'],
+                    '[data-toc-parameter-item]',
+                    ['parameter_label', 'parameter_value', 'parameter_mode'],
                     { threshold: 0.35 }
                 );
             } catch (e) {
@@ -45,101 +52,44 @@ export default () => ({
         return this.filteredIds.includes(Number(id));
     },
 
-    // 4. Form & Parameter Actions
-    editParameter(parameter) {
-        this.formMode = 'edit';
-        this.parameterId = parameter.id;
-        this.parameter_mode = parameter.parameter_mode || 'group';
-        this.parameter_value = parameter.parameter_value || '';
-        this.parameter_label = parameter.parameter_label || '';
-        this.parameter_sort_order = parameter.parameter_sort_order ?? 0;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    },
-
-    resetForm() {
-        this.formMode = 'create';
-        this.parameterId = null;
-        this.parameter_mode = 'group';
-        this.parameter_value = '';
-        this.parameter_label = '';
-        this.parameter_sort_order = 0;
-    },
-
-    async submitParameter() {
-        if (this.isSubmitting) return;
-        this.isSubmitting = true;
-
-        const isEdit = this.formMode === 'edit' && this.parameterId;
-        const endpoint = isEdit ? `/admin/table-of-contents/options/${this.parameterId}` : '/admin/table-of-contents/options';
-        const method = isEdit ? 'PUT' : 'POST';
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-
-        try {
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({
-                    _method: method,
-                    parameter_mode: this.parameter_mode,
-                    parameter_value: this.parameter_value,
-                    parameter_label: this.parameter_label,
-                    parameter_sort_order: this.parameter_sort_order
-                })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                const errorTitle = this.$el.dataset.msgErrorTitle || 'Error';
-                const errorText = data.message || this.$el.dataset.msgValidationFailed || 'Validation failed.';
-                if (window.Swal) {
-                    window.Swal.fire({ icon: 'error', title: errorTitle, text: errorText });
-                }
-                return;
-            }
-
-            if (window.Swal) {
-                window.Swal.fire({
-                    icon: 'success',
-                    title: this.$el.dataset.msgSuccessTitle || 'Success!',
-                    text: data.message || this.$el.dataset.msgSuccessText || 'Option saved successfully.',
-                    timer: 1800,
-                    showConfirmButton: false
-                });
-            }
-
-            this.resetForm();
-            await this.refreshDOM();
-        } catch (error) {
-            if (window.Swal) {
-                window.Swal.fire({
-                    icon: 'error',
-                    title: this.$el.dataset.msgNetworkErrorTitle || 'Network Error',
-                    text: this.$el.dataset.msgNetworkErrorText || 'Could not connect to the server.'
-                });
-            }
-        } finally {
-            this.isSubmitting = false;
+    // 4. Modal Handlers (Using window.Modal utility)
+    openModal(mode = 'create', data = {}) {
+        const baseUrl = '/admin/toc-parameters';
+        if (mode === 'edit') {
+            window.Modal.edit(this.modals.parameter, data, (id) => `${baseUrl}/${id}`);
+            this.modals.parameter.mode = 'edit';
+            this.modals.parameter.method = 'PUT';
+            this.modals.parameter.action = `${baseUrl}/${data.parameterId || data.id}`;
+        } else {
+            window.Modal.create(this.modals.parameter, {
+                parameter_mode: 'group',
+                parameter_value: '',
+                parameter_label: '',
+                parameter_sort_order: 0
+            }, baseUrl);
+            this.modals.parameter.mode = 'create';
+            this.modals.parameter.method = 'POST';
+            this.modals.parameter.action = baseUrl;
         }
+        this.modals.parameter.open = true;
+    },
+
+    closeModal() {
+        window.Modal.close(this.modals.parameter);
+        this.modals.parameter.open = false;
     },
 
     // 5. DOM Refresh Handler (sanitize = false)
     async refreshDOM() {
         if (typeof window.updateDOM === 'function') {
-            await window.updateDOM(this.$refs, ['parametersTableContent'], () => {
+            await window.updateDOM(this.$refs, ['tocParametersTableWrapper'], () => {
+                this.closeModal();
                 this.$nextTick(() => {
                     this.initSearch();
                 });
             }, false);
         } else {
-            this.$nextTick(() => {
-                this.initSearch();
-            });
+            this.closeModal();
         }
     }
 });

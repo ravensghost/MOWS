@@ -1,166 +1,84 @@
 // resources/js/managers/candidatePetitionManager.js
 export default (config = {}) => ({
-    routes: {
-        index: config.routes?.index || '/admin/candidate-petitions',
-        store: config.routes?.store || '/admin/candidate-petitions',
-        baseUrl: config.routes?.baseUrl || '/admin/candidate-petitions',
-        evaluationsUrl: config.routes?.evaluationsUrl || '/admin/candidate-petitions',
+    // 1. State Properties Upfront (Unified Modals & State Contract)
+    modals: {
+        review: {
+            open: false,
+            mode: 'edit',
+            petitionId: '',
+            personaName: '',
+            applicantName: '',
+            submittedAt: '',
+            answers: [],
+            hasParseError: false,
+            action: '',
+            method: 'POST'
+        },
+        reassign: {
+            open: false,
+            mode: 'edit',
+            personaId: '',
+            personaName: '',
+            currentPosId: '',
+            currentRankId: '',
+            action: '',
+            method: 'POST'
+        }
     },
-
-    petitions: config.initialPetitions || [],
-    insignias: config.insignias || [],
-    assignments: config.assignments || [],
-    personas: config.personas || [],
-
-    statusFilter: 'all',
-    searchQuery: '',
-
-    isModalOpen: false,
-    modalView: 'review',
-    reviewModalOpen: false,
-    reassignModalOpen: false,
-
-    activePetition: {
-        petitionId: '',
-        personaId: '',
-        personaName: '',
-        petition_status: 'pending',
-        insignia_id: '',
-        assignment_id: '',
-        entries: [],
-        evaluations: [],
-    },
-
-    evaluationNotes: '',
-
-    petitionId: '',
-    personaName: '',
-    applicantName: '',
-    submittedAt: '',
-    answers: [],
-    hasParseError: false,
-
-    personaId: '',
-    currentPosId: '',
-    currentRankId: '',
-
     i18n: {
         rejectConfirm: config.rejectConfirm || 'Are you sure you want to reject this candidate petition?',
         confirmRejectBtn: config.confirmRejectBtn || 'Yes, Reject',
         rejectFailed: config.rejectFailed || 'Failed to reject candidate petition.',
-        approveFailed: config.approveFailed || 'Failed to approve candidate petition.',
-        saveFailed: config.saveFailed || 'Failed to update candidate petition.',
     },
 
+    // 2. Lifecycle Hook
+    init() {
+        // No asynchronous search initialization required for this manager view
+    },
+
+    // 3. Search & Filtering (Placeholder per contract)
+    isItemVisible(id) {
+        return true;
+    },
+
+    // 4. Modal Handlers (Using window.Modal utility)
     openModal(mode = 'edit', data = {}, context = 'review') {
-        this.modalView = context;
-        this.evaluationNotes = '';
-
-        this.activePetition = {
-            petitionId: data.petitionId || '',
-            personaId: data.personaId || '',
-            personaName: data.personaName || '',
-            petition_status: data.petition_status || 'pending',
-            insignia_id: data.insignia_id || data.currentRankId || '',
-            assignment_id: data.assignment_id || data.currentPosId || '',
-            entries: Array.isArray(data.entries) ? data.entries : [],
-            evaluations: Array.isArray(data.evaluations) ? data.evaluations : [],
-        };
-
         if (context === 'review') {
-            this.petitionId = data.petitionId || '';
-            this.personaName = data.personaName || '';
-            this.applicantName = data.applicantName || '';
-            this.submittedAt = data.submittedAt || '';
+            this.modals.review.petitionId = data.petitionId || '';
+            this.modals.review.personaName = data.personaName || '';
+            this.modals.review.applicantName = data.applicantName || '';
+            this.modals.review.submittedAt = data.submittedAt || '';
 
-            if (data.base64Answers) {
-                try {
-                    const decoded = JSON.parse(atob(data.base64Answers));
-                    this.answers = typeof decoded === 'string' ? JSON.parse(decoded) : decoded;
-                    this.activePetition.entries = this.answers;
-                    this.hasParseError = false;
-                } catch (e) {
-                    this.answers = [];
-                    this.hasParseError = true;
-                }
-            } else {
-                this.answers = this.activePetition.entries;
-                this.hasParseError = false;
+            try {
+                const decoded = data.base64Answers ? JSON.parse(atob(data.base64Answers)) : [];
+                this.modals.review.answers = typeof decoded === 'string' ? JSON.parse(decoded) : decoded;
+                this.modals.review.hasParseError = false;
+            } catch (e) {
+                this.modals.review.answers = [];
+                this.modals.review.hasParseError = true;
             }
 
-            this.reviewModalOpen = true;
-            this.reassignModalOpen = false;
+            this.modals.review.open = true;
         } else if (context === 'reassign') {
-            this.personaId = data.personaId || '';
-            this.personaName = data.personaName || '';
-            this.currentPosId = data.assignment_id || data.currentPosId || '';
-            this.currentRankId = data.insignia_id || data.currentRankId || '';
-            this.reassignModalOpen = true;
-            this.reviewModalOpen = false;
-        }
-
-        this.isModalOpen = true;
-    },
-
-    closeModal() {
-        this.isModalOpen = false;
-        this.reviewModalOpen = false;
-        this.reassignModalOpen = false;
-        this.evaluationNotes = '';
-    },
-
-    async refreshPetitions() {
-        await this.refreshDOM();
-    },
-
-    async refreshDOM() {
-        if (typeof window.updateDOM === 'function') {
-            await window.updateDOM(
-                this.$refs,
-                ['candidate-petitions-tbody', 'pendingAppsTableContent', 'activeRosterTableContent'],
-                () => {
-                    this.closeModal();
-                },
-                false
-            );
-        } else {
-            this.closeModal();
-            window.location.reload();
+            this.modals.reassign.personaId = data.personaId || '';
+            this.modals.reassign.personaName = data.personaName || '';
+            this.modals.reassign.currentPosId = data.currentPosId || '';
+            this.modals.reassign.currentRankId = data.currentRankId || '';
+            this.modals.reassign.open = true;
         }
     },
 
-    async approvePetition(targetId = null) {
-        const id = targetId || this.activePetition.petitionId || this.petitionId;
-        if (!id) return;
-
-        const payload = {
-            assignment_id: this.activePetition.assignment_id || this.assignments[0]?.id || null,
-            insignia_id: this.activePetition.insignia_id || this.insignias[0]?.id || null,
-            evaluation_commentary: this.evaluationNotes || null,
-        };
-
-        try {
-            const { ok, data } = await window.Fetch.post(`${this.routes.baseUrl}/${id}/approve`, payload, {
-                loading: true,
-                loadingTitle: 'Processing...',
-                loadingHtml: 'Approving candidate petition...',
-                showError: false,
-            });
-
-            if (ok) {
-                await this.refreshDOM();
-            } else {
-                window.Swal?.error('Error', data?.message || this.i18n.approveFailed);
-            }
-        } catch (error) {
-            window.Swal?.error('Error', this.i18n.approveFailed);
+    closeModal(context = 'review') {
+        if (context === 'review') {
+            window.Modal.close(this.modals.review);
+            this.modals.review.open = false;
+        } else if (context === 'reassign') {
+            window.Modal.close(this.modals.reassign);
+            this.modals.reassign.open = false;
         }
     },
 
-    async rejectPetition(targetId = null) {
-        const id = targetId || this.activePetition.petitionId || this.petitionId;
-        if (!id) return;
-
+    async rejectPetition() {
         const result = await window.Swal.confirm(
             this.i18n.rejectConfirm,
             'You cannot revert this action!',
@@ -169,54 +87,34 @@ export default (config = {}) => ({
 
         if (result.isConfirmed) {
             try {
-                const { ok, data } = await window.Fetch.post(
-                    `${this.routes.baseUrl}/${id}/reject`,
-                    { evaluation_commentary: this.evaluationNotes || null },
-                    {
-                        loading: true,
-                        loadingTitle: 'Processing...',
-                        loadingHtml: 'Rejecting candidate petition...',
-                        showError: false,
-                    }
-                );
+                const { ok, data } = await window.Fetch.post(`/admin/applications/${this.modals.review.petitionId}/reject`, {}, {
+                    loading: true,
+                    loadingTitle: 'Processing...',
+                    loadingHtml: 'Rejecting candidate petition...',
+                    showError: false
+                });
 
                 if (ok) {
                     await this.refreshDOM();
                 } else {
-                    window.Swal?.error('Error', data?.message || this.i18n.rejectFailed);
+                    window.Swal.error('Error', data.message || this.i18n.rejectFailed);
                 }
             } catch (error) {
-                window.Swal?.error('Error', this.i18n.rejectFailed);
+                window.Swal.error('Error', this.i18n.rejectFailed);
             }
         }
     },
 
-    async submitPetition(targetId = null) {
-        const id = targetId || this.activePetition.petitionId || this.petitionId;
-        if (!id) return;
-
-        const payload = {
-            persona_id: this.activePetition.personaId || null,
-            proposed_persona_name: this.activePetition.personaName,
-            insignia_id: this.activePetition.insignia_id || null,
-            assignment_id: this.activePetition.assignment_id || null,
-        };
-
-        try {
-            const { ok, data } = await window.Fetch.put(`${this.routes.baseUrl}/${id}`, payload, {
-                loading: true,
-                loadingTitle: 'Saving...',
-                loadingHtml: 'Updating candidate petition reassignment...',
-                showError: false,
-            });
-
-            if (ok) {
-                await this.refreshDOM();
-            } else {
-                window.Swal?.error('Error', data?.message || this.i18n.saveFailed);
-            }
-        } catch (error) {
-            window.Swal?.error('Error', this.i18n.saveFailed);
+    // 5. DOM Refresh Handler (sanitize = false)
+    async refreshDOM() {
+        if (typeof window.updateDOM === 'function') {
+            await window.updateDOM(this.$refs, ['pendingAppsTableContent', 'activeRosterTableContent'], () => {
+                this.closeModal('review');
+                this.closeModal('reassign');
+            }, false);
+        } else {
+            this.closeModal('review');
+            this.closeModal('reassign');
         }
-    },
+    }
 });

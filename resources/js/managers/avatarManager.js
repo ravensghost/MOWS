@@ -1,14 +1,29 @@
 // resources/js/managers/avatarManager.js
 export default (primaryUrlInit, galleryInit, personaNameInit, galleryGroupInit, primaryUrlEndpoint, deleteUrlEndpoint) => ({
-    editModalOpen: false,
+    // 1. State Properties Upfront (Unified Modals & State Contract)
+    modals: {
+        avatar: {
+            open: false,
+            mode: 'edit',
+            id: '',
+            action: primaryUrlEndpoint || '',
+            method: 'POST'
+        }
+    },
     isBusy: false,
     primaryUrl: primaryUrlInit,
-    gallery: galleryInit,
-    personaName: personaNameInit,
-    galleryGroup: galleryGroupInit,
+    gallery: galleryInit || [],
+    personaName: personaNameInit || '',
+    galleryGroup: galleryGroupInit || '',
     currentIndex: 0,
     lightboxInstance: null,
 
+    // 2. Lifecycle Hook
+    init() {
+        this.initLightbox();
+    },
+
+    // 3. Computed Getters & Lightbox Management
     get allImages() {
         let imgs = [];
         if (this.primaryUrl) imgs.push(this.primaryUrl);
@@ -57,6 +72,7 @@ export default (primaryUrlInit, galleryInit, personaNameInit, galleryGroupInit, 
         this.$nextTick(() => this.initLightbox());
     },
 
+    // 4. Modal & Action Handlers (Using window.Modal & window.Fetch)
     async setPrimary(avatarId) {
         if (!primaryUrlEndpoint) return;
         this.isBusy = true;
@@ -113,7 +129,16 @@ export default (primaryUrlInit, galleryInit, personaNameInit, galleryGroupInit, 
         }
     },
 
-    init() {
-        this.initLightbox();
+    // 5. DOM Refresh Handler (sanitize = false)
+    async refreshDOM() {
+        if (typeof window.updateDOM === 'function') {
+            await window.updateDOM(this.$refs, ['avatarGalleryContent'], () => {
+                this.$nextTick(() => {
+                    this.initLightbox();
+                });
+            }, false);
+        } else {
+            this.initLightbox();
+        }
     }
 });

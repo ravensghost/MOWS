@@ -1,17 +1,23 @@
 // resources/js/managers/bulletinManager.js
 export default () => ({
-    modalOpen: false,
-    mode: 'create',
-    id: '',
-    title: '',
-    content: '',
-    formAction: '/admin/bulletins',
-    method: 'POST',
+    // 1. State Properties Upfront (Unified Modals & Search Contract)
+    modals: {
+        bulletin: {
+            open: false,
+            mode: 'create',
+            id: '',
+            title: '',
+            content: '',
+            action: '/admin/news',
+            method: 'POST'
+        }
+    },
     searchQuery: '',
     searchHelperInstance: null,
     newsList: [],
     filteredIds: null,
 
+    // 2. Lifecycle Hook
     init() {
         this.loadNewsData();
         this.$watch('searchQuery', (val) => {
@@ -24,14 +30,17 @@ export default () => ({
         });
     },
 
+    // 3. Search & Filtering (Fuse.js Integration)
     loadNewsData() {
         const el = document.getElementById('news-fresh-data');
         if (el) {
             this.newsList = JSON.parse(el.getAttribute('data-news') || '[]');
             if (window.Search) {
-                this.searchHelperInstance = window.Search.create('#news-fresh-data [data-news-item], [data-news-search-item]', ['title', 'date'], {
-                    threshold: 0.35
-                });
+                this.searchHelperInstance = window.Search.create(
+                    '#news-fresh-data [data-news-item], [data-news-search-item]',
+                    ['title', 'date'],
+                    { threshold: 0.35 }
+                );
             }
         }
     },
@@ -40,48 +49,48 @@ export default () => ({
         return this.filteredIds === null || this.filteredIds.includes(Number(id));
     },
 
-    async refreshDOM() {
-        if (typeof window.updateDOM === 'function') {
-            await window.updateDOM(this.$refs, ['newsTableContent'], () => {
-                this.modalOpen = false;
-                this.$nextTick(() => {
-                    this.loadNewsData();
-                });
-            }, false);
-        } else {
-            this.modalOpen = false;
-            this.$nextTick(() => {
-                this.loadNewsData();
-            });
-        }
-    },
-
-    openModal(mode, data = {}) {
+    // 4. Modal Handlers (Using window.Modal utility)
+    openModal(mode = 'create', data = {}) {
+        const baseUrl = '/admin/news';
         if (mode === 'create') {
-            window.Modal.create(this, {
+            window.Modal.create(this.modals.bulletin, {
                 id: '',
                 title: '',
                 content: ''
-            }, '/admin/bulletins');
-            this.mode = 'create';
-            this.formAction = '/admin/bulletins';
-            this.method = 'POST';
+            }, baseUrl);
+            this.modals.bulletin.method = 'POST';
         } else {
-            window.Modal.edit(this, data, (id) => `/admin/bulletins/${id}`);
-            this.mode = 'edit';
-            this.formAction = `/admin/bulletins/${this.id}`;
-            this.method = 'PUT';
+            window.Modal.edit(this.modals.bulletin, data, (id) => `${baseUrl}/${id}`);
+            this.modals.bulletin.method = 'PUT';
         }
-        this.modalOpen = true;
+        this.modals.bulletin.open = true;
 
         this.$nextTick(() => {
             window.dispatchEvent(new CustomEvent('set-chapter-editor-content', {
-                detail: { content: this.content || '' }
+                detail: { content: this.modals.bulletin.content || '' }
             }));
         });
     },
 
     closeModal() {
-        window.Modal.close(this);
+        window.Modal.close(this.modals.bulletin);
+        this.modals.bulletin.open = false;
+    },
+
+    // 5. DOM Refresh Handler (sanitize = false)
+    async refreshDOM() {
+        if (typeof window.updateDOM === 'function') {
+            await window.updateDOM(this.$refs, ['newsTableContent'], () => {
+                this.closeModal();
+                this.$nextTick(() => {
+                    this.loadNewsData();
+                });
+            }, false);
+        } else {
+            this.closeModal();
+            this.$nextTick(() => {
+                this.loadNewsData();
+            });
+        }
     }
 });

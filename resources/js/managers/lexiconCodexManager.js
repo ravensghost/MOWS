@@ -1,5 +1,38 @@
 // resources/js/managers/lexiconCodexManager.js
 export default () => ({
+    // 1. State Properties Upfront (Unified Modals & State Contract)
+    modals: {
+        term: {
+            open: false,
+            mode: 'create',
+            id: '',
+            code_key: '',
+            master_group: '',
+            subgroup: '',
+            translations: {},
+            action: '/admin/lexicon',
+            method: 'POST'
+        },
+        addLang: {
+            open: false,
+            langType: 'common',
+            action: '/admin/lexicon/languages',
+            method: 'POST'
+        },
+        importLang: {
+            open: false,
+            langCode: '',
+            action: '/admin/lexicon/import',
+            method: 'POST'
+        },
+        editLang: {
+            open: false,
+            code: '',
+            label: '',
+            action: '/admin/lexicon/languages',
+            method: 'PUT'
+        }
+    },
     activeTab: 'gb',
     searchQuery: '',
     searchHelperInstance: null,
@@ -10,33 +43,7 @@ export default () => ({
     tomSelectInstance: null,
     dropzoneInstance: null,
 
-    modals: {
-        term: {
-            open: false,
-            mode: 'create',
-            id: '',
-            code_key: '',
-            master_group: '',
-            subgroup: '',
-            translations: {},
-            action: '/admin/lexicon-codex',
-            method: 'POST'
-        },
-        addLang: {
-            open: false,
-            langType: 'common'
-        },
-        importLang: {
-            open: false,
-            langCode: ''
-        },
-        editLang: {
-            open: false,
-            code: '',
-            label: ''
-        }
-    },
-
+    // 2. Lifecycle Hook
     init() {
         this.initFuse();
         this.initTomSelect();
@@ -47,6 +54,7 @@ export default () => ({
         });
     },
 
+    // 3. Search & Filtering (Fuse.js Integration)
     initFuse() {
         const rows = this.$el.querySelectorAll('[data-term-row]');
         this.termsList = Array.from(rows).map((row) => {
@@ -126,7 +134,7 @@ export default () => ({
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
         this.dropzoneInstance = new Dropzone(this.$refs.lexiconDropzone, {
-            url: '/admin/lexicon-codex/import',
+            url: '/admin/lexicon/import',
             paramName: 'import_file',
             maxFiles: 1,
             maxFilesize: 10,
@@ -156,6 +164,7 @@ export default () => ({
 
         this.dropzoneInstance.on('success', (file, response) => {
             this.dropzoneInstance.removeAllFiles();
+            window.Modal.close(this.modals.importLang);
             this.modals.importLang.open = false;
             this.modals.importLang.langCode = '';
 
@@ -199,6 +208,74 @@ export default () => ({
         this.dropzoneInstance.processQueue();
     },
 
+    // 4. Modal Handlers (Using window.Modal utility)
+    openTermModal(mode = 'create', id = '', code_key = '', master_group = '', subgroup = '', translations = {}) {
+        const baseUrl = '/admin/lexicon';
+        if (mode === 'edit') {
+            window.Modal.edit(this.modals.term, {
+                id,
+                code_key,
+                master_group,
+                subgroup,
+                translations: translations && typeof translations === 'object' ? { ...translations } : { gb: '' }
+            }, (termId) => `${baseUrl}/${termId}`);
+            this.modals.term.mode = 'edit';
+            this.modals.term.method = 'PUT';
+            this.modals.term.action = `${baseUrl}/${id}`;
+        } else {
+            window.Modal.create(this.modals.term, {
+                code_key: '',
+                master_group: '',
+                subgroup: '',
+                translations: { gb: '' }
+            }, baseUrl);
+            this.modals.term.mode = 'create';
+            this.modals.term.method = 'POST';
+            this.modals.term.action = baseUrl;
+        }
+        this.modals.term.open = true;
+    },
+
+    openAddLangModal(langType = 'common') {
+        const baseUrl = '/admin/lexicon/languages';
+        window.Modal.create(this.modals.addLang, { langType }, baseUrl);
+        this.modals.addLang.langType = langType;
+        this.modals.addLang.method = 'POST';
+        this.modals.addLang.action = baseUrl;
+        this.modals.addLang.open = true;
+    },
+
+    openImportLangModal(langCode = '') {
+        const baseUrl = '/admin/lexicon/import';
+        window.Modal.create(this.modals.importLang, { langCode }, baseUrl);
+        this.modals.importLang.langCode = langCode;
+        this.modals.importLang.method = 'POST';
+        this.modals.importLang.action = baseUrl;
+        this.modals.importLang.open = true;
+    },
+
+    openEditLangModal(code = '', label = '') {
+        const baseUrl = '/admin/lexicon/languages';
+        window.Modal.edit(this.modals.editLang, { code, label }, (langCode) => `${baseUrl}/${langCode}`);
+        this.modals.editLang.code = code;
+        this.modals.editLang.label = label;
+        this.modals.editLang.method = 'PUT';
+        this.modals.editLang.action = `${baseUrl}/${code}`;
+        this.modals.editLang.open = true;
+    },
+
+    closeModals() {
+        window.Modal.close(this.modals.term);
+        window.Modal.close(this.modals.addLang);
+        window.Modal.close(this.modals.importLang);
+        window.Modal.close(this.modals.editLang);
+        this.modals.term.open = false;
+        this.modals.addLang.open = false;
+        this.modals.importLang.open = false;
+        this.modals.editLang.open = false;
+    },
+
+    // 5. DOM Refresh Handler (sanitize = false)
     async refreshDOM(isClearAction = false) {
         if (isClearAction) {
             if (window.Swal && typeof window.Swal.fire === 'function') {
@@ -216,41 +293,16 @@ export default () => ({
 
         if (typeof window.updateDOM === 'function') {
             await window.updateDOM(this.$refs, ['lexiconTabsHeader', 'lexiconActiveToolbar', 'lexiconTableContent'], () => {
-                this.modals.term.open = false;
-                this.modals.addLang.open = false;
-                this.modals.importLang.open = false;
-                this.modals.editLang.open = false;
-                this.initFuse();
+                this.closeModals();
+                this.$nextTick(() => {
+                    this.initFuse();
+                });
             }, false);
         } else {
-            this.modals.term.open = false;
-            this.modals.addLang.open = false;
-            this.modals.importLang.open = false;
-            this.modals.editLang.open = false;
-            this.initFuse();
+            this.closeModals();
+            this.$nextTick(() => {
+                this.initFuse();
+            });
         }
-    },
-
-    openTermModal(mode, id = '', code_key = '', master_group = '', subgroup = '', translations = {}) {
-        this.modals.term.mode = mode;
-        this.modals.term.id = id;
-        this.modals.term.code_key = code_key;
-        this.modals.term.master_group = master_group;
-        this.modals.term.subgroup = subgroup;
-        this.modals.term.translations = translations && typeof translations === 'object' ? { ...translations } : {};
-
-        if (Object.keys(this.modals.term.translations).length === 0) {
-            this.modals.term.translations = { gb: '' };
-        }
-
-        this.modals.term.action = '/admin/lexicon-codex';
-        this.modals.term.method = 'POST';
-        this.modals.term.open = true;
-    },
-
-    openEditLangModal(code, label) {
-        this.modals.editLang.code = code;
-        this.modals.editLang.label = label;
-        this.modals.editLang.open = true;
     }
 });

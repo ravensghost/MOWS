@@ -1,24 +1,69 @@
 // resources/js/managers/accessClearanceRoleManager.js
 export default () => ({
-    showEditModal: false,
-    editRoleId: '',
-    editRoleName: '',
-    editRolePermissions: [],
+    // 1. State Properties Upfront (Unified Modals & Search Contract)
+    modals: {
+        role: {
+            open: false,
+            mode: 'edit',
+            id: '',
+            action: '',
+            method: 'PUT',
+            editRoleId: '',
+            editRoleName: '',
+            editRolePermissions: []
+        }
+    },
     createTomSelect: null,
     editTomSelect: null,
     permissionSearch: '',
     roleSearch: '',
     auditSearch: '',
-    roleSearchHelper: null,
-    permissionSearchHelper: null,
-    auditSearchHelper: null,
+    searchHelperInstance: null,
+    filteredIds: null,
+    isLoading: false,
 
+    // 2. Lifecycle Hook
     init() {
+        this.initSearch();
         this.$nextTick(() => {
             this.initTomSelects();
         });
     },
 
+    // 3. Search & Filtering (Fuse.js Integration)
+    initSearch() {
+        if (window.Search && this.$el.querySelector('[data-permission-row]')) {
+            try {
+                this.searchHelperInstance = window.Search.create(
+                    '[data-permission-row]',
+                    ['name'],
+                    { threshold: 0.35 }
+                );
+            } catch (e) {
+                this.searchHelperInstance = null;
+            }
+        }
+    },
+
+    matchesPermissionSearch(name) {
+        if (!this.permissionSearch.trim()) return true;
+        const fuse = new window.Fuse([{ name }], { keys: ['name'], threshold: 0.35 });
+        return fuse.search(this.permissionSearch.trim()).length > 0;
+    },
+
+    matchesRoleSearch(name, permissions) {
+        if (!this.roleSearch.trim()) return true;
+        const fuse = new window.Fuse([{ name, permissions }], { keys: ['name', 'permissions'], threshold: 0.35 });
+        return fuse.search(this.roleSearch.trim()).length > 0;
+    },
+
+    matchesAuditSearch(key, url, location, visibility, perm) {
+        if (!this.auditSearch.trim()) return true;
+        const fuse = new window.Fuse([{ key, url, location, visibility, perm }], { keys: ['key', 'url', 'location', 'visibility', 'perm'], threshold: 0.35 });
+        return fuse.search(this.auditSearch.trim()).length > 0;
+    },
+
+    // 4. Modal Handlers (Using window.Modal utility)
     initTomSelects() {
         const createSelectEl = document.getElementById('create-role-permissions');
         if (createSelectEl && !this.createTomSelect && window.Select) {
@@ -61,25 +106,37 @@ export default () => ({
     },
 
     openEditModal(roleId, roleName, permissionIds) {
-        this.editRoleId = roleId;
-        this.editRoleName = roleName;
-        this.editRolePermissions = permissionIds.map(String);
-        this.showEditModal = true;
+        const baseUrl = '/admin/roles';
+        const data = {
+            id: roleId,
+            editRoleId: roleId,
+            editRoleName: roleName,
+            editRolePermissions: permissionIds.map(String)
+        };
+
+        window.Modal.edit(this.modals.role, data, (id) => `${baseUrl}/${id}`);
+        this.modals.role.editRoleId = roleId;
+        this.modals.role.editRoleName = roleName;
+        this.modals.role.editRolePermissions = permissionIds.map(String);
+        this.modals.role.action = `${baseUrl}/${roleId}`;
+        this.modals.role.method = 'PUT';
+        this.modals.role.open = true;
 
         this.$nextTick(() => {
             const editSelectEl = document.getElementById('edit-role-permissions');
             if (editSelectEl && window.Select) {
                 window.Select.clear(editSelectEl, true);
-                window.Select.setValue(editSelectEl, this.editRolePermissions, true);
+                window.Select.setValue(editSelectEl, this.modals.role.editRolePermissions, true);
             }
         });
     },
 
     closeEditModal() {
-        this.showEditModal = false;
-        this.editRoleId = '';
-        this.editRoleName = '';
-        this.editRolePermissions = [];
+        window.Modal.close(this.modals.role);
+        this.modals.role.open = false;
+        this.modals.role.editRoleId = '';
+        this.modals.role.editRoleName = '';
+        this.modals.role.editRolePermissions = [];
 
         const editSelectEl = document.getElementById('edit-role-permissions');
         if (editSelectEl && window.Select) {
@@ -87,28 +144,7 @@ export default () => ({
         }
     },
 
-    matchesPermissionSearch(name) {
-        if (!this.permissionSearch.trim()) return true;
-        const searchHelper = window.Search ? window.Search.create('[data-permission-row]', ['name'], { threshold: 0.35 }) : null;
-        if (searchHelper) {
-            const fuse = new window.Fuse([{ name }], { keys: ['name'], threshold: 0.35 });
-            return fuse.search(this.permissionSearch.trim()).length > 0;
-        }
-        return true;
-    },
-
-    matchesRoleSearch(name, permissions) {
-        if (!this.roleSearch.trim()) return true;
-        const fuse = new window.Fuse([{ name, permissions }], { keys: ['name', 'permissions'], threshold: 0.35 });
-        return fuse.search(this.roleSearch.trim()).length > 0;
-    },
-
-    matchesAuditSearch(key, url, location, visibility, perm) {
-        if (!this.auditSearch.trim()) return true;
-        const fuse = new window.Fuse([{ key, url, location, visibility, perm }], { keys: ['key', 'url', 'location', 'visibility', 'perm'], threshold: 0.35 });
-        return fuse.search(this.auditSearch.trim()).length > 0;
-    },
-
+    // 5. DOM Refresh Handler (sanitize = false)
     async handleAjaxSuccess() {
         this.closeEditModal();
         if (this.createTomSelect && window.Select) {
@@ -116,9 +152,12 @@ export default () => ({
             if (createSelectEl) window.Select.clear(createSelectEl, true);
         }
 
-        if (typeof window.refreshDOM === 'function') {
-            await window.refreshDOM('.table-wrapper', () => {
-                this.syncTomSelectOptions();
+        if (typeof window.updateDOM === 'function') {
+            await window.updateDOM(this.$refs, ['tableWrapper'], () => {
+                this.$nextTick(() => {
+                    this.syncTomSelectOptions();
+                    this.initSearch();
+                });
             }, false);
         } else {
             this.syncTomSelectOptions();

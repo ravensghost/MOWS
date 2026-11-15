@@ -1,24 +1,28 @@
 // resources/js/managers/tableOfContentsManager.js
 export default () => ({
-    // 1. State Properties Upfront
+    // 1. State Properties Upfront (Unified Modals & Search Contract)
+    modals: {
+        entry: {
+            open: false,
+            mode: 'create',
+            id: '',
+            parent_entry_id: '',
+            group_title: '',
+            group_sort_order: 0,
+            translation_code_key: '',
+            destination_url: '',
+            display_location: 'primary',
+            access_clearance: 'public',
+            required_permission: '',
+            window_target: '_self',
+            entry_sort_order: 0,
+            is_visible: true,
+            action: '/admin/navigation',
+            method: 'POST'
+        }
+    },
     isOpen: false,
     open: false,
-    mode: 'create',
-    id: '',
-    action: '/admin/table-of-contents',
-    formAction: '/admin/table-of-contents',
-    method: 'POST',
-    parent_entry_id: '',
-    group_title: '',
-    group_sort_order: 0,
-    translation_code_key: '',
-    destination_url: '',
-    display_location: 'primary',
-    access_clearance: 'public',
-    required_permission: '',
-    window_target: '_self',
-    entry_sort_order: 0,
-    is_visible: true,
     searchQuery: '',
     searchHelperInstance: null,
     filteredIds: null,
@@ -31,11 +35,11 @@ export default () => ({
 
     // 3. Search & Filtering (Fuse.js Integration)
     initSearch() {
-        if (window.Search && this.$el.querySelector('[data-search-item]')) {
+        if (window.Search && this.$el && this.$el.querySelector('[data-navigation-item]')) {
             try {
                 this.searchHelperInstance = window.Search.create(
-                    '[data-search-item]',
-                    ['translation_code_key', 'destination_url', 'group_title', 'display_location'],
+                    '[data-navigation-item]',
+                    ['group_title', 'destination_url', 'translation_code_key'],
                     { threshold: 0.35 }
                 );
             } catch (e) {
@@ -52,17 +56,21 @@ export default () => ({
         });
     },
 
-    isItemVisible(id, childIds = []) {
+    isItemVisible(id) {
         if (!this.searchQuery.trim() || this.filteredIds === null) return true;
-        if (this.filteredIds.includes(Number(id))) return true;
-        return Array.isArray(childIds) && childIds.some(childId => this.filteredIds.includes(Number(childId)));
+        return this.filteredIds.includes(Number(id));
     },
 
     // 4. Modal Handlers (Using window.Modal utility)
-    openModal(mode, data = {}) {
-        const baseUrl = '/admin/table-of-contents';
-        if (mode === 'create') {
-            window.Modal.create(this, {
+    openModal(mode = 'create', data = {}) {
+        const baseUrl = '/admin/navigation';
+        if (mode === 'edit') {
+            window.Modal.edit(this.modals.entry, data, (id) => `${baseUrl}/${id}`);
+            this.modals.entry.mode = 'edit';
+            this.modals.entry.method = 'PUT';
+            this.modals.entry.action = `${baseUrl}/${data.id}`;
+        } else {
+            window.Modal.create(this.modals.entry, {
                 parent_entry_id: '',
                 group_title: '',
                 group_sort_order: 0,
@@ -75,33 +83,26 @@ export default () => ({
                 entry_sort_order: 0,
                 is_visible: true
             }, baseUrl);
-            this.formAction = baseUrl;
-            this.action = baseUrl;
-        } else {
-            window.Modal.edit(this, {
-                ...data,
-                parent_entry_id: data.parent_entry_id && data.parent_entry_id !== 'null' ? String(data.parent_entry_id) : '',
-                group_title: data.group_title && data.group_title !== 'null' ? data.group_title : '',
-                required_permission: data.required_permission && data.required_permission !== 'null' ? data.required_permission : '',
-                is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true
-            }, (id) => `${baseUrl}/${id}`);
-            this.formAction = `${baseUrl}/${data.id}`;
-            this.action = `${baseUrl}/${data.id}`;
+            this.modals.entry.mode = 'create';
+            this.modals.entry.method = 'POST';
+            this.modals.entry.action = baseUrl;
         }
-        this.isOpen = true;
+        this.modals.entry.open = true;
         this.open = true;
+        this.isOpen = true;
     },
 
     closeModal() {
-        window.Modal.close(this);
-        this.isOpen = false;
+        window.Modal.close(this.modals.entry);
+        this.modals.entry.open = false;
         this.open = false;
+        this.isOpen = false;
     },
 
     // 5. DOM Refresh Handler (sanitize = false)
     async refreshDOM() {
         if (typeof window.updateDOM === 'function') {
-            await window.updateDOM(this.$refs, ['tocTableContent', 'tocModalDropdowns'], () => {
+            await window.updateDOM(this.$refs, ['navigationTableContent', 'navigationTreeWrapper'], () => {
                 this.closeModal();
                 this.$nextTick(() => {
                     this.initSearch();
@@ -109,9 +110,6 @@ export default () => ({
             }, false);
         } else {
             this.closeModal();
-            this.$nextTick(() => {
-                this.initSearch();
-            });
         }
     }
 });
