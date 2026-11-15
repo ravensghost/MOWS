@@ -1,3 +1,4 @@
+{{-- resources/views/components/page-header.blade.php --}}
 @props([
     'title',
     'xData' => null,
@@ -18,7 +19,7 @@
         : lexicon('tooltip_common_BackToHub', 'Return to your Dashboard');
 @endphp
 
-<div @if($xData) x-data="{{ $xData }}" @endif {{ $attributes->merge(['class' => 'pb-4 mb-4 flex flex-row justify-between items-center flex-wrap gap-md']) }}>
+<div @if($xData) x-data="{{ $xData }}" @endif {{ $attributes->merge(['class' => 'bg-panel-body border-panel border-rounded shadow-panel p-panel-header pb-4 mb-4 flex flex-row justify-between items-center flex-wrap gap-md']) }}>
     <span class="text-3xl font-bold text-accent block">{{ $title }}</span>
     
     <div class="flex flex-row flex-wrap gap-md items-center">

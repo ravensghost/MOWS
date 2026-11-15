@@ -1,16 +1,19 @@
+{{-- resources/views/components/grid-wrapper.blade.php --}}
 @props([
-    'book',
+    'book' => null,
+    'volume' => null,
     'newsItems' => null,
     'storyPosts' => null,
 ])
 
 @php
-    $grid = $book?->grid;
+    $activeBook = $book ?? $volume;
+    $grid = $activeBook?->grid;
     $gridModules = $grid ? $grid->gridModules : collect();
-    $bookModules = $book ? $book->modules->where('pivot.is_visible', true) : collect();
+    $bookModules = $activeBook ? $activeBook->modules->where('pivot.is_visible', true) : collect();
 @endphp
 
-<div class="mows-books-grid-wrapper grid grid-cols-12 gap-4">
+<div {{ $attributes->merge(['class' => 'mows-books-grid-wrapper max-w-container mx-auto px-container grid grid-cols-12 gap-4']) }}>
     @forelse($gridModules as $gridModule)
         @php
             $colSpan = $gridModule->column_span ?? 12;
@@ -36,7 +39,7 @@
 
                 @if($canView && view()->exists('widgets.' . $module->module_token))
                     @include('widgets.' . $module->module_token, [
-                        'book'           => $book,
+                        'book'           => $activeBook,
                         'module'         => $module,
                         'moduleSettings' => $moduleSettings,
                         'newsItems'      => $newsItems,
@@ -62,7 +65,7 @@
 
                 @if($canView && view()->exists('widgets.' . $module->module_token))
                     @include('widgets.' . $module->module_token, [
-                        'book'           => $book,
+                        'book'           => $activeBook,
                         'module'         => $module,
                         'moduleSettings' => $moduleSettings,
                         'newsItems'      => $newsItems,

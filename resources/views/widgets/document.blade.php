@@ -18,7 +18,9 @@
 })
 --}}
 @php
-    $options = is_string($widget->pivot->instance_options) ? json_decode($widget->pivot->instance_options, true) : ($widget->pivot->instance_options ?? []);
+    $options = is_string($module->pivot->instance_options ?? null)
+        ? json_decode($module->pivot->instance_options, true)
+        : ($module->pivot->instance_options ?? []);
     $title = trim($options['title'] ?? '');
     $content = trim($options['content'] ?? '');
 @endphp
