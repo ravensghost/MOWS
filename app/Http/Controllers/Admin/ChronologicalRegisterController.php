@@ -88,7 +88,7 @@ class ChronologicalRegisterController extends Controller
             'user_id' => $targetUserId,
             'persona_id' => $validated['persona_id'] ?? null,
             'distinction_id' => $distinction->id,
-            'register_event_mode' => 'distinction',
+            'register_event_mode' => 'award',
             'chronicle_text' => $validated['chronicle_text'],
             'authorising_user_id' => auth()->id(),
             'scope_target' => $distinction->scope_target,

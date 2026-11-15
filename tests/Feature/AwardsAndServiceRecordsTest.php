@@ -41,7 +41,7 @@ class AwardsAndServiceRecordsTest extends TestCase
         $this->assertDatabaseHas('chronological_registers', [
             'persona_id' => $persona->id,
             'distinction_id' => $distinction->id,
-            'register_event_mode' => 'distinction',
+            'register_event_mode' => 'award',
             'chronicle_text' => 'For outstanding bravery in the line of duty.',
         ]);
     }

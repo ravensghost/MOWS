@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CorrespondenceThread extends Model
 {
@@ -13,14 +14,14 @@ class CorrespondenceThread extends Model
         'thread_title',
     ];
 
-    public function participants()
+    public function participants(): HasMany
     {
-        return $this->hasMany(ThreadParticipant::class, 'thread_id');
+        return $this->hasMany(CorrespondenceParticipant::class, 'correspondence_thread_id');
     }
 
-    public function messages()
+    public function messages(): HasMany
     {
-        return $this->hasMany(Message::class, 'thread_id');
+        return $this->hasMany(CorrespondenceEntry::class, 'correspondence_thread_id');
     }
 
     /**
@@ -48,29 +49,27 @@ class CorrespondenceThread extends Model
             'thread_title' => $subject,
         ]);
 
-        // Add sender participant (marked as read immediately)
-        ThreadParticipant::create([
-            'thread_id'    => $thread->id,
-            'user_id'      => $senderId,
-            'character_id' => null,
+        CorrespondenceParticipant::create([
+            'correspondence_thread_id' => $thread->id,
+            'user_id' => $senderId,
+            'persona_id' => null,
             'last_read_at' => now(),
         ]);
 
-        // Add each recipient participant (unread)
         foreach ($recipientIds as $recipientId) {
-            ThreadParticipant::create([
-                'thread_id'    => $thread->id,
-                'user_id'      => $recipientId,
-                'character_id' => null,
+            CorrespondenceParticipant::create([
+                'correspondence_thread_id' => $thread->id,
+                'user_id' => $recipientId,
+                'persona_id' => null,
                 'last_read_at' => null,
             ]);
         }
 
-        Message::create([
-            'thread_id'    => $thread->id,
-            'user_id'      => $senderId,
-            'character_id' => null,
-            'body'         => $body,
+        CorrespondenceEntry::create([
+            'correspondence_thread_id' => $thread->id,
+            'user_id' => $senderId,
+            'persona_id' => null,
+            'correspondence_text' => $body,
         ]);
 
         return $thread;

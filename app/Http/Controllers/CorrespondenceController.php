@@ -155,8 +155,8 @@ class CorrespondenceController extends Controller
             }
 
             $discordId = UserAttribute::where('user_id', $recipient->id)
-                ->where('key', 'discord_id')
-                ->value('value');
+                ->where('attribute_key', 'discord_id')
+                ->value('attribute_value');
             $mention = ! empty($discordId) ? "<@{$discordId}>" : $recipient->user_handle;
 
             NotificationService::sendDiscord(

@@ -14,7 +14,7 @@ class DashboardController extends Controller
     {
         $userId = auth()->id();
 
-        $draftChapters = Folio::where('author_user_id', $userId)
+        $draftChapters = Folio::where('user_id', $userId)
             ->where('folio_status', 'draft')
             ->orderByDesc('updated_at')
             ->get();

@@ -28,13 +28,13 @@ class CommandCentreController extends Controller
             ->with(['grid.gridModules', 'modules'])
             ->firstOrFail();
 
-        $assignments = Assignment::where('is_open', true)
+        $assignments = Assignment::where('is_recruitment_open', true)
             ->withCount(['personae' => function ($query) {
                 $query->where('persona_status', 'active');
             }])->get();
 
         $trueOpenSlots = $assignments->sum(function ($assignment) {
-            return max(0, $assignment->assignment_capacity - $assignment->personae_count);
+            return max(0, $assignment->maximum_occupants - $assignment->personae_count);
         });
 
         // Configurable inactivity threshold in days (defaults to 30 days)
