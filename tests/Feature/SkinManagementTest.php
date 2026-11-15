@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\ThematicBinding;
 use App\Models\User;
-use App\Models\Skin;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -15,21 +15,22 @@ class SkinManagementTest extends TestCase
     {
         $admin = User::factory()->create(['role' => 'webmaster']);
 
-        $skin = Skin::create([
-            'name'              => 'LCARS Blue',
-            'folder_name'       => 'lcars_blue',
-            'version'           => '1.0',
-            'is_global_default' => 0,
+        $skin = ThematicBinding::create([
+            'binding_title' => 'LCARS Blue',
+            'directory_name' => 'lcars_blue',
+            'package_version' => '1.0',
+            'is_active' => true,
+            'is_global_default' => false,
         ]);
 
-        $response = $this->actingAs($admin)->postJson("/admin/themes/{$skin->id}/activate");
+        $response = $this->actingAs($admin)->postJson(route('admin.thematic_bindings.activate', $skin));
 
         $response->assertStatus(200);
 
         // Verify that the skin is now set as the global default in the database
-        $this->assertDatabaseHas('skins', [
-            'id'                => $skin->id,
-            'folder_name'       => 'lcars_blue',
+        $this->assertDatabaseHas('thematic_bindings', [
+            'id' => $skin->id,
+            'directory_name' => 'lcars_blue',
             'is_global_default' => 1,
         ]);
     }

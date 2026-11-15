@@ -15,7 +15,7 @@
     <!-- Top Page Header Bar -->
     <x-page-header :title="lexicon($formKey, $formTitle)" />
 
-    <x-admin-grid-wrapper :page="$systemPage">
+    <x-grid-wrapper :book="$systemBook">
         <x-slot:content>
             <!-- Form Panel -->
             <x-accordion-panel :title="lexicon($formKey, $formTitle)" :expanded="true">
@@ -49,6 +49,6 @@
                 </form>
             </x-accordion-panel>
         </x-slot:content>
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 </div>
 @endsection

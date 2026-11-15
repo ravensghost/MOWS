@@ -12,13 +12,13 @@
             <!-- LOGIN FORM -->
             <form method="POST" action="/login" class="flex flex-col gap-md" x-show="view === 'login'" x-data="ajaxForm" @submit.prevent="submit">
                 @csrf
-                <x-form-input name="email"
+                <x-metadata name="email"
                               type="email"
                               :label="lexicon('label_common_EmailAddress', 'Email Address')"
                               :required="true"
                               autocomplete="username" />
                 
-                <x-form-input name="password"
+                <x-metadata name="password"
                               type="password"
                               :label="lexicon('label_common_Password', 'Password')"
                               :required="true"
@@ -56,26 +56,26 @@
             <!-- REGISTER FORM -->
             <form method="POST" action="/register" class="flex flex-col gap-md" x-show="view === 'register'" x-cloak x-data="ajaxForm" @submit.prevent="submit">
                 @csrf
-                <x-form-input name="name"
+                <x-metadata name="name"
                               type="text"
                               :label="lexicon('label_common_FullName', 'Full Name')"
                               :required="true"
                               autocomplete="name" />
                 
-                <x-form-input name="email"
+                <x-metadata name="email"
                               type="email"
                               :label="lexicon('label_common_EmailAddress', 'Email Address')"
                               :required="true"
                               autocomplete="username" />
                 
                 <div class="grid grid-cols-1 md-grid-cols-2 gap-md w-full">
-                    <x-form-input name="password"
+                    <x-metadata name="password"
                                   type="password"
                                   :label="lexicon('label_common_Password', 'Password')"
                                   :required="true"
                                   autocomplete="new-password" />
 
-                    <x-form-input name="password_confirmation"
+                    <x-metadata name="password_confirmation"
                                   type="password"
                                   :label="lexicon('label_common_Confirm', 'Confirm')"
                                   :required="true"
@@ -103,7 +103,7 @@
                 @csrf
                 <span class="text-sm text-muted block">{{ lexicon('msg_auth_ForgotPasswordPrompt', 'Enter your email and we will send you a reset link.') }}</span>
                 
-                <x-form-input name="email"
+                <x-metadata name="email"
                               type="email"
                               :label="lexicon('label_common_EmailAddress', 'Email Address')"
                               :required="true"

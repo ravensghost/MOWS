@@ -356,7 +356,7 @@
                                     <div class="flex flex-col gap-xs">
                                         <label class="text-xs font-bold text-input-muted">Story Text</label>
                                         <div class="bg-panel border-panel rounded-panel shadow-panel overflow-hidden flex flex-col" x-data="tiptapEditor(@js($folio->folio_text ?? ''))">
-                                            <x-tt-tb />
+                                            <x-tiptap-toolbar />
                                             <div x-ref="editorContainer" class="tiptap-content w-full p-panel flex-grow"></div>
                                             <input type="hidden" name="folio_text" x-model="content" required>
                                         </div>

@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Book;
+use App\Models\ThematicBinding;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use App\Models\ThematicBinding;
-use App\Models\Book;
 use ZipArchive;
 
 class ThematicBindingController extends Controller
@@ -15,11 +15,9 @@ class ThematicBindingController extends Controller
     {
         abort_unless(auth()->user()->can('manage_themes'), 403, lexicon('msg_Themes_Unauthorised', 'Unauthorised access to the Theme & Skin Engine.'));
 
-        $systemPage = Book::where('book_url', 'admin/thematic-bindings')
+        $systemBook = Book::where('book_url', 'admin/themes')
             ->where('is_published', true)
-            ->with(['layout.blocks', 'widgets' => function ($query) {
-                $query->orderBy('page_widget.sort_order');
-            }])
+            ->with(['grid.gridModules', 'modules'])
             ->firstOrFail();
 
         $skins = ThematicBinding::orderBy('binding_title')->get();
@@ -27,6 +25,7 @@ class ThematicBindingController extends Controller
         // Reuse the exact same cache key as AppServiceProvider
         $activeSkinArray = Cache::rememberForever('active_skin_default_array', function () {
             $skin = ThematicBinding::where('is_global_default', 1)->first();
+
             return $skin ? $skin->toArray() : null;
         });
         $defaultSkin = $activeSkinArray ? (object) $activeSkinArray : null;
@@ -37,7 +36,7 @@ class ThematicBindingController extends Controller
         // 2. Read saved custom values from theme.css (if it exists)
         $savedVariables = [];
         if ($defaultSkin) {
-            $cssPath = public_path('skins/' . $defaultSkin->directory_name . '/css/theme.css');
+            $cssPath = public_path('skins/'.$defaultSkin->directory_name.'/css/theme.css');
             if (file_exists($cssPath)) {
                 $content = file_get_contents($cssPath);
                 $cleanContent = preg_replace('/\/\*.*?\*\//s', '', $content);
@@ -70,7 +69,7 @@ class ThematicBindingController extends Controller
             'themeUsage',
             'groupedVars',
             'structuralOptions',
-            'systemPage'
+            'systemBook'
         ));
     }
 
@@ -79,31 +78,31 @@ class ThematicBindingController extends Controller
         abort_unless(auth()->user()->can('manage_themes'), 403, lexicon('msg_Themes_Unauthorised', 'Unauthorised access to the Theme & Skin Engine.'));
 
         $request->validate([
-            'theme_vars'            => 'required|array',
-            'custom_head_injection' => 'nullable|string'
+            'theme_vars' => 'required|array',
+            'custom_head_injection' => 'nullable|string',
         ]);
 
         $defaultSkin = ThematicBinding::where('is_global_default', 1)->first();
 
-        if (!$defaultSkin) {
+        if (! $defaultSkin) {
             return response()->json([
-                'status'   => 'error',
-                'message'  => lexicon('msg_Themes_NoDefaultSkin', 'No active global default skin found.'),
-                'data'     => null,
-                'redirect' => null
+                'status' => 'error',
+                'message' => lexicon('msg_Themes_NoDefaultSkin', 'No active global default skin found.'),
+                'data' => null,
+                'redirect' => null,
             ], 422);
         }
 
         $defaultSkin->update([
-            'custom_head_injection' => $request->input('custom_head_injection')
+            'custom_head_injection' => $request->input('custom_head_injection'),
         ]);
 
         Cache::forget('active_skin_default_array');
         Cache::forget('widget_active_skin_folder');
 
-        $cssPath = public_path('skins/' . $defaultSkin->directory_name . '/css/theme.css');
+        $cssPath = public_path('skins/'.$defaultSkin->directory_name.'/css/theme.css');
         $dir = dirname($cssPath);
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
 
@@ -115,14 +114,14 @@ class ThematicBindingController extends Controller
             $safeKey = preg_replace('/[^a-zA-Z0-9\-]/', '', $key);
 
             // Skip any legacy variables that are no longer used in resources/css
-            if (!isset($usageMap[$safeKey])) {
+            if (! isset($usageMap[$safeKey])) {
                 continue;
             }
 
             $safeValue = trim(strip_tags($value));
 
             if (str_contains(strtolower($safeKey), 'image') && $safeValue !== 'none') {
-                if (!preg_match('/^url\(/i', $safeValue)) {
+                if (! preg_match('/^url\(/i', $safeValue)) {
                     $safeValue = "url('{$safeValue}')";
                 }
             }
@@ -137,10 +136,10 @@ class ThematicBindingController extends Controller
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
-                'status'   => 'success',
-                'message'  => lexicon('msg_Themes_CssUpdated', 'Visual theme settings updated successfully.'),
-                'data'     => $defaultSkin,
-                'redirect' => null
+                'status' => 'success',
+                'message' => lexicon('msg_Themes_CssUpdated', 'Visual theme settings updated successfully.'),
+                'data' => $defaultSkin,
+                'redirect' => null,
             ], 200);
         }
 
@@ -153,30 +152,30 @@ class ThematicBindingController extends Controller
     private function buildGroupedVariables(array $themeVariables, array $themeUsage): array
     {
         $categoryMap = [
-            'font'       => lexicon('label_Themes_GroupTypography', 'Typography & Fonts'),
-            'text'       => lexicon('label_Themes_GroupTypography', 'Typography & Fonts'),
-            'h'          => lexicon('label_Themes_GroupTypography', 'Typography & Fonts'),
-            'p'          => lexicon('label_Themes_GroupTypography', 'Typography & Fonts'),
-            'bg'         => lexicon('label_Themes_GroupBackgrounds', 'Backgrounds & Panels'),
-            'base'       => lexicon('label_Themes_GroupBackgrounds', 'Backgrounds & Panels'),
-            'panel'      => lexicon('label_Themes_GroupBackgrounds', 'Backgrounds & Panels'),
-            'backdrop'   => lexicon('label_Themes_GroupBackgrounds', 'Backgrounds & Panels'),
-            'banner'     => lexicon('label_Themes_GroupBranding', 'Branding & Header'),
-            'logo'       => lexicon('label_Themes_GroupBranding', 'Branding & Header'),
-            'title'      => lexicon('label_Themes_GroupBranding', 'Branding & Header'),
-            'sidebar'    => lexicon('label_Themes_GroupLayout', 'Layout & Dimensions'),
-            'drawer'     => lexicon('label_Themes_GroupLayout', 'Layout & Dimensions'),
-            'container'  => lexicon('label_Themes_GroupLayout', 'Layout & Dimensions'),
-            'width'      => lexicon('label_Themes_GroupLayout', 'Layout & Dimensions'),
-            'height'     => lexicon('label_Themes_GroupLayout', 'Layout & Dimensions'),
-            'padding'    => lexicon('label_Themes_GroupLayout', 'Layout & Dimensions'),
-            'margin'     => lexicon('label_Themes_GroupLayout', 'Layout & Dimensions'),
-            'gap'        => lexicon('label_Themes_GroupLayout', 'Layout & Dimensions'),
-            'input'      => lexicon('label_Themes_GroupForms', 'Forms & Inputs'),
-            'button'     => lexicon('label_Themes_GroupForms', 'Forms & Inputs'),
-            'radius'     => lexicon('label_Themes_GroupBorders', 'Borders & Styling'),
-            'border'     => lexicon('label_Themes_GroupBorders', 'Borders & Styling'),
-            'shadow'     => lexicon('label_Themes_GroupBorders', 'Borders & Styling'),
+            'font' => lexicon('label_Themes_GroupTypography', 'Typography & Fonts'),
+            'text' => lexicon('label_Themes_GroupTypography', 'Typography & Fonts'),
+            'h' => lexicon('label_Themes_GroupTypography', 'Typography & Fonts'),
+            'p' => lexicon('label_Themes_GroupTypography', 'Typography & Fonts'),
+            'bg' => lexicon('label_Themes_GroupBackgrounds', 'Backgrounds & Panels'),
+            'base' => lexicon('label_Themes_GroupBackgrounds', 'Backgrounds & Panels'),
+            'panel' => lexicon('label_Themes_GroupBackgrounds', 'Backgrounds & Panels'),
+            'backdrop' => lexicon('label_Themes_GroupBackgrounds', 'Backgrounds & Panels'),
+            'banner' => lexicon('label_Themes_GroupBranding', 'Branding & Header'),
+            'logo' => lexicon('label_Themes_GroupBranding', 'Branding & Header'),
+            'title' => lexicon('label_Themes_GroupBranding', 'Branding & Header'),
+            'sidebar' => lexicon('label_Themes_GroupLayout', 'Layout & Dimensions'),
+            'drawer' => lexicon('label_Themes_GroupLayout', 'Layout & Dimensions'),
+            'container' => lexicon('label_Themes_GroupLayout', 'Layout & Dimensions'),
+            'width' => lexicon('label_Themes_GroupLayout', 'Layout & Dimensions'),
+            'height' => lexicon('label_Themes_GroupLayout', 'Layout & Dimensions'),
+            'padding' => lexicon('label_Themes_GroupLayout', 'Layout & Dimensions'),
+            'margin' => lexicon('label_Themes_GroupLayout', 'Layout & Dimensions'),
+            'gap' => lexicon('label_Themes_GroupLayout', 'Layout & Dimensions'),
+            'input' => lexicon('label_Themes_GroupForms', 'Forms & Inputs'),
+            'button' => lexicon('label_Themes_GroupForms', 'Forms & Inputs'),
+            'radius' => lexicon('label_Themes_GroupBorders', 'Borders & Styling'),
+            'border' => lexicon('label_Themes_GroupBorders', 'Borders & Styling'),
+            'shadow' => lexicon('label_Themes_GroupBorders', 'Borders & Styling'),
             'transition' => lexicon('label_Themes_GroupBorders', 'Borders & Styling'),
         ];
 
@@ -197,27 +196,27 @@ class ThematicBindingController extends Controller
 
             foreach ($varUsage as $cssFile => $selectors) {
                 $uniqueSel = array_unique($selectors);
-                $fullParts[] = $cssFile . ': ' . implode(', ', $uniqueSel);
+                $fullParts[] = $cssFile.': '.implode(', ', $uniqueSel);
 
                 $shownSel = array_slice($uniqueSel, 0, 2);
                 $moreCount = count($uniqueSel) - count($shownSel);
-                $shortParts[] = $cssFile . ' (' . implode(', ', $shownSel) . ($moreCount > 0 ? " +{$moreCount}" : '') . ')';
+                $shortParts[] = $cssFile.' ('.implode(', ', $shownSel).($moreCount > 0 ? " +{$moreCount}" : '').')';
             }
 
-            $shortUsageText = !empty($shortParts)
+            $shortUsageText = ! empty($shortParts)
                 ? implode(' | ', $shortParts)
                 : lexicon('msg_Themes_VarUnused', 'Unused in resources/css');
 
-            $fullUsageTooltip = !empty($fullParts)
+            $fullUsageTooltip = ! empty($fullParts)
                 ? implode(' • ', $fullParts)
                 : lexicon('tooltip_Themes_VarUnused', 'Not currently referenced in any resources/css stylesheet.');
 
             $groupedVars[$groupName][$key] = [
-                'value'            => $value,
-                'label'            => $label,
-                'isHex'            => $isHex,
-                'isUsed'           => !empty($varUsage),
-                'shortUsageText'   => $shortUsageText,
+                'value' => $value,
+                'label' => $label,
+                'isHex' => $isHex,
+                'isUsed' => ! empty($varUsage),
+                'shortUsageText' => $shortUsageText,
                 'fullUsageTooltip' => $fullUsageTooltip,
             ];
         }
@@ -234,12 +233,12 @@ class ThematicBindingController extends Controller
     {
         return [
             '--theme-radius' => [
-                '0px'      => lexicon('label_Themes_OptRadiusSharp', 'Sharp (0px)'),
-                '0.25rem'  => lexicon('label_Themes_OptRadiusSmall', 'Small (4px)'),
+                '0px' => lexicon('label_Themes_OptRadiusSharp', 'Sharp (0px)'),
+                '0.25rem' => lexicon('label_Themes_OptRadiusSmall', 'Small (4px)'),
                 '0.375rem' => lexicon('label_Themes_OptRadiusStandard', 'Standard (6px)'),
-                '0.5rem'   => lexicon('label_Themes_OptRadiusLarge', 'Large (8px)'),
-                '1rem'     => lexicon('label_Themes_OptRadiusXl', 'Extra Large (16px)'),
-                '9999px'   => lexicon('label_Themes_OptRadiusPill', 'Pill / Round'),
+                '0.5rem' => lexicon('label_Themes_OptRadiusLarge', 'Large (8px)'),
+                '1rem' => lexicon('label_Themes_OptRadiusXl', 'Extra Large (16px)'),
+                '9999px' => lexicon('label_Themes_OptRadiusPill', 'Pill / Round'),
             ],
             '--theme-sidebar-width' => [
                 '200px' => lexicon('label_Themes_OptSidebarNarrow', 'Narrow (200px)'),
@@ -255,15 +254,15 @@ class ThematicBindingController extends Controller
                 '1000px' => lexicon('label_Themes_OptContainerCompact', 'Compact (1000px)'),
                 '1200px' => lexicon('label_Themes_OptContainerStandard', 'Standard (1200px)'),
                 '1400px' => lexicon('label_Themes_OptContainerWide', 'Wide (1400px)'),
-                '100%'   => lexicon('label_Themes_OptContainerFull', 'Full Width'),
+                '100%' => lexicon('label_Themes_OptContainerFull', 'Full Width'),
             ],
             '--theme-button-padding' => [
                 '0.25rem 0.5rem' => lexicon('label_Themes_OptBtnCompact', 'Compact'),
-                '0.5rem 1rem'    => lexicon('label_Themes_OptBtnStandard', 'Standard'),
+                '0.5rem 1rem' => lexicon('label_Themes_OptBtnStandard', 'Standard'),
                 '0.75rem 1.5rem' => lexicon('label_Themes_OptBtnSpacious', 'Spacious'),
             ],
             '--theme-input-height' => [
-                '2rem'    => lexicon('label_Themes_OptInputCompact', 'Compact (32px)'),
+                '2rem' => lexicon('label_Themes_OptInputCompact', 'Compact (32px)'),
                 '2.25rem' => lexicon('label_Themes_OptInputStandard', 'Standard (36px)'),
                 '2.75rem' => lexicon('label_Themes_OptInputTall', 'Tall (44px)'),
             ],
@@ -277,7 +276,7 @@ class ThematicBindingController extends Controller
     private function scanThemeVariableUsage(): array
     {
         $cssDir = resource_path('css');
-        if (!is_dir($cssDir)) {
+        if (! is_dir($cssDir)) {
             return [[], []];
         }
 
@@ -310,13 +309,13 @@ class ThematicBindingController extends Controller
 
                             $usage[$varName][$fileName][] = $selector;
 
-                            if (!isset($defaults[$varName]) && $fallback !== '' && !str_starts_with($fallback, 'var(')) {
+                            if (! isset($defaults[$varName]) && $fallback !== '' && ! str_starts_with($fallback, 'var(')) {
                                 if (preg_match('/^url\([\'"]?(.*?)[\'"]?\)$/i', $fallback, $urlMatches)) {
                                     $defaults[$varName] = $urlMatches[1];
                                 } else {
                                     $defaults[$varName] = $fallback;
                                 }
-                            } elseif (!isset($defaults[$varName])) {
+                            } elseif (! isset($defaults[$varName])) {
                                 $defaults[$varName] = '';
                             }
                         }
@@ -353,7 +352,7 @@ class ThematicBindingController extends Controller
             $parts[] = "{$file} ({$selectorList})";
         }
 
-        return 'Used in: ' . implode(' | ', $parts);
+        return 'Used in: '.implode(' | ', $parts);
     }
 
     public function upload(Request $request)
@@ -362,33 +361,33 @@ class ThematicBindingController extends Controller
 
         // Enforce 10 MB (10240 KB) maximum archive size for InfinityFree compliance
         $request->validate([
-            'skin_package' => 'required|file|mimes:zip|max:10240'
+            'skin_package' => 'required|file|mimes:zip|max:10240',
         ]);
 
         $zip = new ZipArchive;
         $file = $request->file('skin_package');
 
-        if ($zip->open($file->getRealPath()) === TRUE) {
-            $directoryName = 'skin_' . time();
-            $extractPath = public_path('skins/' . $directoryName);
+        if ($zip->open($file->getRealPath()) === true) {
+            $directoryName = 'skin_'.time();
+            $extractPath = public_path('skins/'.$directoryName);
 
             $zip->extractTo($extractPath);
             $zip->close();
 
             $model = ThematicBinding::create([
-                'binding_title'     => 'Imported Skin (' . date('M d, Y') . ')',
-                'directory_name'    => $directoryName,
-                'package_version'   => '1.0',
-                'is_active'         => 1,
-                'is_global_default' => 0
+                'binding_title' => 'Imported Skin ('.date('M d, Y').')',
+                'directory_name' => $directoryName,
+                'package_version' => '1.0',
+                'is_active' => 1,
+                'is_global_default' => 0,
             ]);
 
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
-                    'status'   => 'success',
-                    'message'  => lexicon('msg_Themes_SkinUploaded', 'Skin package uploaded and installed successfully.'),
-                    'data'     => $model,
-                    'redirect' => null
+                    'status' => 'success',
+                    'message' => lexicon('msg_Themes_SkinUploaded', 'Skin package uploaded and installed successfully.'),
+                    'data' => $model,
+                    'redirect' => null,
                 ], 200);
             }
 
@@ -397,10 +396,10 @@ class ThematicBindingController extends Controller
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
-                'status'   => 'error',
-                'message'  => lexicon('msg_Themes_ZipExtractError', 'Failed to extract the zip archive.'),
-                'data'     => null,
-                'redirect' => null
+                'status' => 'error',
+                'message' => lexicon('msg_Themes_ZipExtractError', 'Failed to extract the zip archive.'),
+                'data' => null,
+                'redirect' => null,
             ], 422);
         }
 
@@ -420,38 +419,38 @@ class ThematicBindingController extends Controller
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
-                'status'   => 'success',
-                'message'  => lexicon('msg_Themes_SkinActivated', 'Skin is now the global default.') . " ({$skin->binding_title})",
-                'data'     => $skin,
-                'redirect' => null
+                'status' => 'success',
+                'message' => lexicon('msg_Themes_SkinActivated', 'Skin is now the global default.')." ({$skin->binding_title})",
+                'data' => $skin,
+                'redirect' => null,
             ], 200);
         }
 
-        return redirect('/admin/thematic-bindings')->with('status', lexicon('msg_Themes_SkinActivated', 'Skin is now the global default.') . " ({$skin->binding_title})");
+        return redirect('/admin/thematic-bindings')->with('status', lexicon('msg_Themes_SkinActivated', 'Skin is now the global default.')." ({$skin->binding_title})");
     }
 
     public function export(ThematicBinding $skin)
     {
         abort_unless(auth()->user()->can('manage_themes'), 403, lexicon('msg_Themes_Unauthorised', 'Unauthorised access to the Theme & Skin Engine.'));
 
-        $folderPath = public_path('skins/' . $skin->directory_name);
+        $folderPath = public_path('skins/'.$skin->directory_name);
 
-        if (!is_dir($folderPath)) {
+        if (! is_dir($folderPath)) {
             return back()->with('error', lexicon('msg_Themes_DirNotFound', 'Skin directory not found on the server.'));
         }
 
-        $zipFileName = $skin->directory_name . '_export.zip';
-        $zipFilePath = storage_path('app/public/' . $zipFileName);
+        $zipFileName = $skin->directory_name.'_export.zip';
+        $zipFilePath = storage_path('app/public/'.$zipFileName);
 
         $zip = new ZipArchive;
-        if ($zip->open($zipFilePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
+        if ($zip->open($zipFilePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true) {
             $files = new \RecursiveIteratorIterator(
                 new \RecursiveDirectoryIterator($folderPath),
                 \RecursiveIteratorIterator::LEAVES_ONLY
             );
 
             foreach ($files as $file) {
-                if (!$file->isDir()) {
+                if (! $file->isDir()) {
                     $filePath = $file->getRealPath();
                     $relativePath = substr($filePath, strlen($folderPath) + 1);
                     $zip->addFile($filePath, $relativePath);

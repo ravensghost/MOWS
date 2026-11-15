@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Book;
 use App\Models\Configuration;
 use App\Models\Division;
 use App\Models\Insignia;
 use App\Models\InsigniaCatalogue;
-use App\Models\Book;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -26,14 +26,14 @@ class InsigniaController extends Controller
     public function index()
     {
         abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
-        
-        $systemPage = Book::whereIn('book_url', ['admin/insignia', 'admin/ranks'])
+
+        $systemBook = Book::whereIn('book_url', ['admin/insignia', 'admin/ranks'])
             ->where('is_published', true)
-            ->with(['layout.blocks', 'widgets' => function ($query) {$query->orderBy('page_widget.insignia_sort_order');
-            }])
+            ->with(['grid.gridModules', 'modules'])
             ->firstOrFail();
 
-        $rankSets = InsigniaCatalogue::with(['insignia' => function ($q) {$q->orderBy('insignia_sort_order');
+        $rankSets = InsigniaCatalogue::with(['insignia' => function ($q) {
+            $q->orderBy('insignia_sort_order');
         }, 'divisions'])->get();
 
         $sections = Division::orderBy('division_sort_order')->get();
@@ -41,30 +41,39 @@ class InsigniaController extends Controller
         $skinSettings = Configuration::where('configuration_token', 'like', 'theme_%')
             ->pluck('configuration_payload', 'configuration_token')
             ->toArray();
-        $baseLayer =$skinSettings['theme_base'] ?? '#1a1a1a';
+        $baseLayer = $skinSettings['theme_base'] ?? '#1a1a1a';
         $departmentColour = '#991b1b';
 
         $midShapes = [];
-        $topShapes = [];$cssPath = resource_path('css/ranks.css');
+        $topShapes = [];
+        $cssPath = resource_path('css/ranks.css');
 
         if (File::exists($cssPath)) {
             $cssContent = File::get($cssPath);
 
-            preg_match_all('/\.shape-mid-([a-zA-Z0-9\-]+)/', $cssContent,$midMatches);
-            preg_match_all('/\.shape-top-([a-zA-Z0-9\-]+)/', $cssContent,$topMatches);
+            preg_match_all('/\.shape-mid-([a-zA-Z0-9\-]+)/', $cssContent, $midMatches);
+            preg_match_all('/\.shape-top-([a-zA-Z0-9\-]+)/', $cssContent, $topMatches);
 
-            if (!empty($midMatches[0])) {
-                foreach (array_unique($midMatches[0]) as $class) {$className = ltrim($class, '.');$parts = explode('-', $className);$label = ucfirst(end($parts));$midShapes[$className] =$label;
+            if (! empty($midMatches[0])) {
+                foreach (array_unique($midMatches[0]) as $class) {
+                    $className = ltrim($class, '.');
+                    $parts = explode('-', $className);
+                    $label = ucfirst(end($parts));
+                    $midShapes[$className] = $label;
                 }
             }
 
-            if (!empty($topMatches[0])) {
-                foreach (array_unique($topMatches[0]) as $class) {$className = ltrim($class, '.');$parts = explode('-', $className);$label = ucfirst(end($parts));$topShapes[$className] =$label;
+            if (! empty($topMatches[0])) {
+                foreach (array_unique($topMatches[0]) as $class) {
+                    $className = ltrim($class, '.');
+                    $parts = explode('-', $className);
+                    $label = ucfirst(end($parts));
+                    $topShapes[$className] = $label;
                 }
             }
         }
 
-        return view('admin.insignia', compact('rankSets', 'sections', 'baseLayer', 'departmentColour', 'midShapes', 'topShapes', 'systemPage'));
+        return view('admin.insignia', compact('rankSets', 'sections', 'baseLayer', 'departmentColour', 'midShapes', 'topShapes', 'systemBook'));
     }
 
     public function images(Request $request)
@@ -78,18 +87,18 @@ class InsigniaController extends Controller
 
         if (File::exists($directory)) {
             $files = File::files($directory);
-            foreach ($files as$file) {
+            foreach ($files as $file) {
                 if (in_array(strtolower($file->getExtension()), ['png', 'svg', 'webp', 'jpg', 'jpeg'])) {
-                    $images[] =$file->getFilename();
+                    $images[] = $file->getFilename();
                 }
             }
         }
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Ranks_ImagesRetrieved', 'Rank images retrieved successfully.'),
-            'data'     => $images,
-            'images'   => $images,
+            'status' => 'success',
+            'message' => lexicon('msg_Ranks_ImagesRetrieved', 'Rank images retrieved successfully.'),
+            'data' => $images,
+            'images' => $images,
             'redirect' => null,
         ], 200);
     }
@@ -98,66 +107,66 @@ class InsigniaController extends Controller
     {
         abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
 
-        $validated =$request->validate([
+        $validated = $request->validate([
             'insignia_catalogue_id' => 'required|exists:insignia_catalogues,id',
-            'insignia_title'        => 'required|string|max:255',
-            'abbreviated_title'     => 'required|string|max:50',
-            'mid_layer_mode'        => 'required|in:css,image',
-            'mid_layer_asset'       => 'nullable|string',
-            'mid_layer_modifier'    => 'nullable|string',
-            'mid_layer_hue'         => 'nullable|string|max:50',
-            'top_layer_mode'        => 'required|in:css,image',
-            'top_layer_asset'       => 'nullable|string',
-            'top_layer_modifier'    => 'nullable|string',
-            'top_layer_hue'         => 'nullable|string|max:50',
-            'insignia_description'  => 'nullable|string',
-            'insignia_sort_order'   => 'nullable|integer',
-            'is_visible'            => 'nullable|boolean',
+            'insignia_title' => 'required|string|max:255',
+            'abbreviated_title' => 'required|string|max:50',
+            'mid_layer_mode' => 'required|in:css,image',
+            'mid_layer_asset' => 'nullable|string',
+            'mid_layer_modifier' => 'nullable|string',
+            'mid_layer_hue' => 'nullable|string|max:50',
+            'top_layer_mode' => 'required|in:css,image',
+            'top_layer_asset' => 'nullable|string',
+            'top_layer_modifier' => 'nullable|string',
+            'top_layer_hue' => 'nullable|string|max:50',
+            'insignia_description' => 'nullable|string',
+            'insignia_sort_order' => 'nullable|integer',
+            'is_visible' => 'nullable|boolean',
         ]);
 
-        $validated['is_visible'] =$request->boolean('is_visible', false);
+        $validated['is_visible'] = $request->boolean('is_visible', false);
         $insignia = Insignia::create($validated);
 
         $this->clearRankCaches();
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Ranks_Created', 'Rank created successfully.'),
-            'data'     => $insignia,
+            'status' => 'success',
+            'message' => lexicon('msg_Ranks_Created', 'Rank created successfully.'),
+            'data' => $insignia,
             'redirect' => null,
         ], 200);
     }
 
-    public function update(Request $request, Insignia$insignia)
+    public function update(Request $request, Insignia $insignia)
     {
         abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
 
-        $validated =$request->validate([
+        $validated = $request->validate([
             'insignia_catalogue_id' => 'required|exists:insignia_catalogues,id',
-            'insignia_title'        => 'required|string|max:255',
-            'abbreviated_title'     => 'required|string|max:50',
-            'mid_layer_mode'        => 'required|in:css,image',
-            'mid_layer_asset'       => 'nullable|string',
-            'mid_layer_modifier'    => 'nullable|string',
-            'mid_layer_hue'         => 'nullable|string|max:50',
-            'top_layer_mode'        => 'required|in:css,image',
-            'top_layer_asset'       => 'nullable|string',
-            'top_layer_modifier'    => 'nullable|string',
-            'top_layer_hue'         => 'nullable|string|max:50',
-            'insignia_description'  => 'nullable|string',
-            'insignia_sort_order'   => 'nullable|integer',
-            'is_visible'            => 'nullable|boolean',
+            'insignia_title' => 'required|string|max:255',
+            'abbreviated_title' => 'required|string|max:50',
+            'mid_layer_mode' => 'required|in:css,image',
+            'mid_layer_asset' => 'nullable|string',
+            'mid_layer_modifier' => 'nullable|string',
+            'mid_layer_hue' => 'nullable|string|max:50',
+            'top_layer_mode' => 'required|in:css,image',
+            'top_layer_asset' => 'nullable|string',
+            'top_layer_modifier' => 'nullable|string',
+            'top_layer_hue' => 'nullable|string|max:50',
+            'insignia_description' => 'nullable|string',
+            'insignia_sort_order' => 'nullable|integer',
+            'is_visible' => 'nullable|boolean',
         ]);
 
-        $validated['is_visible'] =$request->boolean('is_visible', false);
+        $validated['is_visible'] = $request->boolean('is_visible', false);
         $insignia->update($validated);
 
         $this->clearRankCaches();
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Ranks_Updated', 'Rank updated successfully.'),
-            'data'     => $insignia,
+            'status' => 'success',
+            'message' => lexicon('msg_Ranks_Updated', 'Rank updated successfully.'),
+            'data' => $insignia,
             'redirect' => null,
         ], 200);
     }
@@ -171,9 +180,9 @@ class InsigniaController extends Controller
         $this->clearRankCaches();
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Ranks_Deleted', 'Rank deleted successfully.'),
-            'data'     => null,
+            'status' => 'success',
+            'message' => lexicon('msg_Ranks_Deleted', 'Rank deleted successfully.'),
+            'data' => null,
             'redirect' => null,
         ], 200);
     }
@@ -182,22 +191,22 @@ class InsigniaController extends Controller
     {
         abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
 
-        $validated =$request->validate([
-            'items'                       => 'required|array',
-            'items.*.id'                  => 'required|exists:insignia,id',
+        $validated = $request->validate([
+            'items' => 'required|array',
+            'items.*.id' => 'required|exists:insignia,id',
             'items.*.insignia_sort_order' => 'required|integer',
         ]);
 
-        foreach ($validated['items'] as$item) {
-            Insignia::where('id', $item['id'])->update(['insignia_sort_order' =>$item['insignia_sort_order']]);
+        foreach ($validated['items'] as $item) {
+            Insignia::where('id', $item['id'])->update(['insignia_sort_order' => $item['insignia_sort_order']]);
         }
 
         $this->clearRankCaches();
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Ranks_Reordered', 'Ranks reordered successfully.'),
-            'data'     => null,
+            'status' => 'success',
+            'message' => lexicon('msg_Ranks_Reordered', 'Ranks reordered successfully.'),
+            'data' => null,
             'redirect' => null,
         ], 200);
     }
@@ -209,22 +218,22 @@ class InsigniaController extends Controller
         $rankSets = InsigniaCatalogue::with('insignia')->get()->map(function ($set) {
             return [
                 'catalogue_title' => $set->catalogue_title,
-                'is_visible'      => (bool) $set->is_visible,
-                'insignia'        => $set->insignia->map(function ($rank) {
+                'is_visible' => (bool) $set->is_visible,
+                'insignia' => $set->insignia->map(function ($rank) {
                     return [
-                        'insignia_title'       => $rank->insignia_title,
-                        'abbreviated_title'    => $rank->abbreviated_title,
+                        'insignia_title' => $rank->insignia_title,
+                        'abbreviated_title' => $rank->abbreviated_title,
                         'insignia_description' => $rank->insignia_description,
-                        'insignia_sort_order'  => $rank->insignia_sort_order,
-                        'is_visible'           => (bool) $rank->is_visible,
-                        'mid_layer_mode'       => $rank->mid_layer_mode,
-                        'mid_layer_asset'      => $rank->mid_layer_asset,
-                        'mid_layer_modifier'   => $rank->mid_layer_modifier,
-                        'mid_layer_hue'        => $rank->mid_layer_hue,
-                        'top_layer_mode'       => $rank->top_layer_mode,
-                        'top_layer_asset'      => $rank->top_layer_asset,
-                        'top_layer_modifier'   => $rank->top_layer_modifier,
-                        'top_layer_hue'        => $rank->top_layer_hue,
+                        'insignia_sort_order' => $rank->insignia_sort_order,
+                        'is_visible' => (bool) $rank->is_visible,
+                        'mid_layer_mode' => $rank->mid_layer_mode,
+                        'mid_layer_asset' => $rank->mid_layer_asset,
+                        'mid_layer_modifier' => $rank->mid_layer_modifier,
+                        'mid_layer_hue' => $rank->mid_layer_hue,
+                        'top_layer_mode' => $rank->top_layer_mode,
+                        'top_layer_asset' => $rank->top_layer_asset,
+                        'top_layer_modifier' => $rank->top_layer_modifier,
+                        'top_layer_hue' => $rank->top_layer_hue,
                     ];
                 })->all(),
             ];
@@ -232,9 +241,9 @@ class InsigniaController extends Controller
 
         $manifest = [
             'meta' => [
-                'engine'      => 'MOWS Engine',
-                'type'        => 'insignia_manifest',
-                'version'     => '1.0',
+                'engine' => 'MOWS Engine',
+                'type' => 'insignia_manifest',
+                'version' => '1.0',
                 'exported_at' => now()->toIso8601String(),
             ],
             'insignia_catalogues' => $rankSets->all(),
@@ -253,33 +262,33 @@ class InsigniaController extends Controller
 
         $template = [
             'meta' => [
-                'engine'      => 'MOWS Engine',
-                'type'        => 'insignia_manifest',
-                'version'     => '1.0',
+                'engine' => 'MOWS Engine',
+                'type' => 'insignia_manifest',
+                'version' => '1.0',
                 'exported_at' => now()->toIso8601String(),
             ],
             'insignia_catalogues' => [
                 [
                     'catalogue_title' => 'Starfleet_2409',
-                    'is_visible'      => true,
-                    'insignia'        => [
+                    'is_visible' => true,
+                    'insignia' => [
                         [
-                            'insignia_title'       => 'Captain',
-                            'abbreviated_title'    => 'CAPT',
+                            'insignia_title' => 'Captain',
+                            'abbreviated_title' => 'CAPT',
                             'insignia_description' => 'Commanding officer rank.',
-                            'insignia_sort_order'  => 1,
-                            'is_visible'           => true,
-                            'mid_layer_mode'       => 'css',
-                            'mid_layer_asset'      => null,
-                            'mid_layer_modifier'   => 'shape-mid-original',
-                            'mid_layer_hue'        => '#1a1a1aFF',
-                            'top_layer_mode'       => 'image',
-                            'top_layer_asset'      => 'sgp.png',
-                            'top_layer_modifier'   => null,
-                            'top_layer_hue'        => '#ffffffFF',
-                        ]
-                    ]
-                ]
+                            'insignia_sort_order' => 1,
+                            'is_visible' => true,
+                            'mid_layer_mode' => 'css',
+                            'mid_layer_asset' => null,
+                            'mid_layer_modifier' => 'shape-mid-original',
+                            'mid_layer_hue' => '#1a1a1aFF',
+                            'top_layer_mode' => 'image',
+                            'top_layer_asset' => 'sgp.png',
+                            'top_layer_modifier' => null,
+                            'top_layer_hue' => '#ffffffFF',
+                        ],
+                    ],
+                ],
             ],
         ];
 
@@ -299,48 +308,49 @@ class InsigniaController extends Controller
             'mode' => 'required|in:merge,replace',
         ]);
 
-        $path =$request->file('file')->getRealPath();
+        $path = $request->file('file')->getRealPath();
         $content = file_get_contents($path);
         $data = json_decode($content, true);
 
-        if (!isset($data['insignia_catalogues']) || !is_array($data['insignia_catalogues'])) {
+        if (! isset($data['insignia_catalogues']) || ! is_array($data['insignia_catalogues'])) {
             return response()->json([
-                'status'   => 'error',
-                'message'  => lexicon('msg_Ranks_InvalidManifest', 'Invalid insignia manifest format.'),
-                'data'     => null,
+                'status' => 'error',
+                'message' => lexicon('msg_Ranks_InvalidManifest', 'Invalid insignia manifest format.'),
+                'data' => null,
                 'redirect' => null,
             ], 422);
         }
 
-        DB::transaction(function () use ($data,$request) {
+        DB::transaction(function () use ($data, $request) {
             if ($request->input('mode') === 'replace') {
                 InsigniaCatalogue::query()->delete();
             }
 
-            foreach ($data['insignia_catalogues'] as $setData) {$rankSet = InsigniaCatalogue::updateOrCreate(
+            foreach ($data['insignia_catalogues'] as $setData) {
+                $rankSet = InsigniaCatalogue::updateOrCreate(
                     ['catalogue_title' => $setData['catalogue_title']],
                     ['is_visible' => $setData['is_visible'] ?? true]
                 );
 
-                if (!empty($setData['insignia']) && is_array($setData['insignia'])) {
-                    foreach ($setData['insignia'] as$rankData) {
+                if (! empty($setData['insignia']) && is_array($setData['insignia'])) {
+                    foreach ($setData['insignia'] as $rankData) {
                         Insignia::updateOrCreate(
                             [
                                 'insignia_catalogue_id' => $rankSet->id,
-                                'insignia_title'        => $rankData['insignia_title']
+                                'insignia_title' => $rankData['insignia_title'],
                             ],
                             [
-                                'abbreviated_title'    => $rankData['abbreviated_title'] ?? '',
+                                'abbreviated_title' => $rankData['abbreviated_title'] ?? '',
                                 'insignia_description' => $rankData['insignia_description'] ?? null,
-                                'insignia_sort_order'  => $rankData['insignia_sort_order'] ?? 0, 'is_visible'           =>$rankData['is_visible'] ?? true,
-                                'mid_layer_mode'       => $rankData['mid_layer_mode'] ?? 'css',
-                                'mid_layer_asset'      => $rankData['mid_layer_asset'] ?? null,
-                                'mid_layer_modifier'   => $rankData['mid_layer_modifier'] ?? null,
-                                'mid_layer_hue'        => $rankData['mid_layer_hue'] ?? null,
-                                'top_layer_mode'       => $rankData['top_layer_mode'] ?? 'image',
-                                'top_layer_asset'      => $rankData['top_layer_asset'] ?? null,
-                                'top_layer_modifier'   => $rankData['top_layer_modifier'] ?? null,
-                                'top_layer_hue'        => $rankData['top_layer_hue'] ?? null,
+                                'insignia_sort_order' => $rankData['insignia_sort_order'] ?? 0, 'is_visible' => $rankData['is_visible'] ?? true,
+                                'mid_layer_mode' => $rankData['mid_layer_mode'] ?? 'css',
+                                'mid_layer_asset' => $rankData['mid_layer_asset'] ?? null,
+                                'mid_layer_modifier' => $rankData['mid_layer_modifier'] ?? null,
+                                'mid_layer_hue' => $rankData['mid_layer_hue'] ?? null,
+                                'top_layer_mode' => $rankData['top_layer_mode'] ?? 'image',
+                                'top_layer_asset' => $rankData['top_layer_asset'] ?? null,
+                                'top_layer_modifier' => $rankData['top_layer_modifier'] ?? null,
+                                'top_layer_hue' => $rankData['top_layer_hue'] ?? null,
                             ]
                         );
                     }
@@ -351,9 +361,9 @@ class InsigniaController extends Controller
         $this->clearRankCaches();
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Ranks_ImportSuccess', 'Ranks imported successfully.'),
-            'data'     => null,
+            'status' => 'success',
+            'message' => lexicon('msg_Ranks_ImportSuccess', 'Ranks imported successfully.'),
+            'data' => null,
             'redirect' => null,
         ], 200);
     }

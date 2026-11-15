@@ -6,7 +6,7 @@
 <div x-data="themeManager()"
     @ajax-success.window="refreshDOM()">
 
-    <x-admin-grid-wrapper :page="$systemPage">
+    <x-grid-wrapper :book="$systemBook">
 
         <x-slot:top>
             <x-page-header :title="lexicon('admin_label_theme', 'Theme & Skin Engine')" />
@@ -247,6 +247,6 @@
             @endcan
         </x-slot:bottom>
 
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 </div>
 @endsection

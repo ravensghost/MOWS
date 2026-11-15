@@ -2,24 +2,26 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
+use App\Models\FormField;
+use App\Models\NavigationLink;
+use App\Models\Section;
 use App\Models\Setting;
 use App\Models\Term;
-use App\Models\FormField;
-use App\Models\Section;
-use App\Models\NavigationLink;
-use App\Models\Skin;
+use App\Models\ThematicBinding;
+use App\Models\User;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
         // 0. Master Admin Account
-        \App\Models\User::updateOrCreate(
+        User::updateOrCreate(
             ['email' => 'admin@mows.engine'],
             [
                 'name' => 'System Administrator',
-                'password' => \Illuminate\Support\Facades\Hash::make('admin1234'),
+                'password' => Hash::make('admin1234'),
                 'role' => 'webmaster',
             ]
         );
@@ -65,7 +67,7 @@ class DatabaseSeeder extends Seeder
                 ['code_key' => $term['code_key']],
                 [
                     'display_value' => $term['display_value'] ?? $term['translations'],
-                    'translations' => $term['translations']
+                    'translations' => $term['translations'],
                 ]
             );
         }
@@ -86,71 +88,71 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Command'],
             ['description' => 'Station administration and strategic operations.', 'color' => '#dc2626', 'order' => 1]
         );
-        
+
         // 5. Navigation Defaults
         NavigationLink::insert([
             // Primary Navigation (Publicly Visible)
             [
                 'lexicon_key' => 'page_landing',
-                'url'         => '/',
-                'location'    => 'primary',
-                'visibility'  => 'public',
-                'target'      => '_self',
-                'order'       => 1,
+                'url' => '/',
+                'location' => 'primary',
+                'visibility' => 'public',
+                'target' => '_self',
+                'order' => 1,
             ],
             [
                 'lexicon_key' => 'page_roster',
-                'url'         => '/roster',
-                'location'    => 'primary',
-                'visibility'  => 'public',
-                'target'      => '_self',
-                'order'       => 2,
+                'url' => '/roster',
+                'location' => 'primary',
+                'visibility' => 'public',
+                'target' => '_self',
+                'order' => 2,
             ],
             [
                 'lexicon_key' => 'page_simm',
-                'url'         => '/simm',
-                'location'    => 'primary',
-                'visibility'  => 'public',
-                'target'      => '_self',
-                'order'       => 3,
+                'url' => '/simm',
+                'location' => 'primary',
+                'visibility' => 'public',
+                'target' => '_self',
+                'order' => 3,
             ],
 
             // Context Drawer (State-Dependent Visibility)
             [
                 'lexicon_key' => 'btn_login',
-                'url'         => '/login',
-                'location'    => 'drawer',
-                'visibility'  => 'guest', // Only shows when logged out
-                'target'      => '_self',
-                'order'       => 1,
+                'url' => '/login',
+                'location' => 'drawer',
+                'visibility' => 'guest', // Only shows when logged out
+                'target' => '_self',
+                'order' => 1,
             ],
             [
                 'lexicon_key' => 'page_dashboard',
-                'url'         => '/dashboard',
-                'location'    => 'drawer',
-                'visibility'  => 'auth', // Only shows when logged in
-                'target'      => '_self',
-                'order'       => 2,
+                'url' => '/dashboard',
+                'location' => 'drawer',
+                'visibility' => 'auth', // Only shows when logged in
+                'target' => '_self',
+                'order' => 2,
             ],
             [
                 'lexicon_key' => 'admin_dashboard',
-                'url'         => '/admin',
-                'location'    => 'drawer',
-                'visibility'  => 'admin', // Only shows to administrators
-                'target'      => '_self',
-                'order'       => 3,
+                'url' => '/admin',
+                'location' => 'drawer',
+                'visibility' => 'admin', // Only shows to administrators
+                'target' => '_self',
+                'order' => 3,
             ],
         ]);
 
         // 6. Default Skin Package
-        Skin::updateOrCreate(
-            ['folder_name' => 'default'],
+        ThematicBinding::updateOrCreate(
+            ['directory_name' => 'default'],
             [
-                'name' => 'Default',
-                'version' => '1.0',
-                'is_active' => 1,
-                'is_global_default' => 1,
+                'binding_title' => 'Default',
+                'package_version' => '1.0',
+                'is_active' => true,
+                'is_global_default' => true,
             ]
         );
-   }
+    }
 }

@@ -6,7 +6,7 @@
 <div x-data="chronologicalRegisterManager({{ json_encode($awards) }})"
      @ajax-success.window="window.updateDOM_US($refs, ['chronologicalRegistersTableContent'], () => { issueModalOpen = false; })">
     
-     <x-admin-grid-wrapper :page="$systemPage">
+     <x-grid-wrapper :book="$systemBook">
     
         <x-slot:top>
             <script type="application/json" x-ref="chronologicalRegistersSearchData">
@@ -697,6 +697,6 @@
             </x-modal>
         </x-slot:bottom>
     
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 </div>
 @endsection

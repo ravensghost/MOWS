@@ -10,7 +10,7 @@
         setTimeout(() => loadNewsData(), 300);
     ">
 
-    <x-admin-grid-wrapper :page="$systemPage">
+    <x-grid-wrapper :book="$systemBook">
         
         <x-slot:top>
             <x-page-header :title="lexicon('admin_label_news', 'News & Announcements')">
@@ -186,6 +186,6 @@
             </x-modal>
         </x-slot:bottom>
 
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 </div>
 @endsection

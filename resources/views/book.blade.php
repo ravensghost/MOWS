@@ -8,10 +8,10 @@
             <x-page-header :title="lexicon($bookKey ?? 'book_title', $book->book_title)" />
         @endif
 
-        <x-books-grid-wrapper
+        <x-grid-wrapper
             :book="$book"
-            :bulletins="$bulletins ?? null"
-            :folios="$folios ?? null"
+            :newsItems="$bulletins ?? null"
+            :storyPosts="$folios ?? null"
         />
     </div>
 @endsection

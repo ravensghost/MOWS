@@ -16,8 +16,8 @@ class DistinctionController extends Controller
     {
         abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorised action.');
 
-        $systemPage = Book::with(['grid.gridModules', 'module'])
-            ->where('slug', 'admin/distinctions')
+        $systemBook = Book::with(['grid.gridModules', 'modules'])
+            ->where('book_url', 'admin/awards')
             ->where('is_published', true)
             ->firstOrFail();
 
@@ -33,14 +33,14 @@ class DistinctionController extends Controller
             $cssContent = File::get($cssPath);
 
             preg_match_all('/\.distinction-ml-([a-zA-Z0-9_-]+)/', $cssContent, $mlMatches);
-            if (!empty($mlMatches[1])) {
+            if (! empty($mlMatches[1])) {
                 foreach (array_unique($mlMatches[1]) as $shape) {
                     $midShapes[$shape] = str_replace('-', ' ', ucwords($shape));
                 }
             }
 
             preg_match_all('/\.distinction-tl-([a-zA-Z0-9_-]+)/', $cssContent, $tlMatches);
-            if (!empty($tlMatches[1])) {
+            if (! empty($tlMatches[1])) {
                 foreach (array_unique($tlMatches[1]) as $shape) {
                     $topShapes[$shape] = str_replace('-', ' ', ucwords($shape));
                 }
@@ -49,10 +49,10 @@ class DistinctionController extends Controller
 
         return view('admin.distinctions', [
             'distinctions' => $distinctions,
-            'systemPage'   => $systemPage,
-            'midShapes'    => $midShapes,
-            'topShapes'    => $topShapes,
-            'catalogues'   => $catalogues,
+            'systemBook' => $systemBook,
+            'midShapes' => $midShapes,
+            'topShapes' => $topShapes,
+            'catalogues' => $catalogues,
         ]);
     }
 
@@ -62,34 +62,34 @@ class DistinctionController extends Controller
 
         $request->merge([
             'distinction_catalogue_id' => $request->distinction_catalogue_id ?: null,
-            'mid_layer_mode'           => $request->mid_layer_mode ?: null,
-            'mid_layer_asset'          => $request->mid_layer_asset ?: null,
-            'mid_layer_modifier'       => $request->mid_layer_modifier ?: null,
-            'top_layer_mode'           => $request->top_layer_mode ?: null,
-            'top_layer_asset'          => $request->top_layer_asset ?: null,
-            'top_layer_modifier'       => $request->top_layer_modifier ?: null,
+            'mid_layer_mode' => $request->mid_layer_mode ?: null,
+            'mid_layer_asset' => $request->mid_layer_asset ?: null,
+            'mid_layer_modifier' => $request->mid_layer_modifier ?: null,
+            'top_layer_mode' => $request->top_layer_mode ?: null,
+            'top_layer_asset' => $request->top_layer_asset ?: null,
+            'top_layer_modifier' => $request->top_layer_modifier ?: null,
         ]);
 
         $validated = $request->validate([
-            'distinction_title'        => 'required|string|max:255',
-            'distinction_description'  => 'nullable|string',
-            'scope_target'             => 'required|in:BOTH,IC,OOC',
+            'distinction_title' => 'required|string|max:255',
+            'distinction_description' => 'nullable|string',
+            'scope_target' => 'required|in:BOTH,IC,OOC',
             'distinction_catalogue_id' => 'nullable|exists:distinction_catalogues,id',
-            'distinction_base_colour'  => 'required|string|max:50',
-            'mid_layer_mode'           => 'nullable|string|max:50',
-            'mid_layer_asset'          => 'nullable|string|max:255',
-            'mid_layer_modifier'       => 'nullable|string|max:255',
-            'top_layer_mode'           => 'nullable|string|max:50',
-            'top_layer_asset'          => 'nullable|string|max:255',
-            'top_layer_modifier'       => 'nullable|string|max:255',
+            'distinction_base_colour' => 'required|string|max:50',
+            'mid_layer_mode' => 'nullable|string|max:50',
+            'mid_layer_asset' => 'nullable|string|max:255',
+            'mid_layer_modifier' => 'nullable|string|max:255',
+            'top_layer_mode' => 'nullable|string|max:50',
+            'top_layer_asset' => 'nullable|string|max:255',
+            'top_layer_modifier' => 'nullable|string|max:255',
         ]);
 
         $distinction = Distinction::create($validated);
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_distinction_created', 'Distinction created successfully!'),
-            'data'     => $distinction,
+            'status' => 'success',
+            'message' => lexicon('msg_distinction_created', 'Distinction created successfully!'),
+            'data' => $distinction,
             'redirect' => null,
         ], 200);
     }
@@ -100,34 +100,34 @@ class DistinctionController extends Controller
 
         $request->merge([
             'distinction_catalogue_id' => $request->distinction_catalogue_id ?: null,
-            'mid_layer_mode'           => $request->mid_layer_mode ?: null,
-            'mid_layer_asset'          => $request->mid_layer_asset ?: null,
-            'mid_layer_modifier'       => $request->mid_layer_modifier ?: null,
-            'top_layer_mode'           => $request->top_layer_mode ?: null,
-            'top_layer_asset'          => $request->top_layer_asset ?: null,
-            'top_layer_modifier'       => $request->top_layer_modifier ?: null,
+            'mid_layer_mode' => $request->mid_layer_mode ?: null,
+            'mid_layer_asset' => $request->mid_layer_asset ?: null,
+            'mid_layer_modifier' => $request->mid_layer_modifier ?: null,
+            'top_layer_mode' => $request->top_layer_mode ?: null,
+            'top_layer_asset' => $request->top_layer_asset ?: null,
+            'top_layer_modifier' => $request->top_layer_modifier ?: null,
         ]);
 
         $validated = $request->validate([
-            'distinction_title'        => 'required|string|max:255',
-            'distinction_description'  => 'nullable|string',
-            'scope_target'             => 'required|in:BOTH,IC,OOC',
+            'distinction_title' => 'required|string|max:255',
+            'distinction_description' => 'nullable|string',
+            'scope_target' => 'required|in:BOTH,IC,OOC',
             'distinction_catalogue_id' => 'nullable|exists:distinction_catalogues,id',
-            'distinction_base_colour'  => 'required|string|max:50',
-            'mid_layer_mode'           => 'nullable|string|max:50',
-            'mid_layer_asset'          => 'nullable|string|max:255',
-            'mid_layer_modifier'       => 'nullable|string|max:255',
-            'top_layer_mode'           => 'nullable|string|max:50',
-            'top_layer_asset'          => 'nullable|string|max:255',
-            'top_layer_modifier'       => 'nullable|string|max:255',
+            'distinction_base_colour' => 'required|string|max:50',
+            'mid_layer_mode' => 'nullable|string|max:50',
+            'mid_layer_asset' => 'nullable|string|max:255',
+            'mid_layer_modifier' => 'nullable|string|max:255',
+            'top_layer_mode' => 'nullable|string|max:50',
+            'top_layer_asset' => 'nullable|string|max:255',
+            'top_layer_modifier' => 'nullable|string|max:255',
         ]);
 
         $distinction->update($validated);
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_distinction_updated', 'Distinction updated successfully!'),
-            'data'     => $distinction,
+            'status' => 'success',
+            'message' => lexicon('msg_distinction_updated', 'Distinction updated successfully!'),
+            'data' => $distinction,
             'redirect' => null,
         ], 200);
     }
@@ -139,9 +139,9 @@ class DistinctionController extends Controller
         $distinction->delete();
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_distinction_deleted', 'Distinction deleted successfully!'),
-            'data'     => null,
+            'status' => 'success',
+            'message' => lexicon('msg_distinction_deleted', 'Distinction deleted successfully!'),
+            'data' => null,
             'redirect' => null,
         ], 200);
     }
@@ -155,17 +155,17 @@ class DistinctionController extends Controller
 
         $path = public_path("skins/{$activeSkin}/images/distinctions");
 
-        if (!File::exists($path)) {
+        if (! File::exists($path)) {
             return response()->json([
-                'status'      => 'success',
-                'message'     => lexicon('msg_distinction_images_loaded', 'Distinction images retrieved.'),
-                'data'        => [
-                    'images'      => [],
+                'status' => 'success',
+                'message' => lexicon('msg_distinction_images_loaded', 'Distinction images retrieved.'),
+                'data' => [
+                    'images' => [],
                     'active_skin' => $activeSkin,
                 ],
-                'images'      => [],
+                'images' => [],
                 'active_skin' => $activeSkin,
-                'redirect'    => null,
+                'redirect' => null,
             ], 200);
         }
 
@@ -179,15 +179,15 @@ class DistinctionController extends Controller
         sort($images);
 
         return response()->json([
-            'status'      => 'success',
-            'message'     => lexicon('msg_distinction_images_loaded', 'Distinction images retrieved.'),
-            'data'        => [
-                'images'      => $images,
+            'status' => 'success',
+            'message' => lexicon('msg_distinction_images_loaded', 'Distinction images retrieved.'),
+            'data' => [
+                'images' => $images,
                 'active_skin' => $activeSkin,
             ],
-            'images'      => $images,
+            'images' => $images,
             'active_skin' => $activeSkin,
-            'redirect'    => null,
+            'redirect' => null,
         ], 200);
     }
 }

@@ -23,15 +23,7 @@
         ></div>
 
         @if($bookModel)
-            <x-books-grid-wrapper
-                :book="$bookModel"
-                :books="$books ?? collect()"
-                :grids="$grids ?? collect()"
-                :modules="$modules ?? collect()"
-                :availableModules="$availableModules ?? []"
-                :permissions="$permissions ?? collect()"
-                :forms="$forms ?? collect()"
-            />
+            <x-grid-wrapper :book="$bookModel" />
         @endif
     </div>
 @endsection

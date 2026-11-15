@@ -16,17 +16,15 @@ class UserController extends Controller
     {
         abort_unless(auth()->user()->can('manage_users'), 403, lexicon('msg_Users_Unauthorised', 'Unauthorised access to User Management.'));
 
-        $systemPage = Book::where('book_url', 'admin/users')
+        $systemBook = Book::where('book_url', 'admin/users')
             ->where('is_published', true)
-            ->with(['layout.blocks', 'widgets' => function ($query) {
-                $query->orderBy('page_widget.sort_order');
-            }])
+            ->with(['grid.gridModules', 'modules'])
             ->firstOrFail();
 
         $users = User::with(['roles', 'attributes'])->orderBy('name')->get();
         $roles = Role::orderBy('name')->get();
 
-        return view('admin.users', compact('users', 'roles', 'systemPage'));
+        return view('admin.users', compact('users', 'roles', 'systemBook'));
     }
 
     public function updateRole(Request $request, User $user)
@@ -51,7 +49,7 @@ class UserController extends Controller
 
         $user->load('roles');
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_Users_RoleUpdated', 'Role updated successfully.') . " ({$user->name})", 'data' => $user, 'redirect' => null], 200);
+        return response()->json(['status' => 'success', 'message' => lexicon('msg_Users_RoleUpdated', 'Role updated successfully.')." ({$user->name})", 'data' => $user, 'redirect' => null], 200);
     }
 
     public function updateLoa(Request $request, User $user)
@@ -63,9 +61,9 @@ class UserController extends Controller
         );
 
         $validated = $request->validate([
-            'is_on_loa'       => 'required|boolean',
+            'is_on_loa' => 'required|boolean',
             'loa_return_date' => 'nullable|required_if:is_on_loa,1,true|date',
-            'reason'          => 'nullable|string|max:255',
+            'reason' => 'nullable|string|max:255',
         ]);
 
         $isOnLoa = (bool) $validated['is_on_loa'];
@@ -95,7 +93,7 @@ class UserController extends Controller
 
         $validated = $request->validate([
             'context' => 'nullable|string|in:loa,inactivity',
-            'note'    => 'nullable|string|max:500',
+            'note' => 'nullable|string|max:500',
         ]);
 
         $context = $validated['context'] ?? 'inactivity';
@@ -118,9 +116,9 @@ class UserController extends Controller
         }
 
         if (! empty($user->email) && NotificationService::sendEmail($user->email, $subject, 'emails.notification', [
-            'title'   => $subject,
+            'title' => $subject,
             'content' => $body,
-            'url'     => url('/dashboard'),
+            'url' => url('/dashboard'),
         ])) {
             $channelsDispatched[] = 'Email';
         }
@@ -131,7 +129,7 @@ class UserController extends Controller
         }
 
         $channelSummary = ! empty($channelsDispatched)
-            ? ' (' . implode(', ', $channelsDispatched) . ')'
+            ? ' ('.implode(', ', $channelsDispatched).')'
             : ' (All notification channels currently disabled in Global Settings)';
 
         return response()->json(['status' => 'success', 'message' => "Check-in ping processed for {$user->name}{$channelSummary}.", 'data' => $user, 'redirect' => null], 200);

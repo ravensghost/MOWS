@@ -4,7 +4,7 @@
 
 @section('content')
 <div x-data="roleManager" @ajax-success.window="handleAjaxSuccess()">
-    <x-admin-grid-wrapper :page="$systemPage">
+    <x-grid-wrapper :book="$systemBook">
 
         <x-slot:top>
             <x-page-header :title="lexicon('admin_label_roles', 'Permission & Roles Hub')" />
@@ -14,7 +14,7 @@
                     {{-- Create Role Panel --}}
                     <x-accordion-panel :title="lexicon('admin_label_CreateEditRole', 'Create or Edit Role')" :expanded="false">
                         <form method="POST"
-                              action="{{ route('admin.roles.store') }}"
+                              action="{{ route('admin.access_clearance_roles.store') }}"
                               x-data="ajaxForm"
                               @submit.prevent="submit"
                               data-loading-title="{{ lexicon('msg_Roles_SavingRole', 'Saving Role...') }}"
@@ -60,7 +60,7 @@
                     <x-accordion-panel :title="lexicon('admin_label_ManagePermissions', 'Manage System Permissions')" :expanded="false">
                         <div class="flex flex-col gap-md">
                             <form method="POST"
-                                  action="{{ route('admin.permissions.store') }}"
+                                  action="{{ route('admin.access_clearance_roles.permissions.store') }}"
                                   x-data="ajaxForm"
                                   @submit.prevent="submit"
                                   data-loading-title="{{ lexicon('msg_Roles_CreatingPermission', 'Creating Permission...') }}"
@@ -117,7 +117,7 @@
                                             </td>
                                             <td class="p-4 text-right">
                                                 <form method="POST"
-                                                      action="{{ route('admin.permissions.destroy', $perm->id) }}"
+                                                      action="{{ route('admin.access_clearance_roles.permissions.destroy', $perm->id) }}"
                                                       x-data="ajaxForm"
                                                       @submit.prevent="submit"
                                                       class="inline-block m-0 p-0">
@@ -218,7 +218,7 @@
 
                                                 @if($role->name !== 'webmaster')
                                                     <form method="POST"
-                                                          action="{{ route('admin.roles.destroy', $role->id) }}"
+                                                          action="{{ route('admin.access_clearance_roles.destroy', $role->id) }}"
                                                           x-data="ajaxForm"
                                                           @submit.prevent="submit"
                                                           class="inline-block m-0 p-0">
@@ -327,7 +327,7 @@
             </div>
         </x-slot:bottom>
 
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 
     {{-- Edit Role Pop-Out Modal --}}
     @can('manage_roles')
@@ -338,7 +338,7 @@
 
             <form id="edit-role-form"
                   method="POST"
-                  action="{{ route('admin.roles.store') }}"
+                  action="{{ route('admin.access_clearance_roles.store') }}"
                   x-data="ajaxForm"
                   @submit.prevent="submit"
                   data-loading-title="{{ lexicon('msg_Roles_UpdatingRole', 'Updating Role...') }}"

@@ -4,7 +4,7 @@
 
 @section('content')
 <div x-data="loaHubManager()" @ajax-success.window="loaModal.open = false; window.refreshDOM_US()">
-    <x-admin-grid-wrapper :page="$systemPage">
+    <x-grid-wrapper :book="$systemBook">
 
         <x-slot:top>
             <x-page-header :title="lexicon('admin_label_AdminDashboard', 'Command Centre')">
@@ -380,6 +380,6 @@
 
         </x-slot:bottom>
 
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 </div>
 @endsection

@@ -11,6 +11,10 @@
     $grid = $activeBook?->grid;
     $gridModules = $grid ? $grid->gridModules : collect();
     $bookModules = $activeBook ? $activeBook->modules->where('pivot.is_visible', true) : collect();
+    $normaliseSlotName = static fn (string $name): string => strtolower(preg_replace('/[^a-z0-9]/i', '', $name) ?? '');
+    $namedSlots = collect(get_defined_vars())
+        ->filter(fn ($value, $name) => $name !== 'slot' && $value instanceof \Illuminate\View\ComponentSlot)
+        ->mapWithKeys(fn ($value, $name) => [$normaliseSlotName($name) => $value]);
 @endphp
 
 <div {{ $attributes->merge(['class' => 'mows-books-grid-wrapper max-w-container mx-auto px-container grid grid-cols-12 gap-4']) }}>
@@ -18,12 +22,17 @@
         @php
             $colSpan = $gridModule->column_span ?? 12;
             $rowSpan = $gridModule->row_span ?? 1;
+            $areaSlot = $namedSlots->get($normaliseSlotName($gridModule->grid_module_title));
             $assignedModules = $bookModules
                 ->where('pivot.grid_module_id', $gridModule->id)
                 ->sortBy('pivot.module_sort_order');
         @endphp
 
         <div class="mows-grid-module col-span-{{ $colSpan }} row-span-{{ $rowSpan }}" data-grid-module-id="{{ $gridModule->id }}">
+            @if($areaSlot?->hasActualContent())
+                {{ $areaSlot }}
+            @endif
+
             @foreach($assignedModules as $module)
                 @php
                     $clearance = $module->pivot->access_clearance ?? null;
@@ -50,6 +59,12 @@
         </div>
     @empty
         <div class="col-span-12">
+            @foreach($namedSlots as $areaSlot)
+                @if($areaSlot->hasActualContent())
+                    {{ $areaSlot }}
+                @endif
+            @endforeach
+
             @foreach($bookModules->sortBy('pivot.module_sort_order') as $module)
                 @php
                     $clearance = $module->pivot->access_clearance ?? null;

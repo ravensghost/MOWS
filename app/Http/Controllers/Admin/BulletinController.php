@@ -13,19 +13,14 @@ class BulletinController extends Controller
 {
     public function index()
     {
-        $systemPage = Book::with([
-            'grid.gridModules',
-            'module' => function ($query) {
-                $query->orderBy('module_sort_order');
-            }
-        ])
-            ->where('slug', 'admin/bulletins')
+        $systemBook = Book::with(['grid.gridModules', 'modules'])
+            ->where('book_url', 'admin/news')
             ->where('is_published', true)
             ->firstOrFail();
 
         $news = Bulletin::orderBy('created_at', 'desc')->get();
 
-        return view('admin.news', compact('systemPage', 'news'));
+        return view('admin.news', compact('systemBook', 'news'));
     }
 
     public function store(Request $request)
@@ -33,15 +28,15 @@ class BulletinController extends Controller
         // 1. Validate FIRST. If this fails, it stops execution immediately.
         $validated = $request->validate([
             'bulletin_title' => 'required|string|max:255',
-            'bulletin_text'  => 'required|string',
+            'bulletin_text' => 'required|string',
         ]);
 
         // 2. Create SECOND (only runs if validation passes)
         $model = Bulletin::create([
             'bulletin_title' => $validated['bulletin_title'],
-            'bulletin_text'  => Purify::clean($validated['bulletin_text']),
-            'user_id'        => $request->user()->id,
-            'published_at'   => now(),
+            'bulletin_text' => Purify::clean($validated['bulletin_text']),
+            'user_id' => $request->user()->id,
+            'published_at' => now(),
         ]);
 
         // 3. Push to Discord THIRD (only runs if creation succeeds)
@@ -51,9 +46,9 @@ class BulletinController extends Controller
         );
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Bulletins_Created', 'Bulletin published successfully.'),
-            'data'     => $model,
+            'status' => 'success',
+            'message' => lexicon('msg_Bulletins_Created', 'Bulletin published successfully.'),
+            'data' => $model,
             'redirect' => null,
         ], 200);
     }
@@ -62,7 +57,7 @@ class BulletinController extends Controller
     {
         $validated = $request->validate([
             'bulletin_title' => 'required|string|max:255',
-            'bulletin_text'  => 'required|string',
+            'bulletin_text' => 'required|string',
         ]);
 
         $validated['bulletin_text'] = Purify::clean($validated['bulletin_text']);
@@ -71,9 +66,9 @@ class BulletinController extends Controller
         $model->update($validated);
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Bulletins_Updated', 'Bulletin updated successfully.'),
-            'data'     => $model,
+            'status' => 'success',
+            'message' => lexicon('msg_Bulletins_Updated', 'Bulletin updated successfully.'),
+            'data' => $model,
             'redirect' => null,
         ], 200);
     }
@@ -84,9 +79,9 @@ class BulletinController extends Controller
         $model->delete();
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Bulletins_Deleted', 'Bulletin deleted successfully.'),
-            'data'     => $model,
+            'status' => 'success',
+            'message' => lexicon('msg_Bulletins_Deleted', 'Bulletin deleted successfully.'),
+            'data' => $model,
             'redirect' => null,
         ], 200);
     }

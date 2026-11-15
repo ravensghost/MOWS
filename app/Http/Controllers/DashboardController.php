@@ -28,27 +28,22 @@ class DashboardController extends Controller
             ->take(10)
             ->get();
 
-        $systemPage = Book::where('book_url', 'dashboard')
+        $systemBook = Book::where('book_url', 'dashboard')
             ->where('is_published', true)
-            ->with([
-                'grid.gridModules',
-                'modules' => function ($q) {
-                    $q->orderBy('book_modules.module_sort_order');
-                }
-            ])
+            ->with(['grid.gridModules', 'modules'])
             ->first();
 
         $user = auth()->user();
 
-        return view('dashboard', compact('draftChapters', 'unreadMessages', 'systemPage', 'user'));
+        return view('dashboard', compact('draftChapters', 'unreadMessages', 'systemBook', 'user'));
     }
 
     public function updateLoa(Request $request)
     {
         $validated = $request->validate([
-            'is_on_loa'       => 'required|boolean',
+            'is_on_loa' => 'required|boolean',
             'loa_return_date' => 'nullable|required_if:is_on_loa,1,true|date|after_or_equal:today',
-            'reason'          => 'nullable|string|max:255',
+            'reason' => 'nullable|string|max:255',
         ]);
 
         $user = auth()->user();
@@ -67,8 +62,8 @@ class DashboardController extends Controller
 
         if ($request->wantsJson()) {
             return response()->json([
-                'status'  => 'success',
-                'message' => $message
+                'status' => 'success',
+                'message' => $message,
             ]);
         }
 

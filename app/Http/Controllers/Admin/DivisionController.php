@@ -31,14 +31,9 @@ class DivisionController extends Controller
     {
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
 
-        $systemPage = Book::where('book_url', 'admin/divisions')
+        $systemBook = Book::where('book_url', 'admin/sections')
             ->where('is_published', true)
-            ->with([
-                'grid.gridModules',
-                'modules' => function ($query) {
-                    $query->orderBy('book_modules.module_sort_order');
-                }
-            ])
+            ->with(['grid.gridModules', 'modules'])
             ->firstOrFail();
 
         $sections = Division::with([
@@ -46,12 +41,12 @@ class DivisionController extends Controller
             'divisionCatalogue',
             'assignments.personae' => function ($query) {
                 $query->where('persona_status', 'active');
-            }
+            },
         ])->orderBy('division_sort_order')->get();
 
         $catalogues = DivisionCatalogue::with('divisions')->orderBy('catalogue_title')->get();
 
-        return view('admin.divisions', compact('sections', 'catalogues', 'systemPage'));
+        return view('admin.divisions', compact('sections', 'catalogues', 'systemBook'));
     }
 
     public function store(Request $request)
@@ -59,21 +54,21 @@ class DivisionController extends Controller
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
 
         $validated = $request->validate([
-            'division_title'        => 'required|string|max:255',
-            'division_base_colour'  => 'nullable|string|max:9',
-            'division_description'  => 'nullable|string',
-            'division_sort_order'   => 'nullable|integer',
-            'is_visible'            => 'nullable|boolean',
+            'division_title' => 'required|string|max:255',
+            'division_base_colour' => 'nullable|string|max:9',
+            'division_description' => 'nullable|string',
+            'division_sort_order' => 'nullable|integer',
+            'is_visible' => 'nullable|boolean',
             'division_catalogue_id' => 'nullable|exists:division_catalogues,id',
             'insignia_catalogue_id' => 'nullable|exists:insignia_catalogues,id',
         ]);
 
         $model = Division::create([
-            'division_title'        => $validated['division_title'],
-            'division_description'  => $validated['division_description'] ?? null,
-            'division_base_colour'  => $validated['division_base_colour'] ?? '#374151',
-            'division_sort_order'   => $validated['division_sort_order'] ?? 0,
-            'is_visible'            => $request->boolean('is_visible', false),
+            'division_title' => $validated['division_title'],
+            'division_description' => $validated['division_description'] ?? null,
+            'division_base_colour' => $validated['division_base_colour'] ?? '#374151',
+            'division_sort_order' => $validated['division_sort_order'] ?? 0,
+            'is_visible' => $request->boolean('is_visible', false),
             'division_catalogue_id' => $validated['division_catalogue_id'] ?? null,
             'insignia_catalogue_id' => $validated['insignia_catalogue_id'] ?? null,
         ]);
@@ -88,21 +83,21 @@ class DivisionController extends Controller
         abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
 
         $validated = $request->validate([
-            'division_title'        => 'required|string|max:255',
-            'division_base_colour'  => 'required|string|max:9',
-            'division_description'  => 'nullable|string',
-            'division_sort_order'   => 'required|integer',
-            'is_visible'            => 'nullable|boolean',
+            'division_title' => 'required|string|max:255',
+            'division_base_colour' => 'required|string|max:9',
+            'division_description' => 'nullable|string',
+            'division_sort_order' => 'required|integer',
+            'is_visible' => 'nullable|boolean',
             'division_catalogue_id' => 'nullable|exists:division_catalogues,id',
             'insignia_catalogue_id' => 'nullable|exists:insignia_catalogues,id',
         ]);
 
         $division->update([
-            'division_title'        => $validated['division_title'],
-            'division_description'  => $validated['division_description'] ?? null,
-            'division_base_colour'  => $validated['division_base_colour'],
-            'division_sort_order'   => $validated['division_sort_order'],
-            'is_visible'            => $request->boolean('is_visible', false),
+            'division_title' => $validated['division_title'],
+            'division_description' => $validated['division_description'] ?? null,
+            'division_base_colour' => $validated['division_base_colour'],
+            'division_sort_order' => $validated['division_sort_order'],
+            'is_visible' => $request->boolean('is_visible', false),
             'division_catalogue_id' => $validated['division_catalogue_id'] ?? null,
             'insignia_catalogue_id' => $validated['insignia_catalogue_id'] ?? $division->insignia_catalogue_id,
         ]);
@@ -147,16 +142,16 @@ class DivisionController extends Controller
 
         $model = (object) [
             'division_description' => $generatedText,
-            'description'          => $generatedText,
+            'description' => $generatedText,
         ];
 
         return response()->json([
-            'status'               => 'success',
-            'message'              => lexicon('msg_SectionsPositions_DescGenerated', 'Section description generated successfully.'),
-            'data'                 => $model,
+            'status' => 'success',
+            'message' => lexicon('msg_SectionsPositions_DescGenerated', 'Section description generated successfully.'),
+            'data' => $model,
             'division_description' => $generatedText,
-            'description'          => $generatedText,
-            'redirect'             => null,
+            'description' => $generatedText,
+            'redirect' => null,
         ], 200);
     }
 
@@ -169,21 +164,21 @@ class DivisionController extends Controller
             ->get()
             ->map(function ($division) {
                 return [
-                    'division_title'          => $division->division_title,
-                    'division_description'    => $division->division_description,
-                    'division_base_colour'    => $division->division_base_colour,
-                    'division_sort_order'     => $division->division_sort_order,
-                    'is_visible'              => (bool) $division->is_visible,
-                    'division_catalogue_id'   => $division->division_catalogue_id,
-                    'insignia_catalogue_id'   => $division->insignia_catalogue_id,
+                    'division_title' => $division->division_title,
+                    'division_description' => $division->division_description,
+                    'division_base_colour' => $division->division_base_colour,
+                    'division_sort_order' => $division->division_sort_order,
+                    'is_visible' => (bool) $division->is_visible,
+                    'division_catalogue_id' => $division->division_catalogue_id,
+                    'insignia_catalogue_id' => $division->insignia_catalogue_id,
                     'insignia_catalogue_code' => $division->insigniaCatalogue?->catalogue_code,
-                    'assignments'             => $division->assignments->map(function ($assignment) {
+                    'assignments' => $division->assignments->map(function ($assignment) {
                         return [
-                            'assignment_title'       => $assignment->assignment_title,
+                            'assignment_title' => $assignment->assignment_title,
                             'assignment_description' => $assignment->assignment_description,
-                            'maximum_occupants'      => $assignment->maximum_occupants,
-                            'is_recruitment_open'    => (bool) $assignment->is_recruitment_open,
-                            'is_visible'             => (bool) $assignment->is_visible,
+                            'maximum_occupants' => $assignment->maximum_occupants,
+                            'is_recruitment_open' => (bool) $assignment->is_recruitment_open,
+                            'is_visible' => (bool) $assignment->is_visible,
                         ];
                     })->all(),
                 ];
@@ -191,9 +186,9 @@ class DivisionController extends Controller
 
         $manifest = [
             'meta' => [
-                'engine'      => 'MOWS Engine',
-                'type'        => 'divisions_assignments_manifest',
-                'version'     => '2.0',
+                'engine' => 'MOWS Engine',
+                'type' => 'divisions_assignments_manifest',
+                'version' => '2.0',
                 'exported_at' => now()->toIso8601String(),
             ],
             'divisions' => $divisions->all(),
@@ -212,31 +207,31 @@ class DivisionController extends Controller
 
         $template = [
             'meta' => [
-                'engine'      => 'MOWS Engine',
-                'type'        => 'divisions_assignments_manifest',
-                'version'     => '2.0',
+                'engine' => 'MOWS Engine',
+                'type' => 'divisions_assignments_manifest',
+                'version' => '2.0',
                 'exported_at' => now()->toIso8601String(),
             ],
             'divisions' => [
                 [
-                    'division_title'          => 'Command',
-                    'division_description'    => 'Station command and executive management.',
-                    'division_base_colour'    => '#dc2626',
-                    'division_sort_order'     => 1,
-                    'is_visible'              => true,
-                    'division_catalogue_id'   => null,
-                    'insignia_catalogue_id'   => null,
+                    'division_title' => 'Command',
+                    'division_description' => 'Station command and executive management.',
+                    'division_base_colour' => '#dc2626',
+                    'division_sort_order' => 1,
+                    'is_visible' => true,
+                    'division_catalogue_id' => null,
+                    'insignia_catalogue_id' => null,
                     'insignia_catalogue_code' => 'writers',
-                    'assignments'             => [
+                    'assignments' => [
                         [
-                            'assignment_title'       => 'Commanding Officer',
+                            'assignment_title' => 'Commanding Officer',
                             'assignment_description' => 'Overall station command.',
-                            'maximum_occupants'      => 1,
-                            'is_recruitment_open'    => true,
-                            'is_visible'             => true,
-                        ]
-                    ]
-                ]
+                            'maximum_occupants' => 1,
+                            'is_recruitment_open' => true,
+                            'is_visible' => true,
+                        ],
+                    ],
+                ],
             ],
         ];
 
@@ -260,7 +255,7 @@ class DivisionController extends Controller
         $content = file_get_contents($path);
         $data = json_decode($content, true);
 
-        if (!isset($data['divisions']) || !is_array($data['divisions'])) {
+        if (! isset($data['divisions']) || ! is_array($data['divisions'])) {
             throw ValidationException::withMessages([
                 'file' => [lexicon('msg_SectionsPositions_InvalidManifest', 'Invalid divisions manifest format.')],
             ]);
@@ -275,7 +270,7 @@ class DivisionController extends Controller
 
             foreach ($data['divisions'] as $divData) {
                 $insigniaCatalogueId = $divData['insignia_catalogue_id'] ?? null;
-                if (!$insigniaCatalogueId && !empty($divData['insignia_catalogue_code'])) {
+                if (! $insigniaCatalogueId && ! empty($divData['insignia_catalogue_code'])) {
                     $catalogue = InsigniaCatalogue::where('catalogue_code', $divData['insignia_catalogue_code'])->first();
                     $insigniaCatalogueId = $catalogue?->id;
                 }
@@ -283,27 +278,27 @@ class DivisionController extends Controller
                 $division = Division::updateOrCreate(
                     ['division_title' => $divData['division_title']],
                     [
-                        'division_description'  => $divData['division_description'] ?? null,
-                        'division_base_colour'  => $divData['division_base_colour'] ?? '#374151',
-                        'division_sort_order'   => $divData['division_sort_order'] ?? 0,
-                        'is_visible'            => $divData['is_visible'] ?? true,
+                        'division_description' => $divData['division_description'] ?? null,
+                        'division_base_colour' => $divData['division_base_colour'] ?? '#374151',
+                        'division_sort_order' => $divData['division_sort_order'] ?? 0,
+                        'is_visible' => $divData['is_visible'] ?? true,
                         'division_catalogue_id' => $divData['division_catalogue_id'] ?? null,
                         'insignia_catalogue_id' => $insigniaCatalogueId,
                     ]
                 );
 
-                if (!empty($divData['assignments']) && is_array($divData['assignments'])) {
+                if (! empty($divData['assignments']) && is_array($divData['assignments'])) {
                     foreach ($divData['assignments'] as $assignData) {
                         Assignment::updateOrCreate(
                             [
-                                'division_id'      => $division->id,
+                                'division_id' => $division->id,
                                 'assignment_title' => $assignData['assignment_title'],
                             ],
                             [
                                 'assignment_description' => $assignData['assignment_description'] ?? null,
-                                'maximum_occupants'      => $assignData['maximum_occupants'] ?? 1,
-                                'is_recruitment_open'    => $assignData['is_recruitment_open'] ?? true,
-                                'is_visible'             => $assignData['is_visible'] ?? true,
+                                'maximum_occupants' => $assignData['maximum_occupants'] ?? 1,
+                                'is_recruitment_open' => $assignData['is_recruitment_open'] ?? true,
+                                'is_visible' => $assignData['is_visible'] ?? true,
                             ]
                         );
                     }

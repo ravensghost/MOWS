@@ -4,7 +4,7 @@
 
 @section('content')
 <div x-data="generalImageManager()" @upload-completed.window="loadImages()">
-    <x-admin-grid-wrapper :page="$systemPage">
+    <x-grid-wrapper :book="$systemBook ?? null">
         <x-slot:content>
             <x-page-header :title="lexicon('admin_label_GeneralImages', 'General Asset Manager')">
                 <x-slot:actions>
@@ -67,6 +67,6 @@
             </x-modal>
 
         </x-slot:content>
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 </div>
 @endsection

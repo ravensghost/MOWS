@@ -47,7 +47,7 @@
 @endphp
 
 <div x-data="configurationManager('{{ $globalSettings['ai_mode'] ?? 'cloud' }}', '{{ $globalSettings['mail_mailer'] ?? 'smtp' }}')" @ajax-success.window="refreshDOM()">
-    <x-admin-grid-wrapper :page="$systemPage">
+    <x-grid-wrapper :book="$systemBook">
         
         <x-slot:top>
             <script type="application/json" x-ref="settingsSearchData">
@@ -584,6 +584,6 @@
             </x-modal>
         </x-slot:bottom>
 
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 </div>
 @endsection

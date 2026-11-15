@@ -30,39 +30,39 @@ class CorrespondenceController extends Controller
         $characters = Persona::where('persona_status', 'active')->select('id', 'persona_name', 'user_id')->get();
         $myCharacters = Persona::where('user_id', $userId)->where('persona_status', 'active')->get();
 
-        $systemPage = Book::where('book_url', 'messenger')
+        $systemBook = Book::where('book_url', 'messenger')
             ->where('is_published', true)
             ->with([
                 'grid.gridModules',
                 'modules' => function ($q) {
                     $q->orderBy('module_sort_order');
-                }
+                },
             ])
             ->first();
 
-        return view('messenger', compact('threads', 'activeThread', 'users', 'characters', 'myCharacters', 'systemPage'));
+        return view('messenger', compact('threads', 'activeThread', 'users', 'characters', 'myCharacters', 'systemBook'));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'thread_mode'         => 'required|in:IC,OOC',
-            'recipients'          => 'required|array|min:1',
-            'thread_title'        => 'nullable|string|max:255',
+            'thread_mode' => 'required|in:IC,OOC',
+            'recipients' => 'required|array|min:1',
+            'thread_title' => 'nullable|string|max:255',
             'correspondence_text' => 'required|string',
-            'persona_id'          => 'nullable|required_if:thread_mode,IC|exists:personae,id',
+            'persona_id' => 'nullable|required_if:thread_mode,IC|exists:personae,id',
         ]);
 
         $thread = CorrespondenceThread::create([
-            'thread_mode'  => $validated['thread_mode'],
+            'thread_mode' => $validated['thread_mode'],
             'thread_title' => $validated['thread_title'] ?? null,
         ]);
 
         CorrespondenceParticipant::create([
             'correspondence_thread_id' => $thread->id,
-            'user_id'                  => auth()->id(),
-            'persona_id'               => $validated['thread_mode'] === 'IC' ? $validated['persona_id'] : null,
-            'last_read_at'             => now(),
+            'user_id' => auth()->id(),
+            'persona_id' => $validated['thread_mode'] === 'IC' ? $validated['persona_id'] : null,
+            'last_read_at' => now(),
         ]);
 
         $characterUserMap = $validated['thread_mode'] === 'IC'
@@ -79,8 +79,8 @@ class CorrespondenceController extends Controller
             if ($targetUserId) {
                 CorrespondenceParticipant::create([
                     'correspondence_thread_id' => $thread->id,
-                    'user_id'                  => $targetUserId,
-                    'persona_id'               => $validated['thread_mode'] === 'IC' ? $recipientId : null,
+                    'user_id' => $targetUserId,
+                    'persona_id' => $validated['thread_mode'] === 'IC' ? $recipientId : null,
                 ]);
                 $notifiedUserIds[] = $targetUserId;
             }
@@ -88,9 +88,9 @@ class CorrespondenceController extends Controller
 
         CorrespondenceEntry::create([
             'correspondence_thread_id' => $thread->id,
-            'user_id'                  => auth()->id(),
-            'persona_id'               => $validated['thread_mode'] === 'IC' ? $validated['persona_id'] : null,
-            'correspondence_text'      => $validated['correspondence_text'],
+            'user_id' => auth()->id(),
+            'persona_id' => $validated['thread_mode'] === 'IC' ? $validated['persona_id'] : null,
+            'correspondence_text' => $validated['correspondence_text'],
         ]);
 
         $this->dispatchExternalAlerts($thread, array_unique($notifiedUserIds), $validated['correspondence_text']);
@@ -102,14 +102,14 @@ class CorrespondenceController extends Controller
     {
         $validated = $request->validate([
             'correspondence_text' => 'required|string',
-            'persona_id'          => 'nullable|exists:personae,id',
+            'persona_id' => 'nullable|exists:personae,id',
         ]);
 
         $entry = CorrespondenceEntry::create([
             'correspondence_thread_id' => $thread->id,
-            'user_id'                  => auth()->id(),
-            'persona_id'               => $thread->thread_mode === 'IC' ? ($validated['persona_id'] ?? null) : null,
-            'correspondence_text'      => $validated['correspondence_text'],
+            'user_id' => auth()->id(),
+            'persona_id' => $thread->thread_mode === 'IC' ? ($validated['persona_id'] ?? null) : null,
+            'correspondence_text' => $validated['correspondence_text'],
         ]);
 
         $thread->touch();
@@ -140,15 +140,15 @@ class CorrespondenceController extends Controller
                 continue;
             }
 
-            if (!empty($recipient->email)) {
+            if (! empty($recipient->email)) {
                 NotificationService::sendEmail(
                     $recipient->email,
                     "New Private Message: {$subjectLine}",
                     'emails.notification',
                     [
-                        'heading'     => "New {$thread->thread_mode} Message from {$senderName}",
+                        'heading' => "New {$thread->thread_mode} Message from {$senderName}",
                         'messageText' => $correspondenceText,
-                        'actionUrl'   => url('/messenger/' . $thread->id),
+                        'actionUrl' => url('/messenger/'.$thread->id),
                         'actionLabel' => 'Open Messenger',
                     ]
                 );
@@ -157,7 +157,7 @@ class CorrespondenceController extends Controller
             $discordId = UserAttribute::where('user_id', $recipient->id)
                 ->where('key', 'discord_id')
                 ->value('value');
-            $mention = !empty($discordId) ? "<@{$discordId}>" : $recipient->user_handle;
+            $mention = ! empty($discordId) ? "<@{$discordId}>" : $recipient->user_handle;
 
             NotificationService::sendDiscord(
                 'alerts',

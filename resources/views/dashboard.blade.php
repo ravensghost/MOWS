@@ -8,7 +8,7 @@
     <!-- Top Page Header Bar -->
     <x-page-header :title="lexicon('public_label_dashboard', 'Dashboard & Profile')" />
 
-    <x-admin-grid-wrapper :page="$systemPage">
+    <x-grid-wrapper :book="$systemBook">
 
         <!-- BLOCK: Profile Information & Leave of Absence (LOA) -->
         <x-slot:profileinformation>
@@ -242,6 +242,6 @@
             </x-accordion-panel>
         </x-slot:deleteaccount>
 
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 </div>
 @endsection

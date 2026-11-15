@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use App\Models\Book;
 use App\Models\TableOfContent;
 use App\Models\TableOfContentParameter;
-use App\Models\Book;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Models\Permission;
 
 class TableOfContentsController extends Controller
@@ -16,13 +16,9 @@ class TableOfContentsController extends Controller
     {
         abort_unless(auth()->user()->can('manage_navigation'), 403, lexicon('msg_Navigation_Unauthorised', 'Unauthorised access to Navigation Management.'));
 
-        $systemPage = Book::where('book_url', 'admin/table-of-contents')
+        $systemBook = Book::where('book_url', 'admin/navigation')
             ->where('is_published', true)
-            ->with([
-                'grid.gridModules',
-                'module' => function ($query) {$query->orderBy('module_sort_order');
-                }
-            ])
+            ->with(['grid.gridModules', 'modules'])
             ->firstOrFail();
 
         $entries = TableOfContent::whereNull('parent_entry_id')
@@ -42,19 +38,19 @@ class TableOfContentsController extends Controller
             ->orderBy('parameter_sort_order')
             ->get();
 
-        $grouped =$allParameters->groupBy('parameter_mode');
+        $grouped = $allParameters->groupBy('parameter_mode');
 
         $permissions = Permission::orderBy('name')->get();
 
         return view('admin.table_of_contents', [
-            'systemPage'        => $systemPage,
-            'entries'           => $entries,
-            'parentOptions'     => $parentOptions,
-            'allParameters'     => $allParameters,
-            'groupOptions'      => $grouped->get('group', collect()),
-            'locationOptions'   => $grouped->get('display_location', collect()),
+            'systemBook' => $systemBook,
+            'entries' => $entries,
+            'parentOptions' => $parentOptions,
+            'allParameters' => $allParameters,
+            'groupOptions' => $grouped->get('group', collect()),
+            'locationOptions' => $grouped->get('display_location', collect()),
             'visibilityOptions' => $grouped->get('access_clearance', collect()),
-            'permissions'       => $permissions,
+            'permissions' => $permissions,
         ]);
     }
 
@@ -62,26 +58,26 @@ class TableOfContentsController extends Controller
     {
         abort_unless(auth()->user()->can('manage_navigation'), 403, lexicon('msg_Navigation_Unauthorised', 'Unauthorised access to Navigation Management.'));
 
-        $validated =$request->validate([
-            'parent_entry_id'      => 'nullable|exists:table_of_contents,id',
+        $validated = $request->validate([
+            'parent_entry_id' => 'nullable|exists:table_of_contents,id',
             'translation_code_key' => 'required|string|max:255',
-            'destination_url'      => 'required|string|max:255',
-            'display_location'     => 'required|string|exists:table_of_content_parameters,parameter_value',
-            'access_clearance'     => 'required|string|exists:table_of_content_parameters,parameter_value',
-            'required_permission'  => 'nullable|string|exists:permissions,name',
-            'window_target'        => 'required|in:_self,_blank',
-            'entry_sort_order'     => 'required|integer',
-            'group_title'          => 'nullable|string|max:255',
-            'group_sort_order'     => 'nullable|integer',
-            'is_visible'           => 'nullable|boolean',
+            'destination_url' => 'required|string|max:255',
+            'display_location' => 'required|string|exists:table_of_content_parameters,parameter_value',
+            'access_clearance' => 'required|string|exists:table_of_content_parameters,parameter_value',
+            'required_permission' => 'nullable|string|exists:permissions,name',
+            'window_target' => 'required|in:_self,_blank',
+            'entry_sort_order' => 'required|integer',
+            'group_title' => 'nullable|string|max:255',
+            'group_sort_order' => 'nullable|integer',
+            'is_visible' => 'nullable|boolean',
         ]);
 
-        $validated['group_sort_order'] =$validated['group_sort_order'] ?? 0;
-        $validated['is_visible'] =$request->boolean('is_visible', false);
+        $validated['group_sort_order'] = $validated['group_sort_order'] ?? 0;
+        $validated['is_visible'] = $request->boolean('is_visible', false);
 
         $entry = TableOfContent::create($validated);
 
-        if (!empty($validated['group_title']) && isset($validated['group_sort_order'])) {
+        if (! empty($validated['group_title']) && isset($validated['group_sort_order'])) {
             TableOfContent::where('group_title', $validated['group_title'])
                 ->update(['group_sort_order' => $validated['group_sort_order']]);
         }
@@ -89,37 +85,37 @@ class TableOfContentsController extends Controller
         Cache::forget('table_of_contents_all_array');
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Navigation_Created', 'Navigation item created successfully.'),
-            'data'     => $entry,
+            'status' => 'success',
+            'message' => lexicon('msg_Navigation_Created', 'Navigation item created successfully.'),
+            'data' => $entry,
             'redirect' => null,
         ], 200);
     }
 
-    public function update(Request $request, TableOfContent$link)
+    public function update(Request $request, TableOfContent $link)
     {
         abort_unless(auth()->user()->can('manage_navigation'), 403, lexicon('msg_Navigation_Unauthorised', 'Unauthorised access to Navigation Management.'));
 
-        $validated =$request->validate([
-            'parent_entry_id'      => 'nullable|exists:table_of_contents,id',
+        $validated = $request->validate([
+            'parent_entry_id' => 'nullable|exists:table_of_contents,id',
             'translation_code_key' => 'required|string|max:255',
-            'destination_url'      => 'required|string|max:255',
-            'display_location'     => 'required|string|exists:table_of_content_parameters,parameter_value',
-            'access_clearance'     => 'required|string|exists:table_of_content_parameters,parameter_value',
-            'required_permission'  => 'nullable|string|exists:permissions,name',
-            'window_target'        => 'required|in:_self,_blank',
-            'entry_sort_order'     => 'required|integer',
-            'group_title'          => 'nullable|string|max:255',
-            'group_sort_order'     => 'nullable|integer',
-            'is_visible'           => 'nullable|boolean',
+            'destination_url' => 'required|string|max:255',
+            'display_location' => 'required|string|exists:table_of_content_parameters,parameter_value',
+            'access_clearance' => 'required|string|exists:table_of_content_parameters,parameter_value',
+            'required_permission' => 'nullable|string|exists:permissions,name',
+            'window_target' => 'required|in:_self,_blank',
+            'entry_sort_order' => 'required|integer',
+            'group_title' => 'nullable|string|max:255',
+            'group_sort_order' => 'nullable|integer',
+            'is_visible' => 'nullable|boolean',
         ]);
 
-        $validated['group_sort_order'] =$validated['group_sort_order'] ?? 0;
-        $validated['is_visible'] =$request->boolean('is_visible', false);
+        $validated['group_sort_order'] = $validated['group_sort_order'] ?? 0;
+        $validated['is_visible'] = $request->boolean('is_visible', false);
 
         $link->update($validated);
 
-        if (!empty($validated['group_title']) && isset($validated['group_sort_order'])) {
+        if (! empty($validated['group_title']) && isset($validated['group_sort_order'])) {
             TableOfContent::where('group_title', $validated['group_title'])
                 ->update(['group_sort_order' => $validated['group_sort_order']]);
         }
@@ -127,9 +123,9 @@ class TableOfContentsController extends Controller
         Cache::forget('table_of_contents_all_array');
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Navigation_Updated', 'Navigation item updated successfully.'),
-            'data'     => $link,
+            'status' => 'success',
+            'message' => lexicon('msg_Navigation_Updated', 'Navigation item updated successfully.'),
+            'data' => $link,
             'redirect' => null,
         ], 200);
     }
@@ -142,9 +138,9 @@ class TableOfContentsController extends Controller
         Cache::forget('table_of_contents_all_array');
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Navigation_Removed', 'Navigation item removed successfully.'),
-            'data'     => $link,
+            'status' => 'success',
+            'message' => lexicon('msg_Navigation_Removed', 'Navigation item removed successfully.'),
+            'data' => $link,
             'redirect' => null,
         ], 200);
     }
@@ -153,13 +149,9 @@ class TableOfContentsController extends Controller
     {
         abort_unless(auth()->user()->can('manage_navigation'), 403, lexicon('msg_Navigation_Unauthorised', 'Unauthorised access to Navigation Management.'));
 
-        $systemPage = Book::where('book_url', 'admin/table-of-contents/options')
+        $systemBook = Book::where('book_url', 'admin/navigation/options')
             ->where('is_published', true)
-            ->with([
-                'grid.gridModules',
-                'module' => function ($query) {$query->orderBy('module_sort_order');
-                }
-            ])
+            ->with(['grid.gridModules', 'modules'])
             ->firstOrFail();
 
         $parameters = TableOfContentParameter::orderBy('parameter_mode')
@@ -168,7 +160,7 @@ class TableOfContentsController extends Controller
 
         return view('admin.table_of_content_parameters', [
             'parameters' => $parameters,
-            'systemPage' => $systemPage,
+            'systemBook' => $systemBook,
         ]);
     }
 
@@ -176,47 +168,47 @@ class TableOfContentsController extends Controller
     {
         abort_unless(auth()->user()->can('manage_navigation'), 403, lexicon('msg_Navigation_Unauthorised', 'Unauthorised access to Navigation Management.'));
 
-        $validated =$request->validate([
-            'parameter_mode'       => 'required|string|max:50',
-            'parameter_value'      => 'required|string|max:255',
-            'parameter_label'      => 'nullable|string|max:255',
+        $validated = $request->validate([
+            'parameter_mode' => 'required|string|max:50',
+            'parameter_value' => 'required|string|max:255',
+            'parameter_label' => 'nullable|string|max:255',
             'parameter_sort_order' => 'nullable|integer',
         ]);
 
-        $validated['parameter_sort_order'] =$validated['parameter_sort_order'] ?? 0;
+        $validated['parameter_sort_order'] = $validated['parameter_sort_order'] ?? 0;
         $validated['parameter_label'] = $validated['parameter_label'] ?? $validated['parameter_value'];
 
         $parameter = TableOfContentParameter::create($validated);
         Cache::forget('table_of_contents_all_array');
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Navigation_OptionAdded', 'Navigation option added successfully.'),
-            'data'     => $parameter,
+            'status' => 'success',
+            'message' => lexicon('msg_Navigation_OptionAdded', 'Navigation option added successfully.'),
+            'data' => $parameter,
             'redirect' => null,
         ], 200);
     }
 
-    public function updateOption(Request $request, TableOfContentParameter$option)
+    public function updateOption(Request $request, TableOfContentParameter $option)
     {
         abort_unless(auth()->user()->can('manage_navigation'), 403, lexicon('msg_Navigation_Unauthorised', 'Unauthorised access to Navigation Management.'));
 
-        $validated =$request->validate([
-            'parameter_mode'       => 'required|string|max:50',
-            'parameter_value'      => 'required|string|max:255',
-            'parameter_label'      => 'nullable|string|max:255',
+        $validated = $request->validate([
+            'parameter_mode' => 'required|string|max:50',
+            'parameter_value' => 'required|string|max:255',
+            'parameter_label' => 'nullable|string|max:255',
             'parameter_sort_order' => 'nullable|integer',
         ]);
 
-        $validated['parameter_sort_order'] =$validated['parameter_sort_order'] ?? 0;
+        $validated['parameter_sort_order'] = $validated['parameter_sort_order'] ?? 0;
 
         $option->update($validated);
         Cache::forget('table_of_contents_all_array');
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Navigation_OptionUpdated', 'Navigation option updated successfully.'),
-            'data'     => $option,
+            'status' => 'success',
+            'message' => lexicon('msg_Navigation_OptionUpdated', 'Navigation option updated successfully.'),
+            'data' => $option,
             'redirect' => null,
         ], 200);
     }
@@ -229,9 +221,9 @@ class TableOfContentsController extends Controller
         Cache::forget('table_of_contents_all_array');
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_Navigation_OptionDeleted', 'Navigation option deleted successfully.'),
-            'data'     => $option,
+            'status' => 'success',
+            'message' => lexicon('msg_Navigation_OptionDeleted', 'Navigation option deleted successfully.'),
+            'data' => $option,
             'redirect' => null,
         ], 200);
     }

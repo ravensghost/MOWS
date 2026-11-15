@@ -10,7 +10,7 @@
      data-msg-validation-failed="{{ lexicon('msg_common_ValidationFailed', 'Validation failed.') }}"
      data-msg-network-error-title="{{ lexicon('msg_common_NetworkError', 'Network Error') }}"
      data-msg-network-error-text="{{ lexicon('msg_common_NetworkErrorDesc', 'Could not connect to the server.') }}">
-    <x-admin-grid-wrapper :page="$systemPage">
+    <x-grid-wrapper :book="$systemBook">
         <x-slot:content>
             <!-- Page Header -->
             <x-page-header :title="lexicon('admin_label_NavOptions', 'Navigation Options')">
@@ -190,6 +190,6 @@
                 </x-table>
             </x-accordion-panel>
         </x-slot:content>
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 </div>
 @endsection

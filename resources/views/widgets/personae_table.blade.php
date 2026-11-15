@@ -57,7 +57,7 @@
     
     // Cache the folder name string
     $activeSkin = \Illuminate\Support\Facades\Cache::rememberForever('widget_active_skin_folder', function() {
-        return \App\Models\Skin::where('is_active', 1)->first()->folder_name ?? 'default';
+        return \App\Models\ThematicBinding::where('is_global_default', true)->value('directory_name') ?? 'default';
     });
 @endphp
 

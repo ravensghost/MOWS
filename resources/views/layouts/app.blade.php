@@ -62,15 +62,15 @@
     @includeIf('layouts.partials.alerts')
 
     @auth
-        <x-messenger-modal
-            :myPersonas="$myPersonas ?? collect()"
+        <x-modal type="messenger"
+            :myCharacters="$myCharacters ?? collect()"
             :users="$users ?? collect()"
-            :personas="$personas ?? collect()"
+            :characters="$characters ?? collect()"
             :threads="$threads ?? collect()" />
 
-        <x-chapter-modal
+        <x-modal type="folio"
             :activeBooks="$activeBooks ?? collect()"
-            :allPersonas="$allPersonas ?? collect()"
+            :allCharacters="$allCharacters ?? collect()"
             :languageRatings="$languageRatings ?? collect()"
             :sexRatings="$sexRatings ?? collect()"
             :violenceRatings="$violenceRatings ?? collect()" />

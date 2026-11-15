@@ -254,7 +254,7 @@
                 <div class="bg-panel border-panel border-rounded rounded-panel flex flex-col overflow-hidden"
                      x-data="tiptapEditor(@js($value ?? ''))"
                      @tiptap-update="$refs.hiddenInput.value = $event.detail">
-                    <x-tt-tb />
+                    <x-tiptap-toolbar />
                     <div x-ref="editorContainer" class="tiptap-content p-3 flex-grow"></div>
                     <input type="hidden"
                            x-ref="hiddenInput"

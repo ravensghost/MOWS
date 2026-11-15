@@ -7,7 +7,7 @@
     @open-field-modal.window="openField($event.detail.mode, $event.detail)"
     @ajax-success.window="refreshDOM_US()">
 
-    <x-admin-grid-wrapper :page="$systemPage">
+    <x-grid-wrapper :book="$systemBook">
         
         <x-slot:top>
             <x-page-header :title="lexicon('admin_label_FormsHub', 'Forms & Component Hub')">
@@ -380,6 +380,6 @@
             </x-modal>
         </x-slot:bottom>
 
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 </div>
 @endsection

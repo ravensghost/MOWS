@@ -16,7 +16,7 @@
         }
      }"
      @ajax-success.window="window.updateDOM_US($refs, ['usersTableContent'])">
-    <x-admin-grid-wrapper :page="$systemPage">
+    <x-grid-wrapper :book="$systemBook">
         <x-slot:content>
 
             <x-page-header :title="lexicon('admin_label_users', 'User Management')">
@@ -194,6 +194,6 @@
             </x-accordion-panel>
 
         </x-slot:content>
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 </div>
 @endsection

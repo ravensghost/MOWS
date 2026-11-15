@@ -23,14 +23,9 @@ class CommandCentreController extends Controller
             lexicon('msg_CommandCentre_Unauthorised', 'Unauthorised access to the Command Centre.')
         );
 
-        $systemPage = Book::where('slug', 'admin')
+        $systemBook = Book::where('book_url', 'admin')
             ->where('is_published', true)
-            ->with([
-                'layout.blocks',
-                'widgets' => function ($query) {
-                    $query->orderBy('page_widget.sort_order');
-                },
-            ])
+            ->with(['grid.gridModules', 'modules'])
             ->firstOrFail();
 
         $assignments = Assignment::where('is_open', true)
@@ -69,15 +64,15 @@ class CommandCentreController extends Controller
 
             if ($isOnLoa) {
                 $loaPlayers->push((object) [
-                    'id'             => $user->id,
-                    'name'           => $user->name,
-                    'email'          => $user->email,
-                    'leave_type'     => $leaveType,
-                    'return_date'    => $returnDate ? $returnDate->format('Y-m-d') : null,
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'leave_type' => $leaveType,
+                    'return_date' => $returnDate ? $returnDate->format('Y-m-d') : null,
                     'return_display' => $returnDate ? $returnDate->format('d M Y') : lexicon('label_common_NotSpecified', 'Not Specified'),
                     'days_remaining' => $daysRemaining,
-                    'is_expired'     => $isExpired,
-                    'persona_names'  => $user->personae->pluck('persona_name')->implode(', ') ?: lexicon('label_common_None', 'None'),
+                    'is_expired' => $isExpired,
+                    'persona_names' => $user->personae->pluck('persona_name')->implode(', ') ?: lexicon('label_common_None', 'None'),
                 ]);
             }
 
@@ -95,19 +90,19 @@ class CommandCentreController extends Controller
             }
 
             $playerActivity->push((object) [
-                'id'               => $user->id,
-                'name'             => $user->name,
-                'role'             => $user->role,
-                'persona_names'    => $user->personae->pluck('persona_name')->implode(', ') ?: 'Unassigned',
-                'is_on_loa'        => $isOnLoa,
-                'leave_type'       => $isOnLoa ? $leaveType : 'ACTIVE',
-                'return_date'      => $returnDate ? $returnDate->format('Y-m-d') : '',
-                'is_expired_loa'   => $isExpired,
+                'id' => $user->id,
+                'name' => $user->name,
+                'role' => $user->role,
+                'persona_names' => $user->personae->pluck('persona_name')->implode(', ') ?: 'Unassigned',
+                'is_on_loa' => $isOnLoa,
+                'leave_type' => $isOnLoa ? $leaveType : 'ACTIVE',
+                'return_date' => $returnDate ? $returnDate->format('Y-m-d') : '',
+                'is_expired_loa' => $isExpired,
                 'last_login_human' => $lastLoginCarbon ? $lastLoginCarbon->diffForHumans() : 'Never',
-                'last_login_date'  => $lastLoginCarbon ? $lastLoginCarbon->format('d M Y') : '—',
+                'last_login_date' => $lastLoginCarbon ? $lastLoginCarbon->format('d M Y') : '—',
                 'days_since_login' => $daysSinceLogin,
-                'last_post_human'  => $lastPostCarbon ? $lastPostCarbon->diffForHumans() : 'No posts yet',
-                'is_inactive'      => $isInactive,
+                'last_post_human' => $lastPostCarbon ? $lastPostCarbon->diffForHumans() : 'No posts yet',
+                'is_inactive' => $isInactive,
             ]);
         }
 
@@ -138,24 +133,24 @@ class CommandCentreController extends Controller
             ->get();
 
         $payload = [
-            'systemPage'              => $systemPage,
-            'pendingApps'             => CandidatePetition::where('petition_status', 'Pending')->count(),
-            'activeUsers'             => $allUsers->count(),
-            'totalCharacters'         => Persona::where('persona_status', 'active')->count(),
-            'openPositions'           => $trueOpenSlots,
-            'loaPlayers'              => $loaPlayers,
-            'loaCount'                => $loaPlayers->count(),
-            'playerActivity'          => $playerActivity,
-            'flaggedInactiveCount'    => $flaggedInactiveCount,
+            'systemBook' => $systemBook,
+            'pendingApps' => CandidatePetition::where('petition_status', 'Pending')->count(),
+            'activeUsers' => $allUsers->count(),
+            'totalCharacters' => Persona::where('persona_status', 'active')->count(),
+            'openPositions' => $trueOpenSlots,
+            'loaPlayers' => $loaPlayers,
+            'loaCount' => $loaPlayers->count(),
+            'playerActivity' => $playerActivity,
+            'flaggedInactiveCount' => $flaggedInactiveCount,
             'inactivityThresholdDays' => $inactivityThresholdDays,
-            'currentMonthMetrics'     => $currentMonthMetrics,
+            'currentMonthMetrics' => $currentMonthMetrics,
         ];
 
         if ($request->wantsJson()) {
             return response()->json([
-                'status'   => 'success',
-                'message'  => lexicon('msg_CommandCentre_Loaded', 'Command Centre data retrieved successfully.'),
-                'data'     => $payload,
+                'status' => 'success',
+                'message' => lexicon('msg_CommandCentre_Loaded', 'Command Centre data retrieved successfully.'),
+                'data' => $payload,
                 'redirect' => null,
             ], 200);
         }

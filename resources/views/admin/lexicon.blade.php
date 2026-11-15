@@ -4,7 +4,7 @@
 
 @section('content')
 <div x-data="lexiconManager" @ajax-success.window="refreshDOM()" @lexicon-clear.window="refreshDOM(true)">
-    <x-admin-grid-wrapper :page="$systemPage">
+    <x-grid-wrapper :book="$systemBook">
 
         <x-slot:top>
             <x-page-header :title="lexicon('admin_label_lexicon', 'Lexicon Manager')">
@@ -514,6 +514,6 @@
 
         </x-slot:bottom>
 
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 </div>
 @endsection

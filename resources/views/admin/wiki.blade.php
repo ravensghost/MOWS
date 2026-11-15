@@ -4,7 +4,7 @@
 
 @section('content')
 <div x-data="wikiManager" @ajax-success.window="refreshDOM()">
-    <x-admin-grid-wrapper :page="$systemPage">
+    <x-grid-wrapper :book="$systemBook">
         
         <x-slot:top>
             <x-page-header :title="lexicon('admin_label_WikiManager', 'Wiki Encyclopedia Manager')">
@@ -182,6 +182,6 @@
             @endcan
         </x-slot:bottom>
 
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 </div>
 @endsection

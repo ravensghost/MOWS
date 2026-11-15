@@ -10,7 +10,7 @@
      @open-volume-modal.window="openModal($event.detail.mode, $event.detail, 'volume')"
      @open-move-folio-modal.window="openModal('edit', $event.detail, 'move')">
 
-    <x-admin-grid-wrapper :page="$systemPage">
+    <x-grid-wrapper :book="$systemBook">
         
         <x-slot:top>
             <script type="application/json" x-ref="publicationSearchData">
@@ -444,6 +444,6 @@
             @include('admin.volume_reviews')
         </x-slot:bottom>
         
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 </div>
 @endsection

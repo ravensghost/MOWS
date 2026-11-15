@@ -3,7 +3,7 @@
 
 @section('content')
 <div x-data="tableOfContentsManager" @ajax-success.window="refreshDOM()">
-    <x-admin-grid-wrapper :page="$systemPage">
+    <x-grid-wrapper :book="$systemBook">
         <x-slot:content>
             <x-page-header :title="lexicon('admin_label_navigation', 'Navigation Manager')">
                 <x-slot:actions>
@@ -407,6 +407,6 @@
                 </x-modal>
             @endcan
         </x-slot:content>
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 </div>
 @endsection

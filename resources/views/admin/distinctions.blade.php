@@ -6,7 +6,7 @@
 <div x-data="distinctionManager()" 
      @ajax-success.window="closeModal('distinction'); closeModal('catalogue'); refreshDOM_US()"
      @sync-color-up.window="updateColourFromPicker($event.detail.model, $event.detail.value)">
-    <x-admin-grid-wrapper :page="$systemPage">
+    <x-grid-wrapper :book="$systemBook">
         <x-slot:content>
             <x-page-header :title="lexicon('admin_label_Awards', 'Award Management')">
                 <x-slot:actions>
@@ -341,6 +341,6 @@
             </x-modal>
 
         </x-slot:content>
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 </div>
 @endsection

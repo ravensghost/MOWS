@@ -7,10 +7,10 @@ use App\Models\Layout;
 use App\Models\LayoutBlock;
 use App\Models\Page;
 use App\Models\Position;
-use App\Models\RankSet;
 use App\Models\Ranks;
+use App\Models\RankSet;
 use App\Models\Section;
-use App\Models\Skin;
+use App\Models\ThematicBinding;
 use App\Models\Widget;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\DB;
@@ -39,14 +39,14 @@ abstract class TestCase extends BaseTestCase
         // 1. Clear Spatie's cached roles and permissions so tests don't use stale data
         $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        // 2. Ensure the default Skin exists so views/layouts don't fail
-        Skin::firstOrCreate(
-            ['folder_name' => 'default'],
+        // 2. Ensure the default thematic binding exists so views/layouts don't fail
+        ThematicBinding::firstOrCreate(
+            ['directory_name' => 'default'],
             [
-                'name' => 'Default',
-                'version' => '1.0',
-                'is_active' => 1,
-                'is_global_default' => 1,
+                'binding_title' => 'Default',
+                'package_version' => '1.0',
+                'is_active' => true,
+                'is_global_default' => true,
             ]
         );
 

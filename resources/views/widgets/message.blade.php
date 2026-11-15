@@ -18,7 +18,7 @@
 })
 --}}
 @php
-    $options = is_string($widget->pivot->instance_options) ? json_decode($widget->pivot->instance_options, true) : ($widget->pivot->instance_options ?? []);
+    $options = is_array($moduleSettings ?? null) ? $moduleSettings : [];
     
     $headingText = trim($options['heading_text'] ?? '');
     $messageBody = trim($options['message_body'] ?? '');

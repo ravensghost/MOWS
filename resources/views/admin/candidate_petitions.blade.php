@@ -1,4 +1,10 @@
-<x-app-layout>
+@extends('layouts.app')
+
+@section('title', lexicon('title_Admin_CandidatePetitions', 'Candidate Petitions & Council Evaluations'))
+
+@section('content')
+<x-grid-wrapper :book="$systemBook">
+    <x-slot:content>
     <div class="p-6 flex flex-col gap-md"
          x-data="candidatePetitionManager({
              routes: {
@@ -363,4 +369,6 @@
         </div>
 
     </div>
-</x-app-layout>
+    </x-slot:content>
+</x-grid-wrapper>
+@endsection

@@ -9,7 +9,7 @@
     })"
     @ajax-success.window="handleAjaxSuccess()">
 
-    <x-admin-grid-wrapper :page="$systemPage">
+    <x-grid-wrapper :book="$systemBook">
         <x-slot:content>
 
             {{-- Page Header --}}
@@ -768,6 +768,6 @@
             @endcan
 
         </x-slot:content>
-    </x-admin-grid-wrapper>
+    </x-grid-wrapper>
 </div>
 @endsection
