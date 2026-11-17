@@ -1,6 +1,10 @@
 // resources/js/managers/insigniaManager.js
-export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF') {
+
+export default function insigniaManager(defaultDeptColour = '#991b1bFF', baseLayer = '#1a1a1aFF') {
     const defaultInsigniaState = {
+        isOpen: false,
+        open: false,
+        mode: 'create',
         id: '',
         insignia_catalogue_id: '',
         insignia_title: '',
@@ -16,7 +20,7 @@ export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF
         top_layer_modifier: '',
         top_layer_hue: '#ffffffFF',
         catalogue_title: '',
-        set_color: defaultDeptColor,
+        set_color: defaultDeptColour,
         is_visible: true,
         available_images: [],
         loading_images: false,
@@ -25,14 +29,30 @@ export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF
     };
 
     return {
-        // 1. State Properties Upfront (Unified Modals & State Contract)
+        // 1. State Properties Upfront (Unified Modals & Search Contract)
         modals: {
-            insignia: { ...defaultInsigniaState }
+            insignia: { ...defaultInsigniaState },
+            catalogue: {
+                isOpen: false,
+                open: false,
+                mode: 'create',
+                id: '',
+                catalogue_title: '',
+                assignedIds: [],
+                is_visible: true,
+                action: '/admin/insignia/catalogues',
+                method: 'POST'
+            },
+            import: {
+                isOpen: false,
+                open: false,
+                mode: 'create',
+                importMode: 'merge',
+                action: '/admin/insignia/import',
+                method: 'POST'
+            }
         },
-        modal: null,
-        importModalOpen: false,
-        importMode: 'merge',
-        defaultDeptColor: defaultDeptColor,
+        defaultDeptColor: defaultDeptColour,
         baseLayer: baseLayer,
         assignSet: { id: '', catalogue_title: '', assignedIds: [], is_visible: true },
         imageError: { mid: false, top: false },
@@ -48,10 +68,10 @@ export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF
 
         // 3. Search & Filtering (Fuse.js Integration)
         initSearch() {
-            if (window.Search && this.$el && this.$el.querySelector('[data-insignia-item]')) {
+            if (window.Search && this.$el && this.$el.querySelector('[data-search-item], [data-insignia-item]')) {
                 try {
                     this.searchHelperInstance = window.Search.create(
-                        '[data-insignia-item]',
+                        '[data-search-item], [data-insignia-item]',
                         ['insignia_title', 'abbreviated_title', 'catalogue_title'],
                         { threshold: 0.35 }
                     );
@@ -88,10 +108,10 @@ export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF
             }
             this.modals.insignia.loading_images = true;
             try {
-                const { ok, data } = await window.Fetch.get(`/admin/ranks/images?set_name=${encodeURIComponent(this.modals.insignia.catalogue_title)}`, {
-                    loading: false,
-                    showError: false
-                });
+                const { ok, data } = await window.Fetch.get(
+                    `/admin/insignia/images?set_name=${encodeURIComponent(this.modals.insignia.catalogue_title)}`,
+                    { loading: false, showError: false }
+                );
 
                 if (ok && data) {
                     this.modals.insignia.available_images = data.images || [];
@@ -111,21 +131,42 @@ export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF
                 }
             } catch (e) {
                 this.modals.insignia.available_images = [];
+            } finally {
+                this.modals.insignia.loading_images = false;
             }
-            this.modals.insignia.loading_images = false;
         },
 
         // 4. Modal Handlers (Using window.Modal utility)
-        openModal(mode = 'create', data = {}, domain = 'insignia') {
+        openModal(mode = 'create', data = {}, target = 'insignia') {
+            if (target === 'catalogue') {
+                const catalogueBaseUrl = '/admin/insignia/catalogues';
+                if (mode === 'edit') {
+                    window.Modal.edit(this.modals.catalogue, {
+                        ...data,
+                        assignedIds: Array.isArray(data.assignedIds) ? data.assignedIds : [],
+                        is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true
+                    }, (id) => `${catalogueBaseUrl}/${id}`);
+                } else {
+                    window.Modal.create(this.modals.catalogue, {
+                        catalogue_title: '',
+                        assignedIds: [],
+                        is_visible: true
+                    }, catalogueBaseUrl);
+                }
+                return;
+            }
+
+            if (target === 'import') {
+                window.Modal.create(this.modals.import, { importMode: 'merge' }, '/admin/insignia/import');
+                return;
+            }
+
             this.imageError = { mid: false, top: false };
             const baseUrl = '/admin/insignia';
-            const baseDefaultState = (window.Modal && window.Modal.defaultState && window.Modal.defaultState[domain])
-                ? window.Modal.defaultState[domain]
-                : defaultInsigniaState;
 
             if (mode === 'create') {
                 window.Modal.create(this.modals.insignia, {
-                    ...baseDefaultState,
+                    ...defaultInsigniaState,
                     mid_layer_hue: this.baseLayer || '#1a1a1aFF',
                     top_layer_hue: '#ffffffFF',
                     set_color: this.defaultDeptColor,
@@ -133,8 +174,6 @@ export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF
                     loading_images: false,
                     ...data
                 }, baseUrl);
-                this.modals.insignia.method = 'POST';
-                this.modal = 'rank-create';
                 return;
             }
 
@@ -143,7 +182,7 @@ export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF
                 const savedTopImage = data.top_layer_asset || '';
 
                 window.Modal.edit(this.modals.insignia, {
-                    ...baseDefaultState,
+                    ...defaultInsigniaState,
                     ...data,
                     set_color: data.set_color || this.defaultDeptColor,
                     mid_layer_asset: savedMidImage,
@@ -154,15 +193,18 @@ export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF
                     available_images: [],
                     loading_images: false
                 }, (id) => `${baseUrl}/${id}`);
-                this.modals.insignia.method = 'PUT';
 
-                this.modal = 'rank-edit';
                 this.loadImages(savedMidImage, savedTopImage);
             }
         },
 
+        closeModal(target = null) {
+            window.Modal.close(this.modals, target);
+        },
+
         onSetChange(event) {
             const opt = event.target.options[event.target.selectedIndex];
+            if (!opt) return;
             this.modals.insignia.catalogue_title = opt.dataset.catalogueTitle || opt.dataset.name || '';
             this.modals.insignia.set_color = opt.dataset.color || this.defaultDeptColor;
             this.modals.insignia.mid_layer_asset = '';
@@ -185,31 +227,25 @@ export default function insigniaManager(defaultDeptColor, baseLayer = '#1a1a1aFF
             return `/images/ranks/${encodeURIComponent(this.modals.insignia.catalogue_title)}/${encodeURIComponent(this.modals.insignia.top_layer_asset)}`;
         },
 
-        handleImportSuccess(response) {
-            this.importModalOpen = false;
-            if (window.Swal && typeof window.Swal.fire === 'function') {
-                window.Swal.fire({
-                    icon: 'success',
-                    title: 'Import Successful',
-                    text: response.message || 'Insignia have been imported successfully.',
-                    ...window.Swal.themeConfig()
-                }).then(() => {
-                    window.location.reload();
-                });
-            } else {
-                window.location.reload();
+        async handleImportSuccess(response) {
+            this.closeModal('import');
+            if (window.Swal && typeof window.Swal.toast === 'function') {
+                window.Swal.toast('success', response?.message || 'Insignia have been imported successfully.');
             }
+            await this.refreshDOM();
         },
 
         // 5. DOM Refresh Handler (sanitize = false)
         async refreshDOM() {
-            this.modal = null;
             if (typeof window.updateDOM === 'function') {
-                await window.updateDOM(this.$refs, ['ranksList', 'rankSetSelect', 'assignSectionsList'], () => {
+                await window.updateDOM(this.$refs, ['ranksList', 'rankSetSelect', 'assignSectionsList', 'insigniaTableWrapper'], () => {
+                    this.closeModal();
                     this.$nextTick(() => {
                         this.initSearch();
                     });
                 }, false);
+            } else {
+                this.closeModal();
             }
         }
     };
