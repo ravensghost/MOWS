@@ -1,26 +1,23 @@
-{{-- 
-@WidgetManifest({
-    "name": "Persona Biography",
-    "description": "Displays the persona narrative history, background, and service biography.",
-    "icon": "bi-journal-richtext",
-    "fields": {
-        "title": { "type": "text", "label": "Widget Title", "default": "Persona Biography" }
-    }
-})
---}}
+{{-- resources/views/modules/persona_biography.blade.php --}}
+{{-- @WidgetManifest({ "name": "Persona Biography", "description": "Displays the persona narrative history, background, and service biography.", "icon": "bi-journal-richtext", "fields": { "title": { "type": "text", "label": "Module Title", "default": "Persona Biography" } } }) --}}
 @php
-    $options = is_string($widget->pivot->instance_options ?? null)
-        ? json_decode($widget->pivot->instance_options, true)
-        : ($widget->pivot->instance_options ?? []);
+    $rawOptions = $moduleSettings
+        ?? $module?->pivot?->book_config
+        ?? $module?->pivot?->instance_options
+        ?? $widget?->pivot?->instance_options
+        ?? [];
+    $options = is_string($rawOptions) ? (json_decode($rawOptions, true) ?: []) : (is_array($rawOptions) ? $rawOptions : []);
 
-    $rawTitle = trim($options['title'] ?? '');
+    $rawTitle = trim((string) ($options['title'] ?? ''));
     $title = $rawTitle !== '' ? $rawTitle : lexicon('label_PersonaBio_DefaultTitle', 'Persona Biography');
 
     $targetPersona = $persona ?? $character ?? null;
     $petition = null;
 
     if ($targetPersona) {
-        if ($targetPersona->relationLoaded('petition')) {
+        if ($targetPersona->relationLoaded('candidatePetition')) {
+            $petition = $targetPersona->candidatePetition;
+        } elseif ($targetPersona->relationLoaded('petition')) {
             $petition = $targetPersona->petition;
         } else {
             $petition = \App\Models\CandidatePetition::with('entries')
@@ -37,8 +34,6 @@
             $entriesCollection = $petition->answers;
         } elseif (method_exists($petition, 'entries')) {
             $entriesCollection = $petition->entries()->get();
-        } elseif (method_exists($petition, 'answers')) {
-            $entriesCollection = $petition->answers()->get();
         }
     }
 
@@ -49,12 +44,12 @@
             ?? $metadataMap->get($item->metadata_id);
 
         $fieldName = $meta->metadata_title ?? $meta->metadata_label ?? $meta->metadata_key ?? '';
-        return strtolower(trim($fieldName));
+        return strtolower(trim((string) $fieldName));
     });
 
     $getEntryValue = function ($names) use ($entriesByKey) {
         foreach ((array) $names as $name) {
-            $key = strtolower(trim($name));
+            $key = strtolower(trim((string) $name));
             if ($entriesByKey->has($key)) {
                 $entry = $entriesByKey[$key];
                 $val = $entry->petition_answer ?? null;
@@ -74,29 +69,18 @@
         ?? null;
 @endphp
 
-<div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col overflow-hidden mb-6 widget-persona-biography" x-data>
-    @if($title)
-        <div class="bg-panel-header text-h border-b-panel p-panel-header font-bold flex flex-row flex-wrap justify-between items-center gap-md">
-            <div class="flex flex-row items-center gap-xs">
-                <i class="bi bi-journal-richtext text-accent"></i>
-                <span class="text-xl font-bold text-accent">{{ $title }}</span>
-            </div>
-            <i class="bi bi-book text-accent"
-               x-tooltip="'{{ addslashes(lexicon('tooltip_PersonaBio_Header', 'Persona narrative history and background')) }}'"
-               aria-label="{{ lexicon('tooltip_PersonaBio_Header', 'Persona narrative history and background') }}"></i>
+<x-tab type="accordion"
+       :title="$title"
+       icon="bi-journal-richtext"
+       :open="true">
+    @if(filled($biographyContent))
+        <div class="p-4 bg-panel-sub border-panel border-rounded text-sm text-p leading-relaxed whitespace-pre-line tiptap-content">
+            {!! \Stevebauman\Purify\Facades\Purify::clean((string) $biographyContent) !!}
+        </div>
+    @else
+        <div class="bg-panel-sub border-dashed-panel border-rounded p-panel-body text-center flex flex-col items-center justify-center gap-xs">
+            <i class="bi bi-journal-x text-2xl text-muted" aria-hidden="true"></i>
+            <span class="text-sm text-muted font-italic">{{ $noBioText }}</span>
         </div>
     @endif
-
-    <div class="p-panel flex flex-col gap-md">
-        @if(filled($biographyContent))
-            <div class="p-4 bg-panel-sub border border-panel rounded-panel text-sm text-p leading-relaxed whitespace-pre-line">
-                {!! nl2br(e($biographyContent)) !!}
-            </div>
-        @else
-            <div class="bg-panel-sub border-dashed-panel rounded-panel p-panel text-center flex flex-col items-center justify-center gap-xs">
-                <i class="bi bi-journal-x text-2xl text-muted"></i>
-                <span class="text-sm text-muted italic">{{ $noBioText }}</span>
-            </div>
-        @endif
-    </div>
-</div>
+</x-tab>

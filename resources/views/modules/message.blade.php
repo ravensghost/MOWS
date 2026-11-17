@@ -1,43 +1,38 @@
-{{-- 
-@WidgetManifest({
-    "name": "Scrolling Marquee",
-    "description": "A scrolling text ticker for announcements.",
-    "icon": "bi-cursor-text",
-    "fields": {
-        "heading_text": { 
-            "type": "text", 
-            "label": "Heading Text", 
-            "default": "ALERT" 
-        },
-        "message_body": { 
-            "type": "text", 
-            "label": "Message Body", 
-            "default": "Important announcement here." 
-        }
-    }
-})
---}}
+{{-- resources/views/modules/message.blade.php --}}
+{{-- @WidgetManifest({ "name": "Scrolling Marquee", "description": "A scrolling text ticker for announcements.", "icon": "bi-cursor-text", "fields": { "heading_text": { "type": "text", "label": "Heading Text", "default": "ALERT" }, "message_body": { "type": "text", "label": "Message Body", "default": "Important announcement here." } } }) --}}
 @php
-    $options = is_array($moduleSettings ?? null) ? $moduleSettings : [];
-    
-    $headingText = trim($options['heading_text'] ?? '');
-    $messageBody = trim($options['message_body'] ?? '');
+    $rawOptions = $moduleSettings
+        ?? $module?->pivot?->book_config
+        ?? $module?->pivot?->instance_options
+        ?? $widget?->pivot?->instance_options
+        ?? [];
+    $options = is_string($rawOptions) ? (json_decode($rawOptions, true) ?: []) : (is_array($rawOptions) ? $rawOptions : []);
+
+    $headingText = trim((string) ($options['heading_text'] ?? ''));
+    $messageBody = trim((string) ($options['message_body'] ?? ''));
 @endphp
 
-<div class="bg-panel border border-panel rounded-panel shadow-panel w-full overflow-hidden whitespace-nowrap flex items-center px-4 py-3 group-hover-pause mb-6" x-data>
-    @if($headingText || $messageBody)
-        <div class="inline-block pl-full will-change-transform animate-marquee">
-            @if($headingText)
-                <span class="text-accent font-bold uppercase tracking-wider pr-2 inline-block m-0 text-base">
+<x-tab type="panel">
+    @if($headingText !== '' || $messageBody !== '')
+        <div class="bg-panel-sub border-panel border-rounded p-3 flex flex-row flex-wrap items-center gap-sm overflow-hidden w-full">
+            @if($headingText !== '')
+                <x-badge type="pill"
+                         variant="warning"
+                         icon="bi-megaphone-fill"
+                         :tooltip="lexicon('tooltip_Marquee_AlertBadge', 'Station Announcement')">
                     {{ $headingText }}
-                </span>
+                </x-badge>
             @endif
-            
-            @if($messageBody)
-                <span class="text-p">{!! \Stevebauman\Purify\Facades\Purify::clean($messageBody) !!}</span>
+
+            @if($messageBody !== '')
+                <div class="text-sm text-p flex-grow overflow-x-auto whitespace-nowrap">
+                    {!! \Stevebauman\Purify\Facades\Purify::clean($messageBody) !!}
+                </div>
             @endif
         </div>
     @else
-        <span class="text-muted italic text-sm">{{ lexicon('msg_common_MarqueeEmpty', 'No announcement configured.') }}</span>
+        <div class="bg-panel-sub border-dashed-panel border-rounded p-panel-body text-center">
+            <span class="text-sm text-muted font-italic">{{ lexicon('msg_common_MarqueeEmpty', 'No announcement configured.') }}</span>
+        </div>
     @endif
-</div>
+</x-tab>

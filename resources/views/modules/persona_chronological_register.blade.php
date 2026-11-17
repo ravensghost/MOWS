@@ -1,80 +1,79 @@
-{{-- 
-@WidgetManifest({
-    "name": "Persona Chronological Register",
-    "description": "Displays the chronological service register, career milestones, promotions, and honours for this persona.",
-    "icon": "bi-clock-history",
-    "fields": {
-        "title": { "type": "text", "label": "Widget Title", "default": "Chronological Register" }
-    }
-})
---}}
+{{-- resources/views/modules/persona_chronological_register.blade.php --}}
+{{-- @WidgetManifest({ "name": "Persona Chronological Register", "description": "Displays the chronological service register, career milestones, promotions, and honours for this persona.", "icon": "bi-clock-history", "fields": { "title": { "type": "text", "label": "Module Title", "default": "Chronological Register" } } }) --}}
 @php
-    $options = is_string($widget->pivot->instance_options ?? null)
-        ? json_decode($widget->pivot->instance_options, true)
-        : ($widget->pivot->instance_options ?? []);
+    $rawOptions = $moduleSettings
+        ?? $module?->pivot?->book_config
+        ?? $module?->pivot?->instance_options
+        ?? $widget?->pivot?->instance_options
+        ?? [];
+    $options = is_string($rawOptions) ? (json_decode($rawOptions, true) ?: []) : (is_array($rawOptions) ? $rawOptions : []);
 
-    $rawTitle = trim($options['title'] ?? '');
+    $rawTitle = trim((string) ($options['title'] ?? ''));
     $title = $rawTitle !== '' ? $rawTitle : lexicon('label_PersonaRegister_DefaultTitle', 'Chronological Register');
 
-    $targetPersona = $persona ?? null;
+    $targetPersona = $persona ?? $character ?? null;
     $registerEntries = collect();
 
     if ($targetPersona) {
         if ($targetPersona->relationLoaded('chronologicalRegisters')) {
-            $registerEntries = $targetPersona->chronologicalRegisters;
-        } elseif ($targetPersona->relationLoaded('chronologicalRegister')) {
-            $registerEntries = $targetPersona->chronologicalRegister;
+            $registerEntries = $targetPersona->chronologicalRegisters->sortByDesc('created_at')->values();
+        } elseif ($targetPersona->relationLoaded('serviceRecords')) {
+            $registerEntries = $targetPersona->serviceRecords->sortByDesc('created_at')->values();
         } elseif (method_exists($targetPersona, 'chronologicalRegisters')) {
-            $registerEntries = $targetPersona->chronologicalRegisters()->latest()->get();
-        } elseif (method_exists($targetPersona, 'chronologicalRegister')) {
-            $registerEntries = $targetPersona->chronologicalRegister()->latest()->get();
+            $registerEntries = $targetPersona->chronologicalRegisters()->with('distinction')->latest()->get();
         }
     }
 @endphp
 
-<div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col overflow-hidden mb-6 widget-persona-chronological-register" x-data>
-    @if($title)
-        <div class="bg-panel-header text-h border-b-panel p-panel-header font-bold flex flex-row flex-wrap justify-between items-center gap-md">
-            <div class="flex flex-row items-center gap-xs">
-                <i class="bi bi-clock-history text-accent"></i>
-                <span class="text-xl font-bold text-accent">{{ $title }}</span>
-            </div>
-            <i class="bi bi-calendar3 text-accent"
-               x-tooltip="'{{ addslashes(lexicon('tooltip_PersonaRegister_Header', 'Chronological service history and milestones')) }}'"
-               aria-label="{{ lexicon('tooltip_PersonaRegister_Header', 'Chronological service history and milestones') }}"></i>
+<x-tab type="accordion"
+       :title="$title"
+       icon="bi-clock-history"
+       :open="true">
+    @if($registerEntries->isNotEmpty())
+        <div class="flex flex-col gap-sm">
+            @foreach($registerEntries as $entry)
+                @php
+                    $entryTitle = optional($entry->distinction)->distinction_title
+                        ?? (!empty($entry->register_event_mode)
+                            ? \Illuminate\Support\Str::title(str_replace('_', ' ', (string) $entry->register_event_mode))
+                            : lexicon('label_PersonaRegister_Entry', 'Register Entry'));
+                    $entryDetails = (string) ($entry->chronicle_text ?? '');
+                    $isRevoked = \Illuminate\Support\Str::startsWith($entryDetails, 'REVOKED:');
+                    $entryDate = $entry->created_at ?? null;
+                    $formattedDate = $entryDate
+                        ? (function_exists('world_date')
+                            ? world_date($entryDate)
+                            : ($entryDate instanceof \Carbon\CarbonInterface ? $entryDate->format('d M Y') : (string) $entryDate))
+                        : null;
+                @endphp
+
+                <x-tab type="sub"
+                       :title="$entryTitle"
+                       icon="bi-Journal-check">
+                    <x-slot:top>
+                        @if($isRevoked)
+                            <x-badge type="pill"
+                                     variant="danger"
+                                     :tooltip="lexicon('tooltip_ServiceRecords_Revoked', 'This record has been revoked')">
+                                {{ lexicon('label_ServiceRecords_Revoked', 'Revoked') }}
+                            </x-badge>
+                        @endif
+
+                        @if($formattedDate)
+                            <span class="text-xs text-muted whitespace-nowrap">{{ $formattedDate }}</span>
+                        @endif
+                    </x-slot:top>
+
+                    @if(filled($entryDetails))
+                        <p class="text-xs text-p leading-relaxed whitespace-pre-line m-0">{{ $entryDetails }}</p>
+                    @endif
+                </x-tab>
+            @endforeach
+        </div>
+    @else
+        <div class="bg-panel-sub border-dashed-panel border-rounded p-panel-body text-center flex flex-col items-center justify-center gap-xs">
+            <i class="bi bi-clock-history text-2xl text-muted" aria-hidden="true"></i>
+            <span class="text-sm text-muted font-italic">{{ lexicon('msg_PersonaRegister_NoEntries', 'No chronological register entries recorded for this persona.') }}</span>
         </div>
     @endif
-
-    <div class="p-panel flex flex-col gap-md">
-        @if($registerEntries->isNotEmpty())
-            <div class="flex flex-col gap-sm">
-                @foreach($registerEntries as $entry)
-                    @php
-                        $entryTitle = optional($entry->distinction)->distinction_title
-                            ?? (! empty($entry->register_event_mode) ? \Illuminate\Support\Str::title(str_replace('_', ' ', $entry->register_event_mode)) : lexicon('label_PersonaRegister_Entry', 'Register Entry'));
-                        $entryDetails = $entry->chronicle_text ?? '';
-                        $entryDate = $entry->created_at ?? null;
-                    @endphp
-                    <div class="bg-panel-sub border border-panel rounded-panel p-3 flex flex-col gap-xs">
-                        <div class="flex flex-row flex-wrap justify-between items-center gap-sm">
-                            <span class="text-sm font-bold text-h">{{ $entryTitle }}</span>
-                            <div class="flex flex-row items-center gap-xs text-xs text-muted">
-                                @if($entryDate)
-                                    <span>{{ function_exists('world_date') ? world_date($entryDate) : ($entryDate instanceof \Carbon\CarbonInterface ? $entryDate->format('d M Y') : $entryDate) }}</span>
-                                @endif
-                            </div>
-                        </div>
-                        @if(filled($entryDetails))
-                            <p class="text-xs text-p leading-relaxed whitespace-pre-line m-0">{{ $entryDetails }}</p>
-                        @endif
-                    </div>
-                @endforeach
-            </div>
-        @else
-            <div class="bg-panel-sub border-dashed-panel rounded-panel p-panel text-center flex flex-col items-center justify-center gap-xs">
-                <i class="bi bi-clock-history text-2xl text-muted"></i>
-                <span class="text-sm text-muted italic">{{ lexicon('msg_PersonaRegister_NoEntries', 'No chronological register entries recorded for this persona.') }}</span>
-            </div>
-        @endif
-    </div>
-</div>
+</x-tab>
