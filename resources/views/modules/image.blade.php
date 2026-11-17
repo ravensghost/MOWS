@@ -1,29 +1,29 @@
-{{-- 
-@WidgetManifest({
-    "name": "Single Image",
-    "description": "Displays a single image with an optional caption.",
-    "icon": "bi-image",
-    "fields": {
-        "url": { "type": "text", "label": "Image URL", "default": "" },
-        "alt": { "type": "text", "label": "Alt Text / Caption", "default": "" }
-    }
-})
---}}
+{{-- resources/views/modules/image.blade.php --}}
+{{-- @WidgetManifest({ "name": "Single Image", "description": "Displays a single image with an optional caption.", "icon": "bi-image", "fields": { "title": { "type": "text", "label": "Image Title (Leave blank to hide header)", "default": "" }, "url": { "type": "text", "label": "Image URL", "default": "" }, "alt": { "type": "text", "label": "Alt Text / Caption", "default": "" } } }) --}}
 @php
-    $options = is_string($widget->pivot->instance_options) ? json_decode($widget->pivot->instance_options, true) : ($widget->pivot->instance_options ?? []);
-    $url = trim($options['url'] ?? '');
-    $alt = trim($options['alt'] ?? '');
+    $rawOptions = $moduleSettings
+        ?? $module?->pivot?->book_config
+        ?? $module?->pivot?->instance_options
+        ?? $widget?->pivot?->instance_options
+        ?? [];
+    $options = is_string($rawOptions) ? (json_decode($rawOptions, true) ?: []) : (is_array($rawOptions) ? $rawOptions : []);
+
+    $title = trim((string) ($options['title'] ?? ''));
+    $url = trim((string) ($options['url'] ?? ''));
+    $alt = trim((string) ($options['alt'] ?? ''));
 @endphp
 
-<div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col overflow-hidden w-full mb-6 p-panel gap-sm" x-data>
-    @if($url)
-        <x-image-card :url="$url" :alt="$alt" />
-        @if($alt)
-            <span class="block text-sm text-muted text-center italic">{{ $alt }}</span>
+<x-tab :type="$title !== '' ? 'accordion' : 'panel'"
+       :title="$title"
+       :icon="$title !== '' ? 'bi-image' : null"
+       :open="true">
+    <div class="flex flex-col items-center justify-center gap-sm w-full">
+        <x-preview type="image"
+                   :url="$url !== '' ? $url : null"
+                   :alt="$alt" />
+
+        @if($url !== '' && $alt !== '')
+            <span class="text-xs text-muted text-center font-italic block">{{ $alt }}</span>
         @endif
-    @else
-        <div class="bg-panel-sub border-dashed-panel rounded-panel p-panel text-center">
-            <span class="text-muted italic">{{ lexicon('msg_common_ImageNotConfigured', 'No image URL has been configured.') }}</span>
-        </div>
-    @endif
-</div>
+    </div>
+</x-tab>

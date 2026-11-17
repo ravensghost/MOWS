@@ -1,22 +1,24 @@
-{{-- 
-@WidgetManifest({
-    "name": "Raw HTML Embed",
-    "description": "Used internally. Hidden from page builder.",
-    "hidden": true,
-    "fields": {
-        "content": { "type": "textarea", "label": "HTML Code", "default": "" }
-    }
-})
---}}
+{{-- resources/views/modules/html.blade.php --}}
+{{-- @WidgetManifest({ "name": "Raw HTML Embed", "description": "Used internally. Hidden from page builder.", "hidden": true, "fields": { "content": { "type": "textarea", "label": "HTML Code", "default": "" } } }) --}}
 @php
-    $options = is_string($widget->pivot->instance_options) ? json_decode($widget->pivot->instance_options, true) : ($widget->pivot->instance_options ?? []);
-    $rawContent = trim($options['content'] ?? '');
+    $rawOptions =$moduleSettings
+        ?? $module?->pivot?->book_config
+        ?? $module?->pivot?->instance_options
+        ?? $widget?->pivot?->instance_options
+        ?? [];
+    $options = is_string($rawOptions) ? (json_decode($rawOptions, true) ?: []) : (is_array($rawOptions) ?$rawOptions : []);
+
+    $rawContent = trim((string) ($options['content'] ?? ''));
 @endphp
 
-<div class="bg-panel-sub border-dashed-panel rounded-panel p-panel text-center shadow-panel flex flex-col overflow-hidden w-full mb-6" x-data>
-    @if($rawContent)
-        {!! \Stevebauman\Purify\Facades\Purify::clean($rawContent) !!}
+<x-tab type="panel">
+    @if($rawContent !== '')
+        <div class="text-sm text-p leading-relaxed tiptap-content w-full overflow-x-auto">
+            {!! \Stevebauman\Purify\Facades\Purify::clean($rawContent) !!}
+        </div>
     @else
-        <span class="text-muted italic">{{ lexicon('msg_common_HtmlEmpty', 'No HTML content provided.') }}</span>
+        <div class="bg-panel-sub border-dashed-panel border-rounded p-panel-body text-center">
+            <span class="text-sm text-muted font-italic">{{ lexicon('msg_common_HtmlEmpty', 'No HTML content configured.') }}</span>
+        </div>
     @endif
-</div>
+</x-tab>
