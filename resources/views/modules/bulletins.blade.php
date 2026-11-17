@@ -1,32 +1,65 @@
-{{-- 
-@WidgetManifest({
-    "name": "Station Bulletins",
-    "description": "Displays recent bulletins and announcements.",
-    "icon": "bi-megaphone"
-})
---}}
-<div class="flex flex-col gap-md w-full mb-6" x-data>
-    <span class="text-2xl font-bold text-h block pb-2">{{ $module->module_name }}</span>
-    @forelse($bulletins as $bulletin)
-        <div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col overflow-hidden hover-border-accent transition-colors">
-            <div class="p-panel flex flex-col flex-grow gap-sm">
-                <span class="text-h text-xl font-bold block">{{ $bulletin->bulletin_title }}</span>
-                
-                <span class="text-muted text-xs block pb-2"
-                      aria-label="{{ lexicon('tooltip_Bulletins_PublishedDate', 'Date this bulletin was broadcast') }}"
-                      x-tooltip="'{{ addslashes(lexicon('tooltip_Bulletins_PublishedDate', 'Date this bulletin was broadcast')) }}'">
-                    <i class="bi bi-calendar-event mr-1" aria-hidden="true"></i>
-                    {{ lexicon('label_common_PostedBy', 'Posted by') }} {{ $bulletin->author->name ?? lexicon('label_common_Admin', 'Admin') }} {{ lexicon('label_common_On', 'on') }} {{ \Carbon\Carbon::parse($bulletin->published_at)->format('M d, Y') }}
+{{-- resources/views/modules/bulletins.blade.php --}}
+{{-- @WidgetManifest({ "name": "Station Bulletins", "description": "Displays recent bulletins and announcements.", "icon": "bi-megaphone", "fields": { "title": { "type": "text", "label": "Module Title", "default": "Station Bulletins" }, "limit": { "type": "number", "label": "Number of Bulletins to Show", "default": "5" } } }) --}}
+@php
+    $rawOptions = $moduleSettings
+        ?? $module?->pivot?->book_config
+        ?? $module?->pivot?->instance_options
+        ?? $widget?->pivot?->instance_options
+        ?? [];
+    $options = is_string($rawOptions) ? (json_decode($rawOptions, true) ?: []) : (is_array($rawOptions) ? $rawOptions : []);
+
+    $rawTitle = trim($options['title'] ?? '');
+    $title = $rawTitle !== '' ? $rawTitle : lexicon('label_Bulletins_DefaultTitle', 'Station Bulletins');
+    $limit = max(1, (int) ($options['limit'] ?? 5));
+
+    $bulletinsList = $newsItems
+        ?? $bulletins
+        ?? \App\Models\Bulletin::with('author')
+            ->orderByDesc('published_at')
+            ->orderByDesc('created_at')
+            ->take($limit)
+            ->get();
+@endphp
+
+<x-tab type="accordion"
+       :title="$title"
+       icon="bi-megaphone"
+       :open="true">
+    @forelse($bulletinsList as $bulletin)
+        @php
+            $authorName = $bulletin->author->user_handle
+                ?? $bulletin->author->name
+                ?? lexicon('label_common_Admin', 'Admin');
+            $publishedDate = $bulletin->published_at
+                ? \Carbon\Carbon::parse($bulletin->published_at)->format('M d, Y')
+                : ($bulletin->created_at ? $bulletin->created_at->format('M d, Y') : '');
+            $dateTooltip = lexicon('tooltip_Bulletins_PublishedDate', 'Date this bulletin was broadcast');
+        @endphp
+
+        <x-tab type="sub"
+               :title="$bulletin->bulletin_title"
+               icon="bi-broadcast">
+            <span class="text-muted text-xs flex flex-row flex-wrap items-center gap-xs pb-2 border-b-panel"
+                  x-tooltip="'{{ addslashes($dateTooltip) }}'"
+                  title="{{ $dateTooltip }}"
+                  aria-label="{{ $dateTooltip }}">
+                <i class="bi bi-calendar-event text-accent" aria-hidden="true"></i>
+                <span>
+                    {{ lexicon('label_common_PostedBy', 'Posted by') }}
+                    <strong class="text-h">{{ $authorName }}</strong>
+                    @if($publishedDate)
+                        {{ lexicon('label_common_On', 'on') }} {{ $publishedDate }}
+                    @endif
                 </span>
-                
-                <div class="text-p tiptap-content">
-                    {!! \Stevebauman\Purify\Facades\Purify::clean($bulletin->bulletin_text) !!}
-                </div>
+            </span>
+
+            <div class="text-sm text-p leading-relaxed tiptap-content">
+                {!! \Stevebauman\Purify\Facades\Purify::clean($bulletin->bulletin_text) !!}
             </div>
-        </div>
+        </x-tab>
     @empty
-        <div class="bg-panel-sub border-dashed-panel rounded-panel p-panel text-center">
-            <span class="text-muted italic">{{ lexicon('msg_common_NoActiveBulletins', 'No active bulletins.') }}</span>
+        <div class="bg-panel-sub border-dashed-panel border-rounded p-panel-body text-center">
+            <span class="text-sm text-muted font-italic">{{ lexicon('msg_common_NoActiveBulletins', 'No active bulletins.') }}</span>
         </div>
     @endforelse
-</div>
+</x-tab>
