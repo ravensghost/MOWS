@@ -20,7 +20,7 @@ class ModuleController extends Controller
      */
     public function sync(): JsonResponse
     {
-        $widgetPath = resource_path('views/widgets');
+        $widgetPath = resource_path('views/modules');
 
         if (!File::exists($widgetPath)) {
             return response()->json([

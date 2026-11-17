@@ -46,8 +46,8 @@
                     $moduleSettings = array_merge($defaultSettings, $bookConfig);
                 @endphp
 
-                @if($canView && view()->exists('widgets.' . $module->module_token))
-                    @include('widgets.' . $module->module_token, [
+                @if($canView && view()->exists('modules.' . $module->module_token))
+                    @include('modules.' . $module->module_token, [
                         'book'           => $activeBook,
                         'module'         => $module,
                         'moduleSettings' => $moduleSettings,
@@ -78,8 +78,8 @@
                     $moduleSettings = array_merge($defaultSettings, $bookConfig);
                 @endphp
 
-                @if($canView && view()->exists('widgets.' . $module->module_token))
-                    @include('widgets.' . $module->module_token, [
+                @if($canView && view()->exists('modules.' . $module->module_token))
+                    @include('modules.' . $module->module_token, [
                         'book'           => $activeBook,
                         'module'         => $module,
                         'moduleSettings' => $moduleSettings,
