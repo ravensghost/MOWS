@@ -1,14 +1,23 @@
-<header data-global-sync="header" class="bg-panel border-b-panel bg-cover bg-no-repeat bg-banner-pos bg-banner-image flex flex-row items-stretch w-full min-h-48 p-1 relative">
-    <div class="w-full max-w-container mx-auto px-container flex flex-row flex-wrap gap-md relative">
+{{-- resources/views/layouts/partials/header.blade.php --}}
+@php
+    $currentSkin = $activeSkin?->directory_name ?? ($skinSettings['active_skin'] ?? 'default');
+    $siteTitle = \App\Models\Configuration::where('configuration_token', 'site_title')->value('configuration_payload')
+        ?: config('app.name', 'MOWS');
+@endphp
+
+<header data-global-sync="header" class="w-full bg-banner-image bg-banner-pos bg-cover bg-no-repeat border-b-panel relative overflow-hidden">
+    <div class="w-full max-w-container mx-auto px-container h-32 relative flex flex-row items-center justify-between">
         <a href="/"
-           class="relative w-full h-full block no-underline"
-           x-data
-           x-tooltip="'{{ addslashes(lexicon('tooltip_common_ReturnHome', 'Return to Landing Page')) }}'"
-           aria-label="{{ config('app.name', 'MOWS') }}">
+           class="flex flex-row items-center gap-md no-underline"
+           x-tooltip="'{{ addslashes(lexicon('tooltip_common_ReturnHome', 'Return to Home Page')) }}'"
+           title="{{ lexicon('tooltip_common_ReturnHome', 'Return to Home Page') }}"
+           aria-label="{{ $siteTitle }}">
             <img src="{{ asset('skins/' . $currentSkin . '/images/site/logo.png') }}"
-                 alt="{{ config('app.name', 'MOWS') }} {{ lexicon('label_common_Logo', 'Logo') }}"
-                 class="absolute h-logo w-auto object-contain translate-y-logo translate-x-logo flex-shrink-0 z-20">
-            <span class="text-4xl font-bold text-h shadow-text-title absolute translate-y-title translate-x-title">{{ config('app.name', 'MOWS') }}</span>
+                 alt="{{ $siteTitle }}"
+                 class="h-logo w-auto object-contain relative translate-y-logo translate-x-logo">
+            <span class="text-3xl font-bold text-h relative translate-y-title translate-x-title">
+                {{ lexicon('public_label_SiteTitle', $siteTitle) }}
+            </span>
         </a>
     </div>
 </header>

@@ -1,3 +1,4 @@
+{{-- resources/views/petition_metadata.blade.php --}}
 @extends('layouts.app')
 
 @php
@@ -5,20 +6,21 @@
     $studlyMode = \Illuminate\Support\Str::studly($activeMode);
     $formKey = 'public_label_' . $studlyMode . 'Form';
     $formTitle = ucfirst($activeMode) . ' Form';
+    $resolvedFields = $fields ?? collect();
 @endphp
 
 @section('title', lexicon($formKey, $formTitle))
 
 @section('content')
-<div x-data @ajax-success.window="$refs.dynamicForm && $refs.dynamicForm.reset()">
-    
     <!-- Top Page Header Bar -->
-    <x-page-header :title="lexicon($formKey, $formTitle)" />
+    <x-page-header :title="lexicon($formKey, $formTitle)" icon="bi-file-earmark-text" />
 
     <x-grid-wrapper :book="$systemBook">
         <x-slot:content>
-            <!-- Form Panel -->
-            <x-accordion-panel :title="lexicon($formKey, $formTitle)" :expanded="true">
+            <x-tab type="accordion"
+                   :title="lexicon($formKey, $formTitle)"
+                   icon="bi-ui-checks"
+                   :open="true">
                 <form method="POST"
                       action="/form/submit/{{ $activeMode }}"
                       x-data="ajaxForm"
@@ -28,27 +30,25 @@
                       class="flex flex-col gap-md">
                     @csrf
 
-                    <!-- Render Fields dynamically -->
-                    @forelse($fields as $field)
-                        <x-dynamic-field :field="$field" />
+                    @forelse($resolvedFields as $field)
+                        <x-metadata type="dynamic" :field="$field" />
                     @empty
-                        <span class="italic text-muted p-4 text-center block">{{ lexicon('msg_common_FormEmpty', 'This form has no fields assigned to it yet.') }}</span>
+                        <span class="font-italic text-muted p-4 text-center block">
+                            {{ lexicon('msg_common_FormEmpty', 'This form has no fields assigned to it yet.') }}
+                        </span>
                     @endforelse
 
-                    <!-- Form Actions -->
-                    @if($fields->count() > 0)
-                        <div class="border-t-actions pt-6 mt-4 flex flex-row flex-wrap items-center justify-end gap-md">
+                    @if(count($resolvedFields) > 0)
+                        <div class="border-t-actions pt-4 mt-2 flex flex-row flex-wrap items-center justify-end gap-sm">
                             <x-button type="submit"
                                       variant="primary"
-                                      x-tooltip="'{{ addslashes(lexicon('tooltip_common_SubmitForm', 'Submit this form')) }}'">
+                                      :tooltip="lexicon('tooltip_common_SubmitForm', 'Submit this form')">
                                 {{ lexicon('btn_common_Submit', 'Submit') }}
                             </x-button>
                         </div>
                     @endif
-                    
                 </form>
-            </x-accordion-panel>
+            </x-tab>
         </x-slot:content>
     </x-grid-wrapper>
-</div>
 @endsection
