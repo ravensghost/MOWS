@@ -1,5 +1,6 @@
 // resources/js/components/thematicBindingCard.js
-export default function themeVarCard(initialValue = '', varKey = '') {
+
+export default function thematicBindingCard(initialValue = '', varKey = '') {
     return {
         val: String(initialValue ?? '').trim(),
         varKey: String(varKey ?? ''),
@@ -118,7 +119,7 @@ export default function themeVarCard(initialValue = '', varKey = '') {
         },
 
         initStructuralTomSelect(el) {
-            let ts = window.Select.init(el, {
+            const ts = window.Select.init(el, {
                 create: true,
                 controlInput: null,
                 onChange: (v) => { this.val = v; }
@@ -138,7 +139,7 @@ export default function themeVarCard(initialValue = '', varKey = '') {
                 .map(u => `<option value="${u}" ${u === currentUnit ? 'selected' : ''}>${u}</option>`)
                 .join('');
 
-            let ts = window.Select.init(el, {
+            const ts = window.Select.init(el, {
                 create: false,
                 controlInput: null,
                 onChange: (v) => {
@@ -163,7 +164,7 @@ export default function themeVarCard(initialValue = '', varKey = '') {
                 .map(e => `<option value="${e}" ${e === currentEasing ? 'selected' : ''}>${e}</option>`)
                 .join('');
 
-            let ts = window.Select.init(el, {
+            const ts = window.Select.init(el, {
                 create: false,
                 controlInput: null,
                 onChange: (v) => {
@@ -188,7 +189,7 @@ export default function themeVarCard(initialValue = '', varKey = '') {
                 .map(p => `<option value="${p}" ${p === currentProp ? 'selected' : ''}>${p}</option>`)
                 .join('');
 
-            let ts = window.Select.init(el, {
+            const ts = window.Select.init(el, {
                 create: true,
                 controlInput: null,
                 onChange: (v) => {
@@ -214,7 +215,7 @@ export default function themeVarCard(initialValue = '', varKey = '') {
 
             const allOptions = Array.from(new Set([...currentFonts, ...this.commonFonts]));
 
-            let ts = window.Select.init(el, {
+            window.Select.init(el, {
                 options: allOptions.map(f => ({ value: f, text: f })),
                 items: currentFonts,
                 multiple: true,

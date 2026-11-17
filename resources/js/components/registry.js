@@ -22,10 +22,10 @@ import configurationManager from '../managers/configurationManager';
 import distinctionManager from '../managers/distinctionManager';
 import divisionManager from '../managers/divisionManager';
 import encyclopediaCodexManager from '../managers/encyclopediaCodexManager';
-import metadataManager from '../managers/metadataManager';
 import insigniaManager from '../managers/insigniaManager';
 import lexiconCodexManager from '../managers/lexiconCodexManager';
 import loaHubManager from '../managers/loaHubManager';
+import metadataManager from '../managers/metadataManager';
 import publicationManager from '../managers/publicationManager';
 import tableOfContentParametersManager from '../managers/tableOfContentParametersManager';
 import tableOfContentsManager from '../managers/tableOfContentsManager';
@@ -37,17 +37,16 @@ import sortableHelper from '../third-party/sortableHelper';
 import sweetalert2Helper from '../third-party/sweetalert2Helper';
 import tiptapHelper from '../third-party/tiptapHelper';
 
-// Register Components
+// Register Components (1:1 with filename)
 Alpine.data('ajaxForm', ajaxForm);
 Alpine.data('autoSave', autoSave);
 Alpine.data('colourPicker', colourPicker);
 Alpine.data('deleteAction', deleteAction);
 Alpine.data('folioEdit', folioEdit);
-Alpine.data('metadataManager', metadataManager);
 Alpine.data('thematicBindingCard', thematicBindingCard);
 Alpine.data('volumeReview', volumeReview);
 
-// Register Managers
+// Register Managers (1:1 with filename)
 Alpine.data('accessClearanceRoleManager', accessClearanceRoleManager);
 Alpine.data('assetManager', assetManager);
 Alpine.data('avatarManager', avatarManager);
@@ -62,16 +61,17 @@ Alpine.data('encyclopediaCodexManager', encyclopediaCodexManager);
 Alpine.data('insigniaManager', insigniaManager);
 Alpine.data('lexiconCodexManager', lexiconCodexManager);
 Alpine.data('loaHubManager', loaHubManager);
+Alpine.data('metadataManager', metadataManager);
 Alpine.data('publicationManager', publicationManager);
 Alpine.data('tableOfContentParametersManager', tableOfContentParametersManager);
 Alpine.data('tableOfContentsManager', tableOfContentsManager);
 Alpine.data('thematicBindingManager', thematicBindingManager);
 
-// Register Third-Party Component Helpers
+// Register Third-Party Component Helpers (1:1 with filename)
 Alpine.data('dropzoneHelper', dropzoneHelper);
 Alpine.data('sortableHelper', sortableHelper);
 Alpine.data('sweetalert2Helper', sweetalert2Helper);
-Alpine.data('tiptapEditor', tiptapHelper);
+Alpine.data('tiptapHelper', tiptapHelper);
 
 // Initialise Alpine
 Alpine.start();
