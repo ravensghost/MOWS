@@ -41,20 +41,44 @@
 @switch($type)
     @case('messenger')
     @case('message')
+    @case('correspondence')
         @php
             $resolvedThreads = $threads ?? collect();
             $resolvedUsers = $users ?? [];
+            $resolvedCharacters = $characters ?? [];
+            $resolvedMyCharacters = $myCharacters ?? [];
+            $firstThreadId = count($resolvedThreads) > 0 ? 'thread-' . collect($resolvedThreads)->first()->id : 'new';
         @endphp
         <div x-data="{
                 isOpen: false,
-                activeTab: '{{ count($resolvedThreads) > 0 ? 'thread-' . collect($resolvedThreads)->first()->id : 'new' }}',
+                activeTab: '{{ $firstThreadId }}',
                 pmType: 'OOC',
                 users: {{ Js::from($resolvedUsers) }},
-                characters: {{ Js::from($characters) }}
+                characters: {{ Js::from($resolvedCharacters) }},
+                initRecipientSelect(el) {
+                    if (!window.Select) return;
+                    const ts = window.Select.init(el, {
+                        valueField: 'id',
+                        labelField: 'name',
+                        searchField: 'name',
+                        plugins: ['remove_button']
+                    });
+                    if (ts) {
+                        ts.clearOptions();
+                        ts.addOptions(this.pmType === 'IC' ? this.characters : this.users);
+                        ts.refreshOptions(false);
+                        this.$watch('pmType', (val) => {
+                            ts.clear(true);
+                            ts.clearOptions();
+                            ts.addOptions(val === 'IC' ? this.characters : this.users);
+                            ts.refreshOptions(false);
+                        });
+                    }
+                }
              }"
              @open-messenger.window="isOpen = true"
              @close-messenger.window="isOpen = false"
-             @ajax-success.window="if (isOpen) { window.updateDOM($refs, ['messengerHub'], null, false); }"
+             @ajax-success.window="if (isOpen && window.updateDOM) { window.updateDOM($refs, ['messengerHub'], null, false); }"
              class="relative">
 
             <div class="fixed inset-0 z-100 backdrop-bg backdrop-blur flex items-center justify-center p-4 {{ $backdropClass }}" x-cloak x-show="isOpen">
@@ -77,6 +101,7 @@
                     </div>
 
                     <div x-ref="messengerHub" class="grid lg-grid-sidebar-left gap-md p-panel-body overflow-y-auto flex-grow">
+                        <!-- Left Column: Thread List -->
                         <div class="flex flex-col gap-md">
                             <div class="flex flex-row items-center justify-between">
                                 <span class="text-xs font-bold text-muted uppercase text-wider">{{ lexicon('label_messenger_Conversations', 'Conversations') }}</span>
@@ -93,9 +118,9 @@
                             <div class="flex flex-col gap-sm overflow-y-auto max-h-64 pr-2" x-ref="threadsContainer">
                                 @forelse($resolvedThreads as $t)
                                     @php
-                                        $badgeLabel = $t->thread_mode ?? ($t->type ?? 'OOC');
+                                        $badgeLabel = $t->thread_mode ?? 'OOC';
                                         $badgeVariant = $badgeLabel === 'IC' ? 'info' : 'muted';
-                                        $threadTitle = $t->thread_title ?? ($t->title ?: lexicon('label_messenger_DirectMessage', 'Direct Message'));
+                                        $threadTitle = $t->thread_title ?: lexicon('label_messenger_DirectMessage', 'Direct Message');
                                     @endphp
                                     <button type="button"
                                             @click="activeTab = 'thread-{{ $t->id }}'"
@@ -115,10 +140,11 @@
                             </div>
                         </div>
 
+                        <!-- Right Column: Active Thread or New Conversation Form -->
                         <div class="flex flex-col gap-md">
                             <div x-show="activeTab === 'new'" x-cloak class="flex flex-col gap-md">
                                 <span class="font-bold text-lg text-h">{{ lexicon('label_messenger_StartNewConversation', 'Start a New Conversation') }}</span>
-                                <form action="/messenger/new"
+                                <form action="/correspondence/new"
                                       method="POST"
                                       x-data="ajaxForm"
                                       @submit.prevent="submit"
@@ -129,7 +155,7 @@
                                     <div class="grid grid-cols-1 md-grid-cols-2 gap-md bg-panel-sub border-panel border-rounded p-3">
                                         <x-metadata type="select"
                                                     id="modal_pm_type"
-                                                    name="type"
+                                                    name="thread_mode"
                                                     :label="lexicon('label_common_Context', 'Context')"
                                                     :tooltip="lexicon('tooltip_messenger_ContextType', 'Choose Out-Of-Character (User) or In-Character (Character) message')"
                                                     x-model="pmType"
@@ -140,14 +166,14 @@
 
                                         <div x-show="pmType === 'IC'" x-cloak>
                                             <x-metadata type="select"
-                                                        id="modal_sender_character_id"
-                                                        name="sender_character_id"
+                                                        id="modal_sender_persona_id"
+                                                        name="sender_persona_id"
                                                         :label="lexicon('label_messenger_SendingAs', 'Sending As')"
                                                         :tooltip="lexicon('tooltip_messenger_SendingAs', 'Select which of your characters is sending this message')"
                                                         x-bind:required="pmType === 'IC'">
                                                 <option value="">{{ lexicon('label_common_SelectCharacter', '-- Select Character --') }}</option>
-                                                @foreach($myCharacters as $myChar)
-                                                    <option value="{{ $myChar->id }}">{{ $myChar->persona_name ?? $myChar->name }}</option>
+                                                @foreach($resolvedMyCharacters as $myChar)
+                                                    <option value="{{ $myChar->id }}">{{ $myChar->persona_name }}</option>
                                                 @endforeach
                                             </x-metadata>
                                         </div>
@@ -159,23 +185,17 @@
                                                 :label="lexicon('label_messenger_ToMultiple', 'To: (Search and select multiple)')"
                                                 multiple
                                                 required
-                                                x-init="
-                                                    if (window.TomSelect) {
-                                                        const ts = new window.TomSelect($el, { valueField: 'id', labelField: 'name', searchField: 'name', plugins: ['remove_button'] });
-                                                        ts.addOption(pmType === 'IC' ? characters : users);
-                                                        $watch('pmType', val => { ts.clear(); ts.clearOptions(); ts.addOption(val === 'IC' ? characters : users); ts.refreshOptions(false); });
-                                                    }
-                                                " />
+                                                x-init="initRecipientSelect($el)" />
 
                                     <x-metadata type="text"
-                                                id="modal_subject"
-                                                name="subject"
+                                                id="modal_thread_title"
+                                                name="thread_title"
                                                 :label="lexicon('label_messenger_SubjectOptional', 'Subject / Group Name (Optional)')"
                                                 :placeholder="lexicon('label_messenger_SubjectPlaceholder', 'e.g. Planning the weekend event...')" />
 
                                     <x-metadata type="textarea"
-                                                id="modal_body"
-                                                name="body"
+                                                id="modal_correspondence_text"
+                                                name="correspondence_text"
                                                 :label="lexicon('label_common_Message', 'Message')"
                                                 rows="3"
                                                 x-init="window.Autosize && window.Autosize.init($el)"
@@ -192,51 +212,55 @@
                             </div>
 
                             @foreach($resolvedThreads as $t)
+                                @php
+                                    $threadEntries = $t->entries ?? collect();
+                                    $threadParticipants = $t->participants ?? collect();
+                                @endphp
                                 <div x-show="activeTab === 'thread-{{ $t->id }}'" x-cloak class="flex flex-col gap-md h-full">
                                     <div class="p-3 bg-panel-header border-b-panel flex flex-row justify-between items-center border-rounded">
-                                        <span class="font-bold text-m text-h">{{ $t->thread_title ?? ($t->title ?? lexicon('label_messenger_DirectMessage', 'Direct Message')) }}</span>
+                                        <span class="font-bold text-m text-h">{{ $t->thread_title ?: lexicon('label_messenger_DirectMessage', 'Direct Message') }}</span>
                                         <span class="text-xs text-muted">
                                             {{ lexicon('label_common_Participants', 'Participants:') }}
-                                            @foreach($t->participants as $p)
-                                                {{ $p->persona ? $p->persona->persona_name : ($p->character ? $p->character->name : $p->user->name) }}@if(!$loop->last), @endif
+                                            @foreach($threadParticipants as $p)
+                                                {{ $p->persona ? $p->persona->persona_name : $p->user?->name }}@if(!$loop->last), @endif
                                             @endforeach
                                         </span>
                                     </div>
 
                                     <div class="flex flex-col gap-md overflow-y-auto max-h-50vh flex-grow p-2">
-                                        @foreach($t->entries ?? ($t->messages ?? []) as $msg)
+                                        @foreach($threadEntries as $msg)
                                             <div class="flex flex-col {{ $msg->user_id === auth()->id() ? 'items-end' : 'items-start' }}">
                                                 <span class="text-xs text-muted mb-1">
-                                                    {{ $msg->persona ? $msg->persona->persona_name : ($msg->character ? $msg->character->name : $msg->user->name) }} - {{ $msg->created_at->format('M d, H:i') }}
+                                                    {{ $msg->persona ? $msg->persona->persona_name : $msg->user?->name }} - {{ $msg->created_at?->format('M d, H:i') }}
                                                 </span>
                                                 <div class="p-3 border-rounded max-w-75 {{ $msg->user_id === auth()->id() ? 'bg-panel-sub text-p border-panel' : 'bg-panel-header text-p border-panel' }}">
-                                                    <span class="whitespace-pre-wrap block text-sm">{{ $msg->correspondence_text ?? $msg->body }}</span>
+                                                    <span class="whitespace-pre-wrap block text-sm">{{ $msg->correspondence_text }}</span>
                                                 </div>
                                             </div>
                                         @endforeach
                                     </div>
 
-                                    <form action="/messenger/{{ $t->id }}/reply"
+                                    <form action="/correspondence/{{ $t->id }}/reply"
                                           method="POST"
                                           x-data="ajaxForm"
                                           @submit.prevent="submit"
                                           data-loading-title="{{ lexicon('msg_messenger_SendingReply', 'Sending Reply...') }}"
                                           class="bg-panel-sub border-t-actions p-4 flex flex-col gap-sm border-rounded">
                                         @csrf
-                                        @if(($t->thread_mode ?? $t->type) === 'IC')
+                                        @if($t->thread_mode === 'IC')
                                             <x-metadata type="select"
-                                                        name="sender_character_id"
+                                                        name="sender_persona_id"
                                                         :label="lexicon('label_messenger_SendingAs', 'Sending As')"
                                                         :tooltip="lexicon('tooltip_messenger_SendingAs', 'Select which of your characters is replying')"
                                                         required>
                                                 <option value="">{{ lexicon('label_messenger_ReplyingAs', '-- Replying As --') }}</option>
-                                                @foreach($myCharacters as $myChar)
-                                                    <option value="{{ $myChar->id }}">{{ $myChar->persona_name ?? $myChar->name }}</option>
+                                                @foreach($resolvedMyCharacters as $myChar)
+                                                    <option value="{{ $myChar->id }}">{{ $myChar->persona_name }}</option>
                                                 @endforeach
                                             </x-metadata>
                                         @endif
                                         <div class="flex flex-row gap-sm items-center">
-                                            <textarea name="body"
+                                            <textarea name="correspondence_text"
                                                       rows="2"
                                                       class="w-full p-input bg-input text-input border-input border-rounded text-sm transition-colors hover-border-accent flex-grow"
                                                       placeholder="{{ lexicon('label_messenger_WriteReplyPlaceholder', 'Write a reply...') }}"
@@ -260,13 +284,19 @@
         @break
 
     @case('folio')
+        @php
+            $resolvedVolumes = $activeBooks ?? [];
+            $resolvedActivePersonae = auth()->user()?->personae->where('persona_status', 'active') ?? [];
+            $resolvedAllCharacters = $allCharacters ?? [];
+            $autoSaveInterval = \App\Models\Configuration::where('configuration_token', 'draft_autosave_interval')->value('configuration_payload') ?: 30000;
+        @endphp
         <div x-data="folioEdit"
-             @ajax-success.window="isOpen = false"
+             @ajax-success.window="closeModal()"
              class="relative">
 
             <div class="fixed inset-0 z-100 backdrop-bg backdrop-blur flex items-center justify-center p-4 {{ $backdropClass }}" x-cloak x-show="isOpen">
                 <div {{ $attributes->merge(['class' => 'bg-panel-body border-panel border-rounded shadow-lg w-full max-w-4xl max-h-90vh flex flex-col overflow-hidden']) }}
-                     @click.outside="isOpen = false">
+                     @click.outside="closeModal()">
 
                     <div class="bg-panel-header text-h border-b-panel p-panel-header flex flex-row justify-between items-center gap-md">
                         <div class="flex flex-row items-center gap-sm">
@@ -274,7 +304,7 @@
                             <span class="text-lg font-bold text-h">{{ lexicon('public_label_WriteChapter', 'Write Folio') }}</span>
                         </div>
                         <button type="button"
-                                @click="isOpen = false"
+                                @click="closeModal()"
                                 class="text-muted bg-transparent hover-text-h cursor-pointer border-none"
                                 x-tooltip="'{{ addslashes(lexicon('tooltip_common_CloseModal', 'Close Modal')) }}'"
                                 title="{{ lexicon('tooltip_common_CloseModal', 'Close Modal') }}"
@@ -283,9 +313,6 @@
                         </button>
                     </div>
 
-                    @php
-                        $autoSaveInterval = \App\Models\Configuration::where('configuration_token', 'draft_autosave_interval')->value('configuration_payload') ?: 30000;
-                    @endphp
                     <form action="/folios"
                           method="POST"
                           x-data="ajaxForm"
@@ -301,11 +328,12 @@
                                                 id="modal_volume_id"
                                                 name="volume_id"
                                                 :label="lexicon('label_WriteChapter_TargetVolume', 'Target Volume')"
+                                                :tooltip="lexicon('tooltip_WriteChapter_TargetVolume', 'Select the volume this folio belongs to')"
                                                 required>
                                         <option value="">{{ lexicon('label_WriteChapter_SelectVolume', '-- Select a Volume --') }}</option>
-                                        @foreach($activeBooks ?? [] as $volume)
+                                        @foreach($resolvedVolumes as $volume)
                                             <option value="{{ $volume->id }}">
-                                                {{ $volume->volume_title }} ({{ $volume->shelf->shelf_title ?? 'Loose' }})
+                                                {{ $volume->volume_title }} ({{ $volume->shelf->shelf_title ?? lexicon('label_Story_LooseVolume', 'Loose') }})
                                             </option>
                                         @endforeach
                                     </x-metadata>
@@ -314,9 +342,10 @@
                                                 id="modal_active_persona_id"
                                                 name="active_persona_id"
                                                 :label="lexicon('label_WriteChapter_PostingAs', 'Posting As')"
+                                                :tooltip="lexicon('tooltip_WriteChapter_PostingAs', 'Select the active persona authoring this folio')"
                                                 required>
                                         <option value="">{{ lexicon('label_WriteChapter_SelectPersona', '-- Select Persona --') }}</option>
-                                        @foreach(auth()->user()?->personae->where('persona_status', 'active') ?? [] as $persona)
+                                        @foreach($resolvedActivePersonae as $persona)
                                             <option value="{{ $persona->id }}">{{ $persona->persona_name }}</option>
                                         @endforeach
                                     </x-metadata>
@@ -327,6 +356,7 @@
                                                 id="modal_folio_mode"
                                                 name="folio_mode"
                                                 :label="lexicon('label_WriteChapter_FolioMode', 'Folio Mode')"
+                                                :tooltip="lexicon('tooltip_WriteChapter_FolioMode', 'Choose whether this folio is a mission entry or personal log')"
                                                 required>
                                         <option value="mission">{{ lexicon('label_WriteChapter_ModeMission', 'Mission') }}</option>
                                         <option value="personal_log">{{ lexicon('label_WriteChapter_ModePersonalLog', 'Personal Log') }}</option>
@@ -336,20 +366,24 @@
                                                 id="modal_ic_day"
                                                 name="ic_day"
                                                 :label="lexicon('label_WriteChapter_InUniverseDay', 'In-Universe Day')"
+                                                :tooltip="lexicon('tooltip_WriteChapter_InUniverseDay', 'Enter the in-universe mission day')"
                                                 required />
 
                                     <x-metadata type="text"
                                                 id="modal_ic_time"
                                                 name="ic_time"
                                                 :label="lexicon('label_WriteChapter_InUniverseTime', 'In-Universe Time')"
+                                                :tooltip="lexicon('tooltip_WriteChapter_InUniverseTime', 'Enter the in-universe scene time')"
                                                 required />
 
                                     <x-metadata type="select"
                                                 id="modal_character_ids"
                                                 name="character_ids[]"
                                                 :label="lexicon('label_WriteChapter_PersonaePresent', 'Personae Present')"
-                                                multiple>
-                                        @foreach($allCharacters ?? [] as $char)
+                                                :tooltip="lexicon('tooltip_WriteChapter_PersonaePresent', 'Select or type NPCs and co-writers participating in this scene')"
+                                                multiple
+                                                x-init="window.Select && window.Select.init($el, { create: true, plugins: ['remove_button'] })">
+                                        @foreach($resolvedAllCharacters as $char)
                                             <option value="{{ $char->id }}">{{ $char->persona_name }}</option>
                                         @endforeach
                                     </x-metadata>
@@ -359,6 +393,7 @@
                                             id="modal_scene_location"
                                             name="scene_location"
                                             :label="lexicon('label_WriteChapter_SceneLocation', 'Scene Location')"
+                                            :tooltip="lexicon('tooltip_WriteChapter_SceneLocation', 'Specify the deck, compartment, or location of this scene')"
                                             required />
                             </div>
 
@@ -372,7 +407,7 @@
 
                                 <div class="flex flex-col gap-xs">
                                     <label class="text-xs font-bold text-input-muted uppercase text-wider">{{ lexicon('label_WriteChapter_StoryText', 'Story Text') }}</label>
-                                    <div class="bg-panel-body border-panel border-rounded shadow-panel overflow-hidden flex flex-col" x-data="tiptapEditor(@js($folio->folio_text ?? ''))">
+                                    <div class="bg-panel-body border-panel border-rounded shadow-panel overflow-hidden flex flex-col" x-data="tiptapHelper(@js($folio->folio_text ?? ''))">
                                         <x-tt-tb name="folio_text" />
                                     </div>
                                 </div>
@@ -383,12 +418,15 @@
                             <x-metadata type="select"
                                         id="modal_folio_status"
                                         name="folio_status"
-                                        :label="lexicon('label_WriteChapter_PublishingStatus', 'Publishing Status')">
+                                        :label="lexicon('label_WriteChapter_PublishingStatus', 'Publishing Status')"
+                                        :tooltip="lexicon('tooltip_WriteChapter_PublishingStatus', 'Save as a private draft or publish immediately to the volume')">
                                 <option value="draft">{{ lexicon('label_WriteChapter_StatusDraft', 'Save as Draft') }}</option>
                                 <option value="published">{{ lexicon('label_WriteChapter_StatusPublished', 'Publish Immediately') }}</option>
                             </x-metadata>
 
-                            <x-button type="submit" variant="primary">
+                            <x-button type="submit"
+                                      variant="primary"
+                                      :tooltip="lexicon('tooltip_WriteChapter_SaveFolio', 'Save this folio')">
                                 {{ lexicon('btn_WriteChapter_SaveFolio', 'Save Folio') }}
                             </x-button>
                         </div>
