@@ -1,3 +1,4 @@
+{{-- resources/views/admin/candidate_petitions.blade.php --}}
 @extends('layouts.app')
 
 @section('title', lexicon('title_Admin_CandidatePetitions', 'Candidate Petitions & Council Evaluations'))
@@ -5,370 +6,329 @@
 @section('content')
 <x-grid-wrapper :book="$systemBook">
     <x-slot:content>
-    <div class="p-6 flex flex-col gap-md"
-         x-data="candidatePetitionManager({
-             routes: {
-                 index: '{{ route('admin.candidate_petitions.index') }}',
-                 store: '{{ route('admin.candidate_petitions.store') }}',
-                 baseUrl: '{{ url('/admin/candidate-petitions') }}',
-                 evaluationsUrl: '{{ url('/admin/candidate-petitions') }}'
-             },
-             initialPetitions: {{ Js::from($petitions ?? []) }},
-             insignias: {{ Js::from($insignias ?? []) }},
-             assignments: {{ Js::from($assignments ?? []) }},
-             personas: {{ Js::from($personas ?? []) }}
-         })">
+        <div class="flex flex-col gap-md"
+             x-data="candidatePetitionManager({
+                 rejectConfirm: '{{ addslashes(lexicon('confirm_Petitions_Reject', 'Are you sure you want to reject this candidate petition?')) }}',
+                 confirmRejectBtn: '{{ addslashes(lexicon('btn_Petitions_ConfirmReject', 'Yes, Reject')) }}',
+                 rejectFailed: '{{ addslashes(lexicon('msg_Petitions_RejectFailed', 'Failed to reject candidate petition.')) }}'
+             })"
+             @ajax-success.window="refreshDOM()">
 
-        {{-- Page Header & Filter Toolbar --}}
-        <div class="bg-panel border-panel rounded-panel shadow-panel p-panel flex flex-col gap-md">
-            <div class="flex flex-row flex-wrap justify-between items-center gap-md border-b-panel pb-4">
-                <div class="flex flex-col gap-xs">
-                    <h1 class="text-2xl font-bold text-accent flex flex-row items-center gap-sm">
-                        <i class="bi bi-file-earmark-person"></i>
-                        <span>{{ lexicon('title_Admin_CandidatePetitions', 'Candidate Petitions & Council Evaluations') }}</span>
-                    </h1>
-                    <p class="text-sm text-input-muted">
-                        {{ lexicon('desc_Admin_CandidatePetitions', 'Review incoming candidate petitions, record council evaluations, and approve or reassign personae.') }}
-                    </p>
-                </div>
-
-                <div class="flex flex-row flex-wrap items-center gap-sm">
+            {{-- Page Header --}}
+            <x-page-header :title="lexicon('title_Admin_CandidatePetitions', 'Candidate Petitions & Council Evaluations')"
+                           :subtitle="lexicon('desc_Admin_CandidatePetitions', 'Review incoming candidate petitions, record council evaluations, and approve or reassign personae.')"
+                           icon="bi-file-earmark-person">
+                <x-slot:actions>
                     <x-button type="button"
+                              variant="secondary"
                               size="sm"
-                              class="bg-secondary text-btn-secondary border-secondary hover-bg-border"
-                              @click="refreshPetitions()"
-                              x-tooltip="'{{ addslashes(lexicon('tooltip_Petitions_Refresh', 'Refresh candidate petitions list')) }}'"
-                              aria-label="{{ lexicon('tooltip_Petitions_Refresh', 'Refresh candidate petitions list') }}">
-                        <i class="bi bi-arrow-clockwise mr-1"></i>
+                              icon="bi-arrow-clockwise"
+                              :tooltip="lexicon('tooltip_Petitions_Refresh', 'Refresh candidate petitions list')"
+                              @click="refreshDOM()">
                         {{ lexicon('btn_common_Refresh', 'Refresh') }}
                     </x-button>
-                </div>
-            </div>
+                </x-slot:actions>
+            </x-page-header>
 
-            {{-- Status Tabs & Search Bar --}}
-            <div class="flex flex-row flex-wrap justify-between items-center gap-md">
-                <div class="flex flex-row flex-wrap gap-xs">
-                    <x-button type="button"
-                              size="sm"
-                              ::class="statusFilter === 'all' ? 'bg-primary text-input border-transparent shadow-btn' : 'bg-secondary text-btn-secondary border-secondary hover-bg-border'"
-                              @click="statusFilter = 'all'">
-                        {{ lexicon('filter_Petitions_All', 'All Petitions') }}
-                    </x-button>
-                    <x-button type="button"
-                              size="sm"
-                              ::class="statusFilter === 'pending' ? 'bg-primary text-input border-transparent shadow-btn' : 'bg-secondary text-btn-secondary border-secondary hover-bg-border'"
-                              @click="statusFilter = 'pending'">
-                        {{ lexicon('filter_Petitions_Pending', 'Pending Review') }}
-                    </x-button>
-                    <x-button type="button"
-                              size="sm"
-                              ::class="statusFilter === 'approved' ? 'bg-primary text-input border-transparent shadow-btn' : 'bg-secondary text-btn-secondary border-secondary hover-bg-border'"
-                              @click="statusFilter = 'approved'">
-                        {{ lexicon('filter_Petitions_Approved', 'Approved') }}
-                    </x-button>
-                    <x-button type="button"
-                              size="sm"
-                              ::class="statusFilter === 'rejected' ? 'bg-primary text-input border-transparent shadow-btn' : 'bg-secondary text-btn-secondary border-secondary hover-bg-border'"
-                              @click="statusFilter = 'rejected'">
-                        {{ lexicon('filter_Petitions_Rejected', 'Rejected') }}
-                    </x-button>
-                </div>
+            {{-- Filter Toolbar & Fuse.js Search Bar --}}
+            <x-tab type="panel">
+                <div class="flex flex-row flex-wrap justify-between items-center gap-md">
+                    <div class="flex flex-row flex-wrap items-center gap-xs">
+                        <x-button type="button"
+                                  size="sm"
+                                  ::variant="activeTab === 'all' ? 'primary' : 'secondary'"
+                                  :tooltip="lexicon('tooltip_Petitions_FilterAll', 'Show all candidate petitions')"
+                                  @click="activeTab = 'all'">
+                            {{ lexicon('filter_Petitions_All', 'All Petitions') }}
+                        </x-button>
 
-                <div class="w-full md-w-64">
-                    <input type="text"
-                           x-model="searchQuery"
-                           placeholder="{{ lexicon('placeholder_Petitions_Search', 'Search persona or applicant...') }}"
-                           class="w-full bg-input text-input border-input rounded-input p-2 text-sm focus-ring-primary" />
-                </div>
-            </div>
-        </div>
+                        <x-button type="button"
+                                  size="sm"
+                                  ::variant="activeTab === 'pending' ? 'primary' : 'secondary'"
+                                  :tooltip="lexicon('tooltip_Petitions_FilterPending', 'Show petitions awaiting review')"
+                                  @click="activeTab = 'pending'">
+                            {{ lexicon('filter_Petitions_Pending', 'Pending Review') }}
+                        </x-button>
 
-        {{-- Candidate Petitions Table --}}
-        <div class="bg-panel border-panel rounded-panel shadow-panel overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-panel-header text-h border-b-panel text-xs uppercase tracking-wider font-bold">
-                            <th class="p-4">{{ lexicon('col_Petitions_ID', 'Petition ID') }}</th>
-                            <th class="p-4">{{ lexicon('col_Petitions_PersonaName', 'Proposed Persona') }}</th>
-                            <th class="p-4">{{ lexicon('col_Petitions_Applicant', 'Applicant') }}</th>
-                            <th class="p-4">{{ lexicon('col_Petitions_Status', 'Petition Status') }}</th>
-                            <th class="p-4">{{ lexicon('col_Petitions_Evaluations', 'Council Evaluations') }}</th>
-                            <th class="p-4">{{ lexicon('col_Petitions_LodgedAt', 'Lodged At') }}</th>
-                            <th class="p-4 text-right">{{ lexicon('col_common_Actions', 'Actions') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody id="candidate-petitions-tbody" x-ref="candidate-petitions-tbody" class="divide-y border-panel text-sm text-p">
-                        @forelse($petitions ?? [] as $petition)
-                            @php
-                                $petitionId = $petition->id;
-                                $personaId = $petition->persona_id;
-                                $personaName = $petition->persona?->persona_name ?? $petition->proposed_persona_name ?? lexicon('label_common_NotSpecified', 'Not Specified');
-                                $petitionStatus = strtolower($petition->petition_status ?? 'pending');
-                            @endphp
-                            <tr id="petition-row-{{ $petitionId }}"
-                                x-show="(statusFilter === 'all' || statusFilter === '{{ $petitionStatus }}') && (!searchQuery || '{{ strtolower(addslashes($personaName)) }}'.includes(searchQuery.toLowerCase()))"
-                                class="hover-bg-panel-sub transition-colors">
-                                <td class="p-4 font-mono text-xs text-input-muted">#{{ $petitionId }}</td>
-                                <td class="p-4 font-bold text-accent">{{ $personaName }}</td>
-                                <td class="p-4">{{ $petition->user?->name ?? lexicon('label_common_Guest', 'Applicant') }}</td>
-                                <td class="p-4">
-                                    <span class="px-2 py-1 rounded-panel text-xs font-bold uppercase
-                                        {{ $petitionStatus === 'approved' ? 'bg-success text-white' : ($petitionStatus === 'rejected' ? 'bg-danger text-white' : 'bg-warning text-dark') }}">
-                                        {{ $petitionStatus }}
-                                    </span>
-                                </td>
-                                <td class="p-4">
-                                    <span class="text-xs font-bold">
-                                        {{ $petition->evaluations_count ?? ($petition->relationLoaded('evaluations') ? $petition->evaluations->count() : 0) }}
-                                        {{ lexicon('label_Petitions_VotesRecorded', 'Evaluations') }}
-                                    </span>
-                                </td>
-                                <td class="p-4 text-xs text-input-muted">
-                                    {{ $petition->lodged_at?->format('Y-m-d H:i') ?? $petition->created_at?->format('Y-m-d H:i') ?? '—' }}
-                                </td>
-                                <td class="p-4 text-right">
-                                    <div class="flex flex-row justify-end items-center gap-xs">
+                        <x-button type="button"
+                                  size="sm"
+                                  ::variant="activeTab === 'approved' ? 'primary' : 'secondary'"
+                                  :tooltip="lexicon('tooltip_Petitions_FilterApproved', 'Show approved petitions')"
+                                  @click="activeTab = 'approved'">
+                            {{ lexicon('filter_Petitions_Approved', 'Approved') }}
+                        </x-button>
+
+                        <x-button type="button"
+                                  size="sm"
+                                  ::variant="activeTab === 'rejected' ? 'primary' : 'secondary'"
+                                  :tooltip="lexicon('tooltip_Petitions_FilterRejected', 'Show rejected petitions')"
+                                  @click="activeTab = 'rejected'">
+                            {{ lexicon('filter_Petitions_Rejected', 'Rejected') }}
+                        </x-button>
+                    </div>
+
+                    <div class="w-full md-w-64">
+                        <x-metadata type="search"
+                                    name="petition_search"
+                                    :bare="true"
+                                    xModel="searchQuery"
+                                    :placeholder="lexicon('placeholder_Petitions_Search', 'Search persona or applicant...')"
+                                    :tooltip="lexicon('tooltip_Petitions_Search', 'Filter candidate petitions by persona or applicant name')" />
+                    </div>
+                </div>
+            </x-tab>
+
+            {{-- Candidate Petitions Table --}}
+            <div x-ref="petitionsTableContent">
+                <x-table type="admin"
+                         :headers="[
+                             lexicon('col_Petitions_ID', 'Petition ID'),
+                             lexicon('col_Petitions_PersonaName', 'Proposed Persona'),
+                             lexicon('col_Petitions_Applicant', 'Applicant'),
+                             lexicon('col_Petitions_Status', 'Petition Status'),
+                             lexicon('col_Petitions_Evaluations', 'Council Evaluations'),
+                             lexicon('col_Petitions_LodgedAt', 'Lodged At'),
+                             lexicon('col_common_Actions', 'Actions')
+                         ]"
+                         :emptyText="lexicon('msg_Petitions_Empty', 'No candidate petitions found matching the current filter.')">
+                    @foreach($petitions ?? [] as $petition)
+                        @php
+                            $petitionId = $petition->id;
+                            $personaId = $petition->persona_id;
+                            $personaName = $petition->persona?->persona_name
+                                ?? $petition->proposed_persona_name
+                                ?? lexicon('label_common_NotSpecified', 'Not Specified');
+                            $applicantName = $petition->user?->name ?? lexicon('label_common_Guest', 'Applicant');
+                            $petitionStatus = strtolower($petition->petition_status ?? 'pending');
+                            $statusVariant = match($petitionStatus) {
+                                'approved' => 'success',
+                                'rejected' => 'danger',
+                                default    => 'warning',
+                            };
+                            $lodgedFormatted = $petition->lodged_at?->format('Y-m-d H:i')
+                                ?? $petition->created_at?->format('Y-m-d H:i')
+                                ?? '—';
+                            $mappedAnswers = collect($petition->entries ?? [])->map(fn($entry) => [
+                                'label'  => $entry->formField?->metadata_title ?? ('Field #' . $entry->metadata_id),
+                                'answer' => $entry->petition_answer ?? '—',
+                            ])->values()->all();
+                        @endphp
+                        <tr id="petition-row-{{ $petitionId }}"
+                            class="border-b-table-row hover-bg-panel-hover transition-colors"
+                            data-search-item
+                            data-petition-item
+                            data-id="{{ $petitionId }}"
+                            data-proposed_persona_name="{{ $personaName }}"
+                            data-persona_name="{{ $personaName }}"
+                            data-applicant="{{ $applicantName }}"
+                            data-petition_status="{{ $petitionStatus }}"
+                            x-show="(activeTab === 'all' || activeTab === '{{ $petitionStatus }}') && isItemVisible({{ $petitionId }})">
+                            <td class="p-4 font-mono text-xs text-muted">#{{ $petitionId }}</td>
+                            <td class="p-4 font-bold text-accent">{{ $personaName }}</td>
+                            <td class="p-4 text-p">{{ $applicantName }}</td>
+                            <td class="p-4">
+                                <x-badge type="pill" :variant="$statusVariant">
+                                    {{ $petitionStatus }}
+                                </x-badge>
+                            </td>
+                            <td class="p-4">
+                                <x-badge type="pill" variant="info">
+                                    {{ $petition->evaluations_count ?? ($petition->relationLoaded('evaluations') ? $petition->evaluations->count() : 0) }}
+                                    {{ lexicon('label_Petitions_VotesRecorded', 'Evaluations') }}
+                                </x-badge>
+                            </td>
+                            <td class="p-4 text-xs text-muted">{{ $lodgedFormatted }}</td>
+                            <td class="p-4 text-right">
+                                <div class="flex flex-row flex-wrap justify-end items-center gap-xs">
+                                    <x-button type="button"
+                                              variant="primary"
+                                              size="sm"
+                                              icon="bi-eye"
+                                              :tooltip="lexicon('tooltip_Petitions_Review', 'Review petition entries and council evaluations')"
+                                              @click="openModal('edit', {{ Js::from([
+                                                  'id' => $petitionId,
+                                                  'petitionId' => $petitionId,
+                                                  'personaId' => $personaId,
+                                                  'personaName' => $personaName,
+                                                  'applicantName' => $applicantName,
+                                                  'submittedAt' => $lodgedFormatted,
+                                                  'answers' => $mappedAnswers,
+                                              ]) }}, 'review')">
+                                        {{ lexicon('btn_Petitions_Review', 'Review') }}
+                                    </x-button>
+
+                                    @if($personaId)
                                         <x-button type="button"
+                                                  variant="secondary"
                                                   size="sm"
-                                                  class="bg-primary text-input border-transparent shadow-btn hover-brightness-110"
+                                                  icon="bi-arrow-left-right"
+                                                  :tooltip="lexicon('tooltip_Petitions_Reassign', 'Reassign persona rank insignia or duty assignment')"
                                                   @click="openModal('edit', {{ Js::from([
-                                                      'petitionId' => $petitionId,
+                                                      'id' => $personaId,
                                                       'personaId' => $personaId,
                                                       'personaName' => $personaName,
-                                                      'petition_status' => $petitionStatus,
-                                                      'insignia_id' => $petition->persona?->insignia_id ?? null,
-                                                      'assignment_id' => $petition->persona?->assignment_id ?? null,
-                                                      'entries' => $petition->entries ?? [],
-                                                      'evaluations' => $petition->evaluations ?? []
-                                                  ]) }}, 'review')"
-                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Petitions_Review', 'Review petition entries and council evaluations')) }}'"
-                                                  aria-label="{{ lexicon('tooltip_Petitions_Review', 'Review petition entries and council evaluations') }}">
-                                            <i class="bi bi-eye mr-1"></i>
-                                            {{ lexicon('btn_Petitions_Review', 'Review') }}
-                                        </x-button>
-
-                                        <x-button type="button"
-                                                  size="sm"
-                                                  class="bg-secondary text-btn-secondary border-secondary hover-bg-border"
-                                                  @click="openModal('edit', {{ Js::from([
-                                                      'petitionId' => $petitionId,
-                                                      'personaId' => $personaId,
-                                                      'personaName' => $personaName,
-                                                      'insignia_id' => $petition->persona?->insignia_id ?? null,
-                                                      'assignment_id' => $petition->persona?->assignment_id ?? null
-                                                  ]) }}, 'reassign')"
-                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Petitions_Reassign', 'Reassign persona linkage or duty assignment')) }}'"
-                                                  aria-label="{{ lexicon('tooltip_Petitions_Reassign', 'Reassign persona linkage or duty assignment') }}">
-                                            <i class="bi bi-arrow-left-right mr-1"></i>
+                                                      'insignia_id' => $petition->persona?->insignia_id ?? '',
+                                                      'assignment_id' => $petition->persona?->assignment_id ?? '',
+                                                  ]) }}, 'reassign')">
                                             {{ lexicon('btn_Petitions_Reassign', 'Reassign') }}
                                         </x-button>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="p-8 text-center text-input-muted">
-                                    {{ lexicon('msg_Petitions_Empty', 'No candidate petitions found matching the current filter.') }}
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        {{-- Unified Review & Reassign Modal --}}
-        <div x-cloak
-             x-show="isModalOpen"
-             class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4"
-             @keydown.escape.window="closeModal()">
-            <div class="bg-panel border-panel rounded-panel shadow-panel w-full max-w-4xl max-h-screen overflow-y-auto flex flex-col"
-                 @click.outside="closeModal()">
-
-                {{-- Modal Header --}}
-                <div class="bg-panel-header text-h border-b-panel p-panel-header flex flex-row justify-between items-center">
-                    <div class="flex flex-col gap-xs">
-                        <span class="text-xl font-bold text-accent"
-                              x-text="modalView === 'reassign'
-                                  ? '{{ addslashes(lexicon('modal_Petitions_ReassignTitle', 'Reassign Candidate Petition')) }}'
-                                  : '{{ addslashes(lexicon('modal_Petitions_ReviewTitle', 'Review Candidate Petition')) }}'"></span>
-                        <span class="text-xs text-input-muted"
-                              x-text="activePetition.personaName ? ('#' + activePetition.petitionId + ' — ' + activePetition.personaName) : ''"></span>
-                    </div>
-                    <x-button type="button"
-                              size="sm"
-                              class="bg-secondary text-btn-secondary border-secondary"
-                              @click="closeModal()"
-                              aria-label="{{ lexicon('btn_common_Close', 'Close') }}">
-                        <i class="bi bi-x-lg"></i>
-                    </x-button>
-                </div>
-
-                {{-- Modal Body: Review Mode --}}
-                <div x-show="modalView === 'review'" class="p-panel flex flex-col gap-md">
-                    {{-- Submitted Petition Entries --}}
-                    <div class="flex flex-col gap-sm">
-                        <h2 class="text-sm font-bold text-input-muted uppercase tracking-wider">
-                            {{ lexicon('heading_Petitions_SubmittedEntries', 'Submitted Petition Entries') }}
-                        </h2>
-                        <div class="flex flex-col gap-sm max-h-96 overflow-y-auto pr-1">
-                            <template x-for="(entry, idx) in (activePetition.entries || [])" :key="idx">
-                                <div class="bg-panel-sub border-panel rounded-panel p-3 flex flex-col gap-xs">
-                                    <span class="text-xs font-bold text-accent uppercase tracking-wider"
-                                          x-text="entry.metadata?.metadata_title || entry.metadata?.metadata_label || entry.field_label || ('Entry #' + (idx + 1))"></span>
-                                    <div class="text-sm text-p whitespace-pre-line"
-                                         x-text="entry.petition_answer || '—'"></div>
+                                    @endif
                                 </div>
+                            </td>
+                        </tr>
+                    @endforeach
+                </x-table>
+            </div>
+
+            {{-- MODAL 1: REVIEW & APPROVE / REJECT CANDIDATE PETITION --}}
+            <x-modal show="modals.review.open" onClose="closeModal('review')" maxWidth="4xl">
+                <x-slot:top>
+                    <div class="flex flex-col gap-xs">
+                        <span class="text-lg font-bold text-h">{{ lexicon('modal_Petitions_ReviewTitle', 'Review Candidate Petition') }}</span>
+                        <span class="text-xs text-muted"
+                              x-text="modals.review.personaName ? ('#' + modals.review.petitionId + ' — ' + modals.review.personaName + ' (' + modals.review.applicantName + ')') : ''"></span>
+                    </div>
+                </x-slot:top>
+
+                <x-meta type="modal"
+                        xAction="modals.review.action"
+                        xMethod="modals.review.method"
+                        :loadingTitle="lexicon('msg_Petitions_Approving', 'Approving Candidate Petition...')">
+
+                    {{-- Submitted Petition Answers --}}
+                    <div class="flex flex-col gap-sm">
+                        <span class="text-xs font-bold text-input-muted uppercase text-wider">
+                            {{ lexicon('heading_Petitions_SubmittedEntries', 'Submitted Petition Entries') }}
+                        </span>
+
+                        <div class="flex flex-col gap-sm max-h-96 overflow-y-auto pr-1">
+                            <template x-for="(entry, idx) in (modals.review.answers || [])" :key="idx">
+                                <x-tab type="sub">
+                                    <span class="text-xs font-bold text-accent uppercase text-wider"
+                                          x-text="entry.label || ('Field #' + (idx + 1))"></span>
+                                    <div class="text-sm text-p whitespace-pre-line"
+                                         x-text="entry.answer || '—'"></div>
+                                </x-tab>
                             </template>
-                            <div x-show="!activePetition.entries || activePetition.entries.length === 0"
-                                 class="p-4 bg-panel-sub border-panel rounded-panel text-sm text-input-muted">
+
+                            <div x-show="!modals.review.answers || modals.review.answers.length === 0"
+                                 class="p-4 bg-panel-sub border-panel border-rounded text-sm text-muted font-italic">
                                 {{ lexicon('msg_Petitions_NoEntries', 'No petition entries recorded for this submission.') }}
                             </div>
                         </div>
                     </div>
 
-                    {{-- Initial Assignment & Insignia Selection on Approval --}}
+                    {{-- Initial Insignia & Assignment Selection on Approval --}}
                     <div class="grid grid-cols-1 md-grid-cols-2 gap-md border-t-panel pt-4">
-                        <div class="flex flex-col gap-xs">
-                            <label class="text-xs font-bold text-input-muted uppercase tracking-wider">
-                                {{ lexicon('label_Demographics_Rank', 'Insignia') }}
-                            </label>
-                            <select x-model="activePetition.insignia_id"
-                                    class="w-full bg-input text-input border-input rounded-input p-2 text-sm">
-                                <option value="">{{ lexicon('label_Demographics_Unranked', 'Default / Unranked') }}</option>
-                                <template x-for="insignia in insignias" :key="insignia.id">
-                                    <option :value="insignia.id" x-text="insignia.insignia_title"></option>
-                                </template>
-                            </select>
-                        </div>
+                        <x-metadata type="select"
+                                    name="insignia_id"
+                                    :label="lexicon('label_Demographics_Rank', 'Initial Rank Insignia')"
+                                    :tooltip="lexicon('tooltip_Petitions_SelectInsignia', 'Assign an initial rank insignia upon approval')">
+                            <option value="">{{ lexicon('label_Demographics_Unranked', 'Default / Unranked') }}</option>
+                            @foreach($insignias ?? [] as $insignia)
+                                <option value="{{ $insignia->id }}">{{ $insignia->insignia_title }}</option>
+                            @endforeach
+                        </x-metadata>
 
-                        <div class="flex flex-col gap-xs">
-                            <label class="text-xs font-bold text-input-muted uppercase tracking-wider">
-                                {{ lexicon('label_Demographics_Position', 'Assignment') }}
-                            </label>
-                            <select x-model="activePetition.assignment_id"
-                                    class="w-full bg-input text-input border-input rounded-input p-2 text-sm">
-                                <option value="">{{ lexicon('label_Demographics_Unassigned', 'Default / Unassigned') }}</option>
-                                <template x-for="assignment in assignments" :key="assignment.id">
-                                    <option :value="assignment.id" x-text="assignment.assignment_title"></option>
-                                </template>
-                            </select>
-                        </div>
+                        <x-metadata type="select"
+                                    name="assignment_id"
+                                    :label="lexicon('label_Demographics_Position', 'Initial Duty Assignment')"
+                                    :tooltip="lexicon('tooltip_Petitions_SelectAssignment', 'Assign an initial duty position upon approval')">
+                            <option value="">{{ lexicon('label_Demographics_Unassigned', 'Default / Unassigned') }}</option>
+                            @foreach($assignments ?? [] as $assignment)
+                                <option value="{{ $assignment->id }}">{{ $assignment->assignment_title }}</option>
+                            @endforeach
+                        </x-metadata>
                     </div>
 
-                    {{-- Council Evaluations & Decision Notes --}}
-                    <div class="flex flex-col gap-sm border-t-panel pt-4">
-                        <label class="text-xs font-bold text-input-muted uppercase tracking-wider">
-                            {{ lexicon('label_Petitions_CouncilNotes', 'Council Evaluation & Decision Notes') }}
-                        </label>
-                        <textarea x-model="evaluationNotes"
-                                  rows="3"
-                                  placeholder="{{ lexicon('placeholder_Petitions_CouncilNotes', 'Enter evaluation commentary or reason for approval/rejection...') }}"
-                                  class="w-full bg-input text-input border-input rounded-input p-3 text-sm focus-ring-primary"></textarea>
-                    </div>
+                    {{-- Council Evaluation Commentary --}}
+                    <x-metadata type="textarea"
+                                name="evaluation_commentary"
+                                :label="lexicon('label_Petitions_CouncilNotes', 'Council Evaluation & Decision Notes')"
+                                :placeholder="lexicon('placeholder_Petitions_CouncilNotes', 'Enter evaluation commentary or reason for approval/rejection...')"
+                                :tooltip="lexicon('tooltip_Petitions_CouncilNotes', 'Recorded in the chronological register and council evaluation log')" />
 
-                    {{-- Review Action Buttons --}}
-                    <div class="flex flex-row flex-wrap justify-end items-center gap-sm border-t-panel pt-4">
+                    <x-slot:footer>
                         <x-button type="button"
-                                  size="sm"
-                                  class="bg-secondary text-btn-secondary border-secondary hover-bg-border"
-                                  @click="closeModal()">
+                                  variant="secondary"
+                                  :tooltip="lexicon('tooltip_common_Cancel', 'Cancel and close modal')"
+                                  @click="closeModal('review')">
                             {{ lexicon('btn_common_Cancel', 'Cancel') }}
                         </x-button>
 
                         <x-button type="button"
-                                  size="sm"
-                                  class="bg-danger text-white border-transparent shadow-btn hover-brightness-110"
-                                  @click="rejectPetition(activePetition.petitionId)">
-                            <i class="bi bi-x-circle mr-1"></i>
+                                  variant="danger"
+                                  icon="bi-x-circle"
+                                  :tooltip="lexicon('tooltip_Petitions_Reject', 'Reject this candidate petition')"
+                                  @click="rejectPetition(modals.review.petitionId)">
                             {{ lexicon('btn_Petitions_Reject', 'Reject Petition') }}
                         </x-button>
 
-                        <x-button type="button"
-                                  size="sm"
-                                  class="bg-success text-white border-transparent shadow-btn hover-brightness-110"
-                                  @click="approvePetition(activePetition.petitionId)">
-                            <i class="bi bi-check-circle mr-1"></i>
+                        <x-button type="submit"
+                                  variant="success"
+                                  icon="bi-check-circle"
+                                  :tooltip="lexicon('tooltip_Petitions_Approve', 'Approve petition and activate persona')">
                             {{ lexicon('btn_Petitions_Approve', 'Approve Petition') }}
                         </x-button>
+                    </x-slot:footer>
+                </x-meta>
+            </x-modal>
+
+            {{-- MODAL 2: REASSIGN PERSONA INSIGNIA & DUTY ASSIGNMENT --}}
+            <x-modal show="modals.reassign.open" onClose="closeModal('reassign')" maxWidth="max-w-lg">
+                <x-slot:top>
+                    <div class="flex flex-col gap-xs">
+                        <span class="text-lg font-bold text-h">{{ lexicon('modal_Petitions_ReassignTitle', 'Reassign Persona') }}</span>
+                        <span class="text-xs text-muted" x-text="modals.reassign.personaName"></span>
                     </div>
-                </div>
+                </x-slot:top>
 
-                {{-- Modal Body: Reassign Mode --}}
-                <div x-show="modalView === 'reassign'" class="p-panel flex flex-col gap-md">
-                    <div class="grid grid-cols-1 md-grid-cols-2 gap-md">
-                        <div class="flex flex-col gap-xs">
-                            <label class="text-xs font-bold text-input-muted uppercase tracking-wider">
-                                {{ lexicon('label_Petitions_TargetPersona', 'Linked Persona') }}
-                            </label>
-                            <select x-model="activePetition.personaId"
-                                    class="w-full bg-input text-input border-input rounded-input p-2 text-sm">
-                                <option value="">{{ lexicon('option_common_SelectPersona', '— Select Persona —') }}</option>
-                                <template x-for="persona in personas" :key="persona.id">
-                                    <option :value="persona.id" x-text="persona.persona_name"></option>
-                                </template>
-                            </select>
-                        </div>
+                <x-meta type="modal"
+                        xAction="modals.reassign.action"
+                        xMethod="modals.reassign.method"
+                        :loadingTitle="lexicon('msg_Petitions_Reassigning', 'Updating Persona Assignment...')">
 
-                        <div class="flex flex-col gap-xs">
-                            <label class="text-xs font-bold text-input-muted uppercase tracking-wider">
-                                {{ lexicon('label_Petitions_PersonaNameOverride', 'Persona Name') }}
-                            </label>
-                            <input type="text"
-                                   x-model="activePetition.personaName"
-                                   class="w-full bg-input text-input border-input rounded-input p-2 text-sm" />
-                        </div>
+                    <x-metadata type="select"
+                                name="insignia_id"
+                                xModel="modals.reassign.insignia_id"
+                                :label="lexicon('label_Demographics_Rank', 'Rank Insignia')"
+                                :tooltip="lexicon('tooltip_Petitions_ReassignRank', 'Select new rank insignia for this persona')">
+                        <option value="">{{ lexicon('label_Demographics_Unranked', 'Unranked') }}</option>
+                        @foreach($insignias ?? [] as $insignia)
+                            <option value="{{ $insignia->id }}">{{ $insignia->insignia_title }}</option>
+                        @endforeach
+                    </x-metadata>
 
-                        <div class="flex flex-col gap-xs">
-                            <label class="text-xs font-bold text-input-muted uppercase tracking-wider">
-                                {{ lexicon('label_Demographics_Rank', 'Insignia') }}
-                            </label>
-                            <select x-model="activePetition.insignia_id"
-                                    class="w-full bg-input text-input border-input rounded-input p-2 text-sm">
-                                <option value="">{{ lexicon('label_Demographics_Unranked', 'Unranked') }}</option>
-                                <template x-for="insignia in insignias" :key="insignia.id">
-                                    <option :value="insignia.id" x-text="insignia.insignia_title"></option>
-                                </template>
-                            </select>
-                        </div>
+                    <x-metadata type="select"
+                                name="assignment_id"
+                                xModel="modals.reassign.assignment_id"
+                                :label="lexicon('label_Demographics_Position', 'Duty Assignment')"
+                                :tooltip="lexicon('tooltip_Petitions_ReassignPosition', 'Select new duty assignment for this persona')">
+                        <option value="">{{ lexicon('label_Demographics_Unassigned', 'Unassigned') }}</option>
+                        @foreach($assignments ?? [] as $assignment)
+                            <option value="{{ $assignment->id }}">{{ $assignment->assignment_title }}</option>
+                        @endforeach
+                    </x-metadata>
 
-                        <div class="flex flex-col gap-xs">
-                            <label class="text-xs font-bold text-input-muted uppercase tracking-wider">
-                                {{ lexicon('label_Demographics_Position', 'Assignment') }}
-                            </label>
-                            <select x-model="activePetition.assignment_id"
-                                    class="w-full bg-input text-input border-input rounded-input p-2 text-sm">
-                                <option value="">{{ lexicon('label_Demographics_Unassigned', 'Unassigned') }}</option>
-                                <template x-for="assignment in assignments" :key="assignment.id">
-                                    <option :value="assignment.id" x-text="assignment.assignment_title"></option>
-                                </template>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-row justify-end items-center gap-sm border-t-panel pt-4">
+                    <x-slot:footer>
                         <x-button type="button"
-                                  size="sm"
-                                  class="bg-secondary text-btn-secondary border-secondary hover-bg-border"
-                                  @click="closeModal()">
+                                  variant="secondary"
+                                  :tooltip="lexicon('tooltip_common_Cancel', 'Cancel and close modal')"
+                                  @click="closeModal('reassign')">
                             {{ lexicon('btn_common_Cancel', 'Cancel') }}
                         </x-button>
 
-                        <x-button type="button"
-                                  size="sm"
-                                  class="bg-primary text-input border-transparent shadow-btn hover-brightness-110"
-                                  @click="submitPetition(activePetition.petitionId)">
-                            <i class="bi bi-save mr-1"></i>
+                        <x-button type="submit"
+                                  variant="primary"
+                                  icon="bi-save"
+                                  :tooltip="lexicon('tooltip_Petitions_SaveReassignment', 'Save persona reassignment')">
                             {{ lexicon('btn_Petitions_SaveReassignment', 'Save Reassignment') }}
                         </x-button>
-                    </div>
-                </div>
+                    </x-slot:footer>
+                </x-meta>
+            </x-modal>
 
-            </div>
         </div>
-
-    </div>
     </x-slot:content>
 </x-grid-wrapper>
 @endsection

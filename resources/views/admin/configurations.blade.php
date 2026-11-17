@@ -1,589 +1,370 @@
+{{-- resources/views/admin/configurations.blade.php --}}
 @extends('layouts.app')
 
-@section('title', lexicon('admin_label_settings', 'Global Settings'))
-
-@section('content')
 @php
     $langOptions = ['auto' => lexicon('label_setting_OptLangAuto', 'Auto-Detect (Browser Default)')];
-    foreach($customLanguages ?? [] as $code => $displayName) {
+    foreach ($customLanguages ?? [] as $code => $displayName) {
         $langOptions[$code] = $displayName . ' (' . lexicon('label_setting_CustomLexicon', 'Custom Lexicon') . ')';
     }
 
     $tsOptions = ['' => lexicon('label_setting_OptRealWorldDefault', 'Real World (Default)')];
-    foreach($timeSystems ?? [] as $system) {
+    foreach ($timeSystems ?? [] as $system) {
         $tsOptions[$system->id] = $system->engine_title;
     }
 
     $notConfiguredText = lexicon('msg_setting_NotConfigured', 'Not Configured');
 
-    $settingsSearchCatalog = [
-        ['configuration_token' => 'approval_review_mode', 'group' => 'general', 'label' => lexicon('label_settings_ApprovalReviewMode', 'Application Review Mode')],
-        ['configuration_token' => 'rejection_protocol', 'group' => 'general', 'label' => lexicon('label_settings_RejectionProtocol', 'Rejection Protocol')],
-        ['configuration_token' => 'global_lexicon_setting', 'group' => 'general', 'label' => lexicon('label_settings_GlobalLanguage', 'Global Site Language')],
-        ['configuration_token' => 'theme_governance', 'group' => 'general', 'label' => lexicon('label_setting_ThemeGovernance', 'Theme & Skin Governance')],
-        ['configuration_token' => 'character_limit_enforced', 'group' => 'mechanics', 'label' => lexicon('label_setting_CharacterLimitEnforced', 'Enforce Character Limit')],
-        ['configuration_token' => 'pc_limit', 'group' => 'mechanics', 'label' => lexicon('label_setting_PcLimit', 'Primary Character (PC) Limit')],
-        ['configuration_token' => 'sc_limit', 'group' => 'mechanics', 'label' => lexicon('label_setting_ScLimit', 'Secondary Character (SC) Limit')],
-        ['configuration_token' => 'universe_time_system', 'group' => 'mechanics', 'label' => lexicon('label_setting_UniverseTimeSystem', 'Universe Time System')],
-        ['configuration_token' => 'content_shield_bypass', 'group' => 'mechanics', 'label' => lexicon('label_setting_ContentShield', 'Mature Content Shield')],
-        ['configuration_token' => 'ai_mode', 'group' => 'ai', 'label' => lexicon('label_setting_AIHosting', 'AI Hosting Environment')],
-        ['configuration_token' => 'ai_provider', 'group' => 'ai', 'label' => lexicon('label_setting_AIProvider', 'Cloud AI Provider')],
-        ['configuration_token' => 'ai_model', 'group' => 'ai', 'label' => lexicon('label_setting_AIModel', 'Target AI Model')],
-        ['configuration_token' => 'ai_api_key', 'group' => 'ai', 'label' => lexicon('label_setting_AI_API_Key', 'API Key')],
-        ['configuration_token' => 'game_setting', 'group' => 'general', 'label' => lexicon('label_setting_GameSetting', 'Game Setting / Franchise')],
-        ['configuration_token' => 'lore_context', 'group' => 'general', 'label' => lexicon('label_setting_LoreContext', 'Lore & Era Context')],
-        ['configuration_token' => 'draft_autosave_interval', 'group' => 'mechanics', 'label' => lexicon('label_setting_DraftAutoSaveInterval', 'Draft Auto-Save Interval (ms)')],
-        ['configuration_token' => 'discord_webhook_chapters', 'group' => 'notifications', 'label' => lexicon('label_setting_DiscordChapters', 'Discord Webhook: Chapters')],
-        ['configuration_token' => 'discord_webhook_news', 'group' => 'notifications', 'label' => lexicon('label_setting_DiscordNews', 'Discord Webhook: News Stories')],
-        ['configuration_token' => 'discord_webhook_alerts', 'group' => 'notifications', 'label' => lexicon('label_setting_DiscordAlerts', 'Discord Webhook: Writer Alerts & Tags')],
-        ['configuration_token' => 'mail_mailer', 'group' => 'notifications', 'label' => lexicon('label_setting_MailMailer', 'Email Transport Driver')],
-        ['configuration_token' => 'mail_from_name', 'group' => 'notifications', 'label' => lexicon('label_setting_MailFromName', 'Email Sender Name')],
-        ['configuration_token' => 'email_subject_prefix', 'group' => 'notifications', 'label' => lexicon('label_setting_EmailSubjectPrefix', 'Email Subject Line Prefix')],
-        ['configuration_token' => 'notifications_discord_enabled', 'group' => 'notifications', 'label' => lexicon('label_setting_EnableDiscord', 'Enable Discord Notifications')],
-        ['configuration_token' => 'notifications_email_enabled', 'group' => 'notifications', 'label' => lexicon('label_setting_EnableEmail', 'Enable Email Notifications')],
-        ['configuration_token' => 'notifications_pm_enabled', 'group' => 'notifications', 'label' => lexicon('label_setting_EnablePm', 'Enable Automated On-Site PM Alerts')],
-        ['configuration_token' => 'inactivity_threshold_days', 'group' => 'mechanics', 'label' => lexicon('label_setting_InactivityThreshold', 'Player Inactivity Threshold (Days)')],
+    $settingsCatalog = [
+        'general' => [
+            'title' => lexicon('heading_settings_General', 'General & Lore Governance'),
+            'icon'  => 'bi-Sliders',
+            'items' => [
+                ['token' => 'game_setting', 'label' => lexicon('label_setting_GameSetting', 'Game Setting / Franchise'), 'hint' => lexicon('hint_setting_GameSetting', 'Primary universe or franchise name used across the portal and AI prompts.')],
+                ['token' => 'lore_context', 'label' => lexicon('label_setting_LoreContext', 'Lore & Era Context'), 'hint' => lexicon('hint_setting_LoreContext', 'Canonical era, year, or campaign summary injected into lore-aware tools.')],
+                ['token' => 'approval_review_mode', 'label' => lexicon('label_settings_ApprovalReviewMode', 'Application Review Mode'), 'hint' => lexicon('hint_settings_ApprovalReviewMode', 'Direct admin approval or council voting evaluation mode.')],
+                ['token' => 'rejection_protocol', 'label' => lexicon('label_settings_RejectionProtocol', 'Rejection Protocol'), 'hint' => lexicon('hint_settings_RejectionProtocol', 'Default handling when a candidate petition is rejected.')],
+                ['token' => 'global_lexicon_setting', 'label' => lexicon('label_settings_GlobalLanguage', 'Global Site Language'), 'hint' => lexicon('hint_settings_GlobalLanguage', 'Default semantic locale applied when browser auto-detect is overridden.')],
+                ['token' => 'theme_governance', 'label' => lexicon('label_setting_ThemeGovernance', 'Theme & Skin Governance'), 'hint' => lexicon('hint_setting_ThemeGovernance', 'Allow user skin selection or enforce the global default thematic binding.')],
+            ],
+        ],
+        'mechanics' => [
+            'title' => lexicon('heading_settings_Mechanics', 'RPG Mechanics & Thresholds'),
+            'icon'  => 'bi-cpu',
+            'items' => [
+                ['token' => 'universe_time_system', 'label' => lexicon('label_setting_UniverseTimeSystem', 'Universe Time System'), 'hint' => lexicon('hint_setting_UniverseTimeSystem', 'Active chronological engine used to calculate in-universe dates.')],
+                ['token' => 'character_limit_enforced', 'label' => lexicon('label_setting_CharacterLimitEnforced', 'Enforce Character Limit'), 'hint' => lexicon('hint_setting_CharacterLimitEnforced', 'Enable or disable maximum PC/SC persona limits per player.')],
+                ['token' => 'pc_limit', 'label' => lexicon('label_setting_PcLimit', 'Primary Character (PC) Limit'), 'hint' => lexicon('hint_setting_PcLimit', 'Maximum active Primary Characters per player.')],
+                ['token' => 'sc_limit', 'label' => lexicon('label_setting_ScLimit', 'Secondary Character (SC) Limit'), 'hint' => lexicon('hint_setting_ScLimit', 'Maximum active Supporting/Secondary Characters per player.')],
+                ['token' => 'content_shield_bypass', 'label' => lexicon('label_setting_ContentShield', 'Mature Content Shield'), 'hint' => lexicon('hint_setting_ContentShield', 'Default L-S-V content shield threshold policy.')],
+                ['token' => 'draft_autosave_interval', 'label' => lexicon('label_setting_DraftAutoSaveInterval', 'Draft Auto-Save Interval (ms)'), 'hint' => lexicon('hint_setting_DraftAutoSaveInterval', 'Millisecond interval between automatic folio draft saves.')],
+                ['token' => 'inactivity_threshold_days', 'label' => lexicon('label_setting_InactivityThreshold', 'Player Inactivity Threshold (Days)'), 'hint' => lexicon('hint_setting_InactivityThreshold', 'Days without login before flagging a player in the Command Centre.')],
+            ],
+        ],
+        'ai' => [
+            'title' => lexicon('heading_settings_AI', 'AI Assistant & Generation Engine'),
+            'icon'  => 'bi-stars',
+            'items' => [
+                ['token' => 'ai_mode', 'label' => lexicon('label_setting_AIHosting', 'AI Hosting Environment'), 'hint' => lexicon('hint_setting_AIHosting', 'Choose between Cloud API provider or self-hosted Local LLM endpoint.')],
+                ['token' => 'ai_provider', 'label' => lexicon('label_setting_AIProvider', 'Cloud AI Provider'), 'hint' => lexicon('hint_setting_AIProvider', 'Target provider (e.g., gemini, openai, anthropic, ollama).')],
+                ['token' => 'ai_model', 'label' => lexicon('label_setting_AIModel', 'Target AI Model'), 'hint' => lexicon('hint_setting_AIModel', 'Model identifier used for proofreading and lore generation.')],
+                ['token' => 'ai_api_key', 'label' => lexicon('label_setting_AI_API_Key', 'API Key'), 'hint' => lexicon('hint_setting_AI_API_Key', 'Encrypted API credential for cloud AI requests.')],
+            ],
+        ],
+        'notifications' => [
+            'title' => lexicon('heading_settings_Notifications', 'Multi-Channel Notifications & Webhooks'),
+            'icon'  => 'bi-bell',
+            'items' => [
+                ['token' => 'notifications_discord_enabled', 'label' => lexicon('label_setting_EnableDiscord', 'Enable Discord Notifications'), 'hint' => lexicon('hint_setting_EnableDiscord', 'Master toggle for outbound Discord webhook dispatches.')],
+                ['token' => 'discord_webhook_chapters', 'label' => lexicon('label_setting_DiscordChapters', 'Discord Webhook: Chapters'), 'hint' => lexicon('hint_setting_DiscordChapters', 'Webhook URL for published folio/chapter announcements.')],
+                ['token' => 'discord_webhook_news', 'label' => lexicon('label_setting_DiscordNews', 'Discord Webhook: News Stories'), 'hint' => lexicon('hint_setting_DiscordNews', 'Webhook URL for published bulletin announcements.')],
+                ['token' => 'discord_webhook_alerts', 'label' => lexicon('label_setting_DiscordAlerts', 'Discord Webhook: Writer Alerts & Tags'), 'hint' => lexicon('hint_setting_DiscordAlerts', 'Webhook URL for turn tags and lock ping alerts.')],
+                ['token' => 'notifications_email_enabled', 'label' => lexicon('label_setting_EnableEmail', 'Enable Email Notifications'), 'hint' => lexicon('hint_setting_EnableEmail', 'Master toggle for outbound email notifications.')],
+                ['token' => 'mail_mailer', 'label' => lexicon('label_setting_MailMailer', 'Email Transport Driver'), 'hint' => lexicon('hint_setting_MailMailer', 'Transport driver (smtp, mail, sendmail, log).')],
+                ['token' => 'mail_from_name', 'label' => lexicon('label_setting_MailFromName', 'Email Sender Name'), 'hint' => lexicon('hint_setting_MailFromName', 'Display name on outbound system emails.')],
+                ['token' => 'email_subject_prefix', 'label' => lexicon('label_setting_EmailSubjectPrefix', 'Email Subject Line Prefix'), 'hint' => lexicon('hint_setting_EmailSubjectPrefix', 'Prefix prepended to outbound notification emails.')],
+                ['token' => 'notifications_pm_enabled', 'label' => lexicon('label_setting_EnablePm', 'Enable Automated On-Site PM Alerts'), 'hint' => lexicon('hint_setting_EnablePm', 'Dispatch automated correspondence threads on system events.')],
+            ],
+        ],
     ];
 @endphp
 
-<div x-data="configurationManager('{{ $globalSettings['ai_mode'] ?? 'cloud' }}', '{{ $globalSettings['mail_mailer'] ?? 'smtp' }}')" @ajax-success.window="refreshDOM()">
-    <x-grid-wrapper :book="$systemBook">
-        
-        <x-slot:top>
-            <script type="application/json" x-ref="settingsSearchData">
-                {!! json_encode($settingsSearchCatalog) !!}
-            </script>
+@section('title', lexicon('admin_label_settings', 'Global Settings'))
 
-            <x-page-header :title="lexicon('admin_label_settings', 'Global Settings')" />
-        </x-slot:top>
+@section('content')
+<x-grid-wrapper :book="$systemBook">
+    <x-slot:content>
+        <div class="flex flex-col gap-lg"
+             x-data="configurationManager('{{ addslashes($settings['ai_mode'] ?? 'cloud') }}', '{{ addslashes($settings['mail_mailer'] ?? 'smtp') }}')"
+             @ajax-success.window="refreshDOM()"
+             x-ref="configurationsWrapper">
 
-        <x-slot:middle>
-            <div class="flex flex-col gap-lg">
+            {{-- Page Header --}}
+            <x-page-header :title="lexicon('admin_label_settings', 'Global Settings & Chronological Engines')"
+                           :subtitle="lexicon('desc_admin_settings', 'Configure system-wide governance, AI integration, multi-channel webhooks, and in-universe time engines.')"
+                           icon="bi-gear-wide-connected">
+                <x-slot:actions>
+                    <x-metadata type="search"
+                                name="config_search"
+                                :bare="true"
+                                xModel="searchQuery"
+                                :placeholder="lexicon('placeholder_settings_Search', 'Search settings by token or label...')"
+                                :tooltip="lexicon('tooltip_settings_Search', 'Filter configuration tokens and labels')" />
 
-                {{-- Instant Fuzzy Search Bar --}}
-                <div class="bg-panel border border-panel rounded-panel shadow-panel p-panel">
-                    <x-form-input name="settings_search"
-                                  id="settings-search-input"
-                                  :label="lexicon('label_setting_FilterSettings', 'Filter Global Settings')"
-                                  :placeholder="lexicon('label_setting_FilterPlaceholder', 'Search configuration settings by name or token...')"
-                                  :tooltip="lexicon('tooltip_setting_FilterInput', 'Instantaneously filter global configuration settings using fuzzy search')"
-                                  xModel="searchQuery"
-                                  @input="filterSettings()" />
-                </div>
-
-                {{-- MAIN CONFIGURATIONS TABLE --}}
-                <div class="bg-panel border border-panel rounded-panel shadow-panel overflow-hidden">
-                    <x-table id="main-settings-table" x-ref="mainSettingsTable" :bareBody="true">
-                        <x-slot:headers>
-                            <th class="p-4 text-left">{{ lexicon('label_setting_name', 'Setting') }}</th>
-                            <th class="p-4 text-left">{{ lexicon('label_setting_payload', 'Current Payload') }}</th>
-                            <th class="p-4 text-right">{{ lexicon('label_common_Actions', 'Actions') }}</th>
-                        </x-slot:headers>
-                        
-                        {{-- General Configuration Group --}}
-                        <tbody x-data="{ expanded: false }" x-show="matchesGroup('general')">
-                            <tr class="bg-panel-sub border-b-table-row hover-bg-panel-hover cursor-pointer select-none" 
-                                @click="expanded = !expanded"
-                                x-tooltip="'{{ addslashes(lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel')) }}'"
-                                aria-label="{{ lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel') }}">
-                                <td colspan="3" class="px-4 py-2 font-bold text-h text-xs uppercase tracking-wider">
-                                    <div class="flex flex-row items-center gap-sm">
-                                        <span class="text-xs text-muted" x-text="(expanded || searchQuery.trim().length > 0) ? '▼' : '▶'"></span>
-                                        <i class="bi bi-sliders text-accent"></i>
-                                        <span>{{ lexicon('label_setting_GeneralConfiguration', 'General Configuration') }}</span>
-                                    </div>
-                                </td>
-                            </tr>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('approval_review_mode')"
-                                                  x-cloak
-                                                  :label="lexicon('label_settings_ApprovalReviewMode', 'Application Review Mode')"
-                                                  editClick="openModal('approval_review_mode', '{{ addslashes(lexicon('label_settings_ApprovalReviewMode', 'Application Review Mode')) }}', '{{ $globalSettings['approval_review_mode'] ?? 'single' }}', 'select', { single: '{{ addslashes(lexicon('label_setting_OptSingle', 'Single-Authority Approval')) }}', council: '{{ addslashes(lexicon('label_setting_OptCouncil', '14-Day Council Voting')) }}' })">
-                                {{ ($globalSettings['approval_review_mode'] ?? '') == 'council' ? lexicon('label_setting_OptCouncil', '14-Day Council Voting') : lexicon('label_setting_OptSingle', 'Single-Authority Approval') }}
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('rejection_protocol')"
-                                                  x-cloak
-                                                  :label="lexicon('label_settings_RejectionProtocol', 'Rejection Protocol')"
-                                                  editClick="openModal('rejection_protocol', '{{ addslashes(lexicon('label_settings_RejectionProtocol', 'Rejection Protocol')) }}', '{{ $globalSettings['rejection_protocol'] ?? 'soft_lock' }}', 'select', { soft_lock: '{{ addslashes(lexicon('label_setting_OptSoftLock', 'Soft Lock (Allow Edit & Resubmit)')) }}', hard_purge: '{{ addslashes(lexicon('label_setting_OptHardPurge', 'Hard Purge (Delete Account)')) }}' })">
-                                {{ ($globalSettings['rejection_protocol'] ?? '') == 'hard_purge' ? lexicon('label_setting_OptHardPurge', 'Hard Purge (Delete Account)') : lexicon('label_setting_OptSoftLock', 'Soft Lock (Allow Edit & Resubmit)') }}
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('global_lexicon_setting')"
-                                                  x-cloak
-                                                  :label="lexicon('label_settings_GlobalLanguage', 'Global Site Language')"
-                                                  editClick="openModal('global_lexicon_setting', '{{ addslashes(lexicon('label_settings_GlobalLanguage', 'Global Site Language')) }}', '{{ $globalSettings['global_lexicon_setting'] ?? 'auto' }}', 'select', {{ json_encode($langOptions) }})">
-                                {{ ($globalSettings['global_lexicon_setting'] ?? 'auto') == 'auto' ? lexicon('label_setting_OptLangAuto', 'Auto-Detect (Browser Default)') : ($customLanguages[$globalSettings['global_lexicon_setting']] ?? $globalSettings['global_lexicon_setting']) }}
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('theme_governance')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_ThemeGovernance', 'Theme & Skin Governance')"
-                                                  :tooltip="lexicon('tooltip_setting_ThemeGovernance', 'Control whether users can select a personal skin or must use the global default')"
-                                                  editClick="openModal('theme_governance', '{{ addslashes(lexicon('label_setting_ThemeGovernance', 'Theme & Skin Governance')) }}', '{{ $globalSettings['theme_governance'] ?? 'user_choice' }}', 'select', { user_choice: '{{ addslashes(lexicon('label_setting_OptThemeUserChoice', 'User Choice (Allow Personal Skin Selection)')) }}', locked: '{{ addslashes(lexicon('label_setting_OptThemeLocked', 'Global Lock (Force Global Default Skin)')) }}' })">
-                                {{ ($globalSettings['theme_governance'] ?? '') == 'locked' ? lexicon('label_setting_OptThemeLocked', 'Global Lock (Force Global Default Skin)') : lexicon('label_setting_OptThemeUserChoice', 'User Choice (Allow Personal Skin Selection)') }}
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('game_setting')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_GameSetting', 'Game Setting / Franchise')"
-                                                  :tooltip="lexicon('tooltip_setting_GameSetting', 'The primary universe or franchise setting')"
-                                                  editClick="openModal('game_setting', '{{ addslashes(lexicon('label_setting_GameSetting', 'Game Setting / Franchise')) }}', '{{ addslashes($globalSettings['game_setting'] ?? '') }}', 'text')">
-                                {{ $globalSettings['game_setting'] ?? $notConfiguredText }}
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('lore_context')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_LoreContext', 'Lore & Era Context')"
-                                                  :tooltip="lexicon('tooltip_setting_LoreContext', 'Brief era, tone, and station premise injected into AI prompts')"
-                                                  editClick="openModal('lore_context', '{{ addslashes(lexicon('label_setting_LoreContext', 'Lore & Era Context')) }}', '{{ addslashes($globalSettings['lore_context'] ?? '') }}', 'text')">
-                                {{ $globalSettings['lore_context'] ?? $notConfiguredText }}
-                            </x-configuration-item>
-                        </tbody>
-
-                        {{-- Mechanics & Display Group --}}
-                        <tbody x-data="{ expanded: false }" x-show="matchesGroup('mechanics')">
-                            <tr class="bg-panel-sub border-b-table-row hover-bg-panel-hover cursor-pointer border-t border-panel select-none" 
-                                @click="expanded = !expanded"
-                                x-tooltip="'{{ addslashes(lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel')) }}'"
-                                aria-label="{{ lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel') }}">
-                                <td colspan="3" class="px-4 py-2 font-bold text-h text-xs uppercase tracking-wider">
-                                    <div class="flex flex-row items-center gap-sm">
-                                        <span class="text-xs text-muted" x-text="(expanded || searchQuery.trim().length > 0) ? '▼' : '▶'"></span>
-                                        <i class="bi bi-clock-history text-accent"></i>
-                                        <span>{{ lexicon('label_setting_MechanicsDisplay', 'Mechanics & Display') }}</span>
-                                    </div>
-                                </td>
-                            </tr>
-                            
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('character_limit_enforced')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_CharacterLimitEnforced', 'Enforce Character Limit')"
-                                                  :tooltip="lexicon('tooltip_setting_CharacterLimitEnforced', 'Restrict players to the maximum allowed active characters')"
-                                                  editClick="openModal('character_limit_enforced', '{{ addslashes(lexicon('label_setting_CharacterLimitEnforced', 'Enforce Character Limit')) }}', '{{ $globalSettings['character_limit_enforced'] ?? 'true' }}', 'select', { 'true': '{{ addslashes(lexicon('label_common_Enabled', 'Enabled')) }}', 'false': '{{ addslashes(lexicon('label_common_Disabled', 'Disabled')) }}' })">
-                                <x-badge :variant="($globalSettings['character_limit_enforced'] ?? 'true') === 'true' ? 'success' : 'secondary'">
-                                    {{ ($globalSettings['character_limit_enforced'] ?? 'true') === 'true' ? lexicon('label_common_Enabled', 'Enabled') : lexicon('label_common_Disabled', 'Disabled') }}
-                                </x-badge>
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('pc_limit')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_PcLimit', 'Primary Character (PC) Limit')"
-                                                  :tooltip="lexicon('tooltip_setting_PcLimit', 'Maximum number of active Primary Characters per user')"
-                                                  editClick="openModal('pc_limit', '{{ addslashes(lexicon('label_setting_PcLimit', 'Primary Character (PC) Limit')) }}', '{{ $globalSettings['pc_limit'] ?? '1' }}', 'text')">
-                                {{ $globalSettings['pc_limit'] ?? '1' }}
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('sc_limit')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_ScLimit', 'Secondary Character (SC) Limit')"
-                                                  :tooltip="lexicon('tooltip_setting_ScLimit', 'Maximum number of active Secondary Characters per user')"
-                                                  editClick="openModal('sc_limit', '{{ addslashes(lexicon('label_setting_ScLimit', 'Secondary Character (SC) Limit')) }}', '{{ $globalSettings['sc_limit'] ?? '3' }}', 'text')">
-                                {{ $globalSettings['sc_limit'] ?? '3' }}
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('universe_time_system')"
-                                x-cloak
-                                :label="lexicon('label_setting_UniverseTimeSystem', 'Universe Time System')"
-                                editClick="openModal('universe_time_system', '{{ addslashes(lexicon('label_setting_UniverseTimeSystem', 'Universe Time System')) }}', '{{ $globalSettings['universe_time_system'] ?? '' }}', 'select', {{ json_encode($tsOptions) }})">
-                                @php
-                                    $activeId = $globalSettings['universe_time_system'] ?? '';
-                                    $activeTs = collect($timeSystems ?? [])->firstWhere('id', $activeId);
-                                @endphp
-                                {{ $activeTs ? $activeTs->engine_title : lexicon('label_setting_OptRealWorldDefault', 'Real World (Default)') }}
-                            </x-configuration-item>
-                            
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('content_shield_bypass')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_ContentShield', 'Mature Content Shield')"
-                                                  editClick="openModal('content_shield_bypass', '{{ addslashes(lexicon('label_setting_ContentShield', 'Mature Content Shield')) }}', '{{ $globalSettings['content_shield_bypass'] ?? 'user' }}', 'select', { user: '{{ addslashes(lexicon('label_setting_OptUserBypass', 'Allow User Bypass')) }}', locked: '{{ addslashes(lexicon('label_setting_OptLocked', 'Global Lock (Require Manual Click)')) }}' })">
-                                {{ ($globalSettings['content_shield_bypass'] ?? '') == 'locked' ? lexicon('label_setting_OptLocked', 'Global Lock (Require Manual Click)') : lexicon('label_setting_OptUserBypass', 'Allow User Bypass') }}
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('draft_autosave_interval')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_DraftAutoSaveInterval', 'Draft Auto-Save Interval (ms)')"
-                                                  :hint="lexicon('msg_setting_AutoSaveIntervalHint', 'Interval in milliseconds (e.g. 30000 for 30 seconds)')"
-                                                  editClick="openModal('draft_autosave_interval', '{{ addslashes(lexicon('label_setting_DraftAutoSaveInterval', 'Draft Auto-Save Interval (ms)')) }}', '{{ $globalSettings['draft_autosave_interval'] ?? '30000' }}', 'text')">
-                                {{ $globalSettings['draft_autosave_interval'] ?? '30000' }} ms
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('inactivity_threshold_days')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_InactivityThreshold', 'Player Inactivity Threshold (Days)')"
-                                                  :tooltip="lexicon('tooltip_setting_InactivityThreshold', 'Number of days without a login before an active player is flagged as inactive (default: 30)')"
-                                                  :hint="lexicon('msg_setting_InactivityThresholdHint', 'Number of days before flagging inactive accounts (e.g. 30)')"
-                                                  editClick="openModal('inactivity_threshold_days', '{{ addslashes(lexicon('label_setting_InactivityThreshold', 'Player Inactivity Threshold (Days)')) }}', '{{ $globalSettings['inactivity_threshold_days'] ?? '30' }}', 'text')">
-                                {{ $globalSettings['inactivity_threshold_days'] ?? '30' }} {{ lexicon('label_common_Days', 'days') }}
-                            </x-configuration-item>
-                        </tbody>
-
-                        {{-- AI Integration Group --}}
-                        <tbody x-data="{ expanded: false }" x-show="matchesGroup('ai')">
-                            <tr class="bg-panel-sub border-b-table-row hover-bg-panel-hover cursor-pointer border-t border-panel select-none" 
-                                @click="expanded = !expanded"
-                                x-tooltip="'{{ addslashes(lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel')) }}'"
-                                aria-label="{{ lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel') }}">
-                                <td colspan="3" class="px-4 py-2 font-bold text-h text-xs uppercase tracking-wider">
-                                    <div class="flex flex-row items-center gap-sm">
-                                        <span class="text-xs text-muted" x-text="(expanded || searchQuery.trim().length > 0) ? '▼' : '▶'"></span>
-                                        <i class="bi bi-cpu text-accent"></i>
-                                        <span>{{ lexicon('label_setting_AIIntegration', 'AI Integration Configuration') }}</span>
-                                    </div>
-                                </td>
-                            </tr>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('ai_mode')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_AIHosting', 'AI Hosting Environment')"
-                                                  editClick="openModal('ai_mode', '{{ addslashes(lexicon('label_setting_AIHosting', 'AI Hosting Environment')) }}', ai_mode, 'select', { cloud: '{{ addslashes(lexicon('label_setting_AICloud', 'Cloud-Based (API)')) }}', local: '{{ addslashes(lexicon('label_setting_AILocal', 'Self-Hosted / Local')) }}' })">
-                                <span x-text="ai_mode === 'local' ? '{{ addslashes(lexicon('label_setting_AILocal', 'Self-Hosted / Local')) }}' : '{{ addslashes(lexicon('label_setting_AICloud', 'Cloud-Based (API)')) }}'">
-                                    {{ ($globalSettings['ai_mode'] ?? 'cloud') == 'local' ? lexicon('label_setting_AILocal', 'Self-Hosted / Local') : lexicon('label_setting_AICloud', 'Cloud-Based (API)') }}
-                                </span>
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && ai_mode === 'cloud' && matchesSetting('ai_provider')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_AIProvider', 'Cloud AI Provider')"
-                                                  editClick="openModal('ai_provider', '{{ addslashes(lexicon('label_setting_AIProvider', 'Cloud AI Provider')) }}', '{{ $globalSettings['ai_provider'] ?? 'gemini' }}', 'select', { gemini: '{{ addslashes(lexicon('label_setting_OptAIGemini', 'Google Gemini')) }}', openai: '{{ addslashes(lexicon('label_setting_OptAIOpenAI', 'OpenAI')) }}', anthropic: '{{ addslashes(lexicon('label_setting_OptAIAnthropic', 'Anthropic')) }}' })">
-                                {{ ucfirst($globalSettings['ai_provider'] ?? $notConfiguredText) }}
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && ai_mode === 'cloud' && matchesSetting('ai_model')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_AIModel', 'Target AI Model')"
-                                                  editClick="openModal('ai_model', '{{ addslashes(lexicon('label_setting_AIModel', 'Target AI Model')) }}', '{{ addslashes($globalSettings['ai_model'] ?? '') }}', 'text')">
-                                {{ $globalSettings['ai_model'] ?? $notConfiguredText }}
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && ai_mode === 'cloud' && matchesSetting('ai_api_key')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_AI_API_Key', 'API Key')"
-                                                  editClick="openModal('ai_api_key', '{{ addslashes(lexicon('label_setting_AI_API_Key', 'API Key')) }}', '{{ addslashes($globalSettings['ai_api_key'] ?? '') }}', 'password')">
-                                {{ !empty($globalSettings['ai_api_key']) ? '••••••••••••••••' : $notConfiguredText }}
-                            </x-configuration-item>
-                        </tbody>
-
-                        {{-- Notifications & Email Group --}}
-                        <tbody x-data="{ expanded: false }" x-show="matchesGroup('notifications')">
-                            <tr class="bg-panel-sub border-b-table-row hover-bg-panel-hover cursor-pointer border-t border-panel select-none" 
-                                @click="expanded = !expanded"
-                                x-tooltip="'{{ addslashes(lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel')) }}'"
-                                aria-label="{{ lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel') }}">
-                                <td colspan="3" class="px-4 py-2 font-bold text-h text-xs uppercase tracking-wider">
-                                    <div class="flex flex-row items-center gap-sm">
-                                        <span class="text-xs text-muted" x-text="(expanded || searchQuery.trim().length > 0) ? '▼' : '▶'"></span>
-                                        <i class="bi bi-bell text-accent"></i>
-                                        <span>{{ lexicon('label_setting_NotificationsGroup', 'Multi-Channel Notifications & Email Settings') }}</span>
-                                    </div>
-                                </td>
-                            </tr>
-                            
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('notifications_discord_enabled')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_EnableDiscord', 'Enable Discord Notifications')"
-                                                  :tooltip="lexicon('tooltip_setting_EnableDiscord', 'Master switch to enable or disable outgoing Discord webhook dispatches')"
-                                                  editClick="openModal('notifications_discord_enabled', '{{ addslashes(lexicon('label_setting_EnableDiscord', 'Enable Discord Notifications')) }}', '{{ $globalSettings['notifications_discord_enabled'] ?? '0' }}', 'select', { '1': '{{ addslashes(lexicon('label_common_Enabled', 'Enabled')) }}', '0': '{{ addslashes(lexicon('label_common_Disabled', 'Disabled')) }}' })">
-                                <x-badge :variant="($globalSettings['notifications_discord_enabled'] ?? '0') === '1' ? 'success' : 'secondary'">
-                                    {{ ($globalSettings['notifications_discord_enabled'] ?? '0') === '1' ? lexicon('label_common_Enabled', 'Enabled') : lexicon('label_common_Disabled', 'Disabled') }}
-                                </x-badge>
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('notifications_email_enabled')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_EnableEmail', 'Enable Email Notifications')"
-                                                  :tooltip="lexicon('tooltip_setting_EnableEmail', 'Master switch to enable or disable outgoing SMTP email alerts')"
-                                                  editClick="openModal('notifications_email_enabled', '{{ addslashes(lexicon('label_setting_EnableEmail', 'Enable Email Notifications')) }}', '{{ $globalSettings['notifications_email_enabled'] ?? '0' }}', 'select', { '1': '{{ addslashes(lexicon('label_common_Enabled', 'Enabled')) }}', '0': '{{ addslashes(lexicon('label_common_Disabled', 'Disabled')) }}' })">
-                                <x-badge :variant="($globalSettings['notifications_email_enabled'] ?? '0') === '1' ? 'success' : 'secondary'">
-                                    {{ ($globalSettings['notifications_email_enabled'] ?? '0') === '1' ? lexicon('label_common_Enabled', 'Enabled') : lexicon('label_common_Disabled', 'Disabled') }}
-                                </x-badge>
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('notifications_pm_enabled')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_EnablePm', 'Enable Automated On-Site PM Alerts')"
-                                                  :tooltip="lexicon('tooltip_setting_EnablePm', 'Master switch to enable or disable automated system Private Message alerts')"
-                                                  editClick="openModal('notifications_pm_enabled', '{{ addslashes(lexicon('label_setting_EnablePm', 'Enable Automated On-Site PM Alerts')) }}', '{{ $globalSettings['notifications_pm_enabled'] ?? '0' }}', 'select', { '1': '{{ addslashes(lexicon('label_common_Enabled', 'Enabled')) }}', '0': '{{ addslashes(lexicon('label_common_Disabled', 'Disabled')) }}' })">
-                                <x-badge :variant="($globalSettings['notifications_pm_enabled'] ?? '0') === '1' ? 'success' : 'secondary'">
-                                    {{ ($globalSettings['notifications_pm_enabled'] ?? '0') === '1' ? lexicon('label_common_Enabled', 'Enabled') : lexicon('label_common_Disabled', 'Disabled') }}
-                                </x-badge>
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('discord_webhook_chapters')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_DiscordChapters', 'Discord Webhook: Chapters')"
-                                                  :tooltip="lexicon('tooltip_setting_DiscordChapters', 'Webhook endpoint URL for broadcasting published chapters')"
-                                                  editClick="openModal('discord_webhook_chapters', '{{ addslashes(lexicon('label_setting_DiscordChapters', 'Discord Webhook: Chapters')) }}', '{{ addslashes($globalSettings['discord_webhook_chapters'] ?? '') }}', 'url')">
-                                {{ Str::limit($globalSettings['discord_webhook_chapters'] ?? $notConfiguredText, 45) }}
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('discord_webhook_news')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_DiscordNews', 'Discord Webhook: News Stories')"
-                                                  :tooltip="lexicon('tooltip_setting_DiscordNews', 'Webhook endpoint URL for broadcasting news and site announcements')"
-                                                  editClick="openModal('discord_webhook_news', '{{ addslashes(lexicon('label_setting_DiscordNews', 'Discord Webhook: News Stories')) }}', '{{ addslashes($globalSettings['discord_webhook_news'] ?? '') }}', 'url')">
-                                {{ Str::limit($globalSettings['discord_webhook_news'] ?? $notConfiguredText, 45) }}
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('mail_mailer')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_MailMailer', 'Email Transport Driver')"
-                                                  :tooltip="lexicon('tooltip_setting_MailMailer', 'Select the mail transport driver (SMTP, PHP mail(), or Log / Disabled)')"
-                                                  editClick="openModal('mail_mailer', '{{ addslashes(lexicon('label_setting_MailMailer', 'Email Transport Driver')) }}', mail_mailer, 'select', { smtp: '{{ addslashes(lexicon('label_setting_OptMailSmtp', 'SMTP')) }}', phpmail: '{{ addslashes(lexicon('label_setting_OptMailPhpmail', 'PHP mail() (phpmail)')) }}', log: '{{ addslashes(lexicon('label_setting_OptMailLog', 'Log / Disabled')) }}' })">
-                                <span x-text="mail_mailer === 'phpmail' ? '{{ addslashes(lexicon('label_setting_OptMailPhpmail', 'PHP mail() (phpmail)')) }}' : (mail_mailer === 'log' ? '{{ addslashes(lexicon('label_setting_OptMailLog', 'Log / Disabled')) }}' : '{{ addslashes(lexicon('label_setting_OptMailSmtp', 'SMTP')) }}')">
-                                    @php
-                                        $currentMailer = $globalSettings['mail_mailer'] ?? 'smtp';
-                                    @endphp
-                                    {{ $currentMailer === 'phpmail' ? lexicon('label_setting_OptMailPhpmail', 'PHP mail() (phpmail)') : ($currentMailer === 'log' ? lexicon('label_setting_OptMailLog', 'Log / Disabled') : lexicon('label_setting_OptMailSmtp', 'SMTP')) }}
-                                </span>
-                            </x-configuration-item>
-
-                            <x-configuration-item x-show="(expanded || searchQuery.trim().length > 0) && matchesSetting('email_subject_prefix')"
-                                                  x-cloak
-                                                  :label="lexicon('label_setting_EmailSubjectPrefix', 'Email Subject Line Prefix')"
-                                                  :tooltip="lexicon('tooltip_setting_EmailSubjectPrefix', 'Custom prefix text prepended to email subjects, e.g. [MOWS Engine]')"
-                                                  editClick="openModal('email_subject_prefix', '{{ addslashes(lexicon('label_setting_EmailSubjectPrefix', 'Email Subject Line Prefix')) }}', '{{ addslashes($globalSettings['email_subject_prefix'] ?? '[MOWS Engine]') }}', 'text')">
-                                {{ $globalSettings['email_subject_prefix'] ?? '[MOWS Engine]' }}
-                            </x-configuration-item>
-                        </tbody>
-                    </x-table>
-                </div>
-
-                {{-- TIME SYSTEMS MANAGEMENT ACCORDION --}}
-                <x-accordion-panel :title="lexicon('admin_label_TimeSystems', 'Immersive Time Systems')" :expanded="false">
-                    <x-slot:top>
-                        <x-button type="button" 
-                                  variant="primary" 
-                                  class="p-btn-sm text-sm flex flex-row items-center gap-xs" 
-                                  @click="openTsModal()"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_setting_AddTimeSystem', 'Create a new custom universe time system')) }}'"
-                                  aria-label="{{ lexicon('tooltip_setting_AddTimeSystem', 'Create a new custom universe time system') }}">
-                            <i class="bi bi-plus-lg"></i>
-                            <span>{{ lexicon('btn_setting_AddTimeSystem', 'Add Time System') }}</span>
+                    @can('manage_time_systems')
+                        <x-button type="button"
+                                  variant="primary"
+                                  size="sm"
+                                  icon="bi-clock-history"
+                                  :tooltip="lexicon('tooltip_ts_CreateEngine', 'Create a new in-universe chronological engine')"
+                                  @click="openModal('create', {}, 'engine')">
+                            + {{ lexicon('btn_ts_NewEngine', 'New Time Engine') }}
                         </x-button>
-                    </x-slot:top>
-                    
-                    <x-table id="time-systems-table" x-ref="timeSystemsTable">
-                        <x-slot:headers>
-                            <th class="p-4 text-left">{{ lexicon('label_common_Name', 'Name') }}</th>
-                            <th class="p-4 text-left">{{ lexicon('label_setting_EngineType', 'Engine Type') }}</th>
-                            <th class="p-4 text-left">{{ lexicon('label_setting_PrefixSuffix', 'Prefix / Suffix') }}</th>
-                            <th class="p-4 text-right">{{ lexicon('label_common_Actions', 'Actions') }}</th>
-                        </x-slot:headers>
-                        
-                        {{-- TIME SYSTEMS TABLE LOOP --}}
-                        @forelse($timeSystems ?? [] as $ts)
-                            <tr class="border-b-table-row hover-bg-table-row">
-                                <td class="p-4 font-bold text-p">{{ $ts->engine_title }}</td>
-                                <td class="p-4 text-muted">
-                                    <x-badge variant="info"
-                                            x-tooltip="'{{ addslashes(lexicon('tooltip_setting_EngineTypeBadge', 'Active calculation engine for this time system')) }}'">
-                                        {{ ucfirst(str_replace('_', ' ', $ts->calculation_algorithm)) }}
+                    @endcan
+                </x-slot:actions>
+            </x-page-header>
+
+            {{-- Configuration Groups --}}
+            @foreach($settingsCatalog as $groupKey => $group)
+                <x-tab type="accordion"
+                       :title="$group['title']"
+                       :icon="$group['icon']"
+                       :open="true">
+                    <x-table type="admin"
+                             :headers="[
+                                 lexicon('col_settings_Parameter', 'Configuration Parameter'),
+                                 lexicon('col_settings_CurrentValue', 'Current Payload'),
+                                 lexicon('col_common_Actions', 'Actions')
+                             ]">
+                        @foreach($group['items'] as $item)
+                            @php
+                                $token = $item['token'];
+                                $rawVal = $settings[$token] ?? '';
+                                $displayVal = $rawVal !== '' && $rawVal !== null ? $rawVal : $notConfiguredText;
+                                if ($token === 'ai_api_key' && !empty($rawVal)) {
+                                    $displayVal = '••••••••' . substr((string) $rawVal, -4);
+                                } elseif ($token === 'universe_time_system') {
+                                    $displayVal = $tsOptions[$rawVal] ?? $notConfiguredText;
+                                } elseif ($token === 'global_lexicon_setting') {
+                                    $displayVal = $langOptions[$rawVal] ?? $rawVal ?: $notConfiguredText;
+                                }
+                            @endphp
+                            <x-table type="config"
+                                     :label="$item['label']"
+                                     :hint="$item['hint']"
+                                     :tooltip="$token"
+                                     data-search-item
+                                     data-config-item
+                                     data-id="{{ $token }}"
+                                     data-configuration_token="{{ $token }}"
+                                     data-label="{{ $item['label'] }}"
+                                     x-show="isItemVisible('{{ $token }}')"
+                                     :editClick="'openModal(\'edit\', ' . Js::from([
+                                         'configuration_token' => $token,
+                                         'configuration_payload' => $token === 'ai_api_key' ? '' : (string) $rawVal,
+                                         'label' => $item['label'],
+                                         'hint' => $item['hint'],
+                                     ]) . ', \'config\')'">
+                                @if($rawVal === '' || $rawVal === null)
+                                    <span class="text-xs text-muted font-italic">{{ $notConfiguredText }}</span>
+                                @elseif(in_array((string) $rawVal, ['1', 'true', 'enabled'], true))
+                                    <x-badge type="pill" variant="success">{{ $displayVal }}</x-badge>
+                                @elseif(in_array((string) $rawVal, ['0', 'false', 'disabled'], true))
+                                    <x-badge type="pill" variant="muted">{{ $displayVal }}</x-badge>
+                                @else
+                                    <span class="font-mono text-xs text-accent">{{ $displayVal }}</span>
+                                @endif
+                            </x-table>
+                        @endforeach
+                    </x-table>
+                </x-tab>
+            @endforeach
+
+            {{-- Chronological Engines Section --}}
+            <x-tab type="accordion"
+                   :title="lexicon('heading_ts_ChronologicalEngines', 'Chronological Time Engines')"
+                   icon="bi-hourglass-split"
+                   :open="true">
+                <div x-ref="enginesTableContent">
+                    <x-table type="admin"
+                             :headers="[
+                                 lexicon('col_ts_Title', 'Engine Title'),
+                                 lexicon('col_ts_Algorithm', 'Algorithm'),
+                                 lexicon('col_ts_Format', 'Prefix / Suffix'),
+                                 lexicon('col_ts_BaseYear', 'Base Earth Year'),
+                                 lexicon('col_ts_Multiplier', 'Multiplier'),
+                                 lexicon('col_common_Status', 'Status'),
+                                 lexicon('col_common_Actions', 'Actions')
+                             ]"
+                             :emptyText="lexicon('msg_ts_NoEngines', 'No custom chronological engines configured.')">
+                        @foreach($timeSystems ?? [] as $engine)
+                            <tr class="border-b-table-row hover-bg-panel-hover transition-colors">
+                                <td class="p-4 font-bold text-h">{{ $engine->engine_title }}</td>
+                                <td class="p-4 font-mono text-xs text-accent">{{ $engine->calculation_algorithm }}</td>
+                                <td class="p-4 text-xs text-muted">
+                                    {{ $engine->date_prefix ?: '—' }} / {{ $engine->date_suffix ?: '—' }}
+                                </td>
+                                <td class="p-4 text-sm text-p">{{ $engine->base_earth_year }}</td>
+                                <td class="p-4 text-sm text-p">×{{ $engine->temporal_multiplier }}</td>
+                                <td class="p-4">
+                                    <x-badge type="pill" :variant="$engine->is_active ? 'success' : 'muted'">
+                                        {{ $engine->is_active ? lexicon('status_common_Active', 'Active') : lexicon('status_common_Inactive', 'Inactive') }}
                                     </x-badge>
                                 </td>
-                                <td class="p-4 text-muted font-mono text-xs">"{{ $ts->date_prefix }}..." / "...{{ $ts->date_suffix }}"</td>
                                 <td class="p-4 text-right">
-                                    <div class="flex flex-row flex-wrap items-center justify-end gap-sm text-sm">
-                                        <x-button type="button" 
-                                                variant="text" 
-                                                class="text-warning hover-text-h flex flex-row items-center gap-xs" 
-                                                @click="openTsModal({{ json_encode($ts) }})"
-                                                x-tooltip="'{{ addslashes(lexicon('tooltip_setting_EditTimeSystem', 'Edit this time system')) }}'">
-                                            <i class="bi bi-pencil"></i>
-                                            <span>{{ lexicon('btn_common_Edit', 'Edit') }}</span>
+                                    <div class="flex flex-row flex-wrap justify-end items-center gap-xs">
+                                        <x-button type="button"
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  icon="bi-pencil"
+                                                  :tooltip="lexicon('tooltip_ts_EditEngine', 'Edit this chronological engine')"
+                                                  @click="openModal('edit', {{ Js::from([
+                                                      'id' => $engine->id,
+                                                      'engine_title' => $engine->engine_title,
+                                                      'calculation_algorithm' => $engine->calculation_algorithm,
+                                                      'date_prefix' => $engine->date_prefix ?? '',
+                                                      'date_suffix' => $engine->date_suffix ?? '',
+                                                      'base_earth_year' => $engine->base_earth_year,
+                                                      'base_earth_modifier' => $engine->base_earth_modifier,
+                                                      'base_system_value' => $engine->base_system_value,
+                                                      'temporal_multiplier' => $engine->temporal_multiplier,
+                                                      'is_active' => (bool) $engine->is_active,
+                                                  ]) }}, 'engine')">
+                                            {{ lexicon('btn_common_Edit', 'Edit') }}
                                         </x-button>
-                                        <x-button type="button" 
-                                                variant="text" 
-                                                class="text-danger hover-text-h flex flex-row items-center gap-xs" 
-                                                x-data="deleteAction('/admin/chronological-engines/{{ $ts->id }}', 'DELETE', '{{ addslashes($ts->engine_title) }}')" 
-                                                @click.prevent="confirmDelete()"
-                                                x-tooltip="'{{ addslashes(lexicon('tooltip_setting_DeleteTimeSystem', 'Delete this time system')) }}'">
-                                            <i class="bi bi-trash"></i>
-                                            <span>{{ lexicon('btn_common_Delete', 'Delete') }}</span>
+
+                                        <x-button type="button"
+                                                  variant="danger"
+                                                  size="sm"
+                                                  icon="bi-trash"
+                                                  :tooltip="lexicon('tooltip_ts_DeleteEngine', 'Delete this chronological engine')"
+                                                  x-data="deleteAction('{{ route('admin.chronological_engines.destroy', $engine) }}', 'DELETE', '{{ addslashes($engine->engine_title) }}')"
+                                                  @click="confirmDelete()">
+                                            {{ lexicon('btn_common_Delete', 'Delete') }}
                                         </x-button>
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="p-6 text-center text-muted italic">{{ lexicon('msg_setting_NoTimeSystems', 'No custom time systems found.') }}</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </x-table>
-                </x-accordion-panel>
+                </div>
+            </x-tab>
 
-            </div>
-        </x-slot:middle>
-
-        <x-slot:bottom>
-            {{-- MODAL 1: CENTRALISED CONFIGURATIONS MODAL --}}
-            <x-modal show="modal.open" maxWidth="max-w-lg">
+            {{-- MODAL 1: EDIT CONFIGURATION SETTING --}}
+            <x-modal show="modals.config.open" onClose="closeModal('config')" maxWidth="max-w-lg">
                 <x-slot:top>
-                    <span x-text="`{{ addslashes(lexicon('btn_common_Edit', 'Edit')) }} ${modal.title}`"></span>
-                </x-slot:top>
-                
-                <form action="/admin/configurations/update" method="POST" class="flex flex-col gap-md" x-data="ajaxForm" @submit.prevent="submit($event)">
-                    @csrf
                     <div class="flex flex-col gap-xs">
-                        <label for="central-setting-input" class="text-xs font-bold text-input-muted" x-text="modal.title"></label>
-                        
-                        <template x-if="modal.type === 'select'">
-                            <select id="central-setting-input"
-                                    :name="'settings[' + modal.configuration_token + ']'" 
-                                    x-model="modal.configuration_payload" 
-                                    x-ref="modalSelect"
-                                    :aria-label="modal.title"
-                                    class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent">
-                                <template x-for="(label, optCode) in modal.options">
-                                    <option :value="optCode" x-text="label" :selected="String(optCode) === String(modal.configuration_payload)"></option>
-                                </template>
-                            </select>
-                        </template>
-
-                        <template x-if="['text', 'url', 'password'].includes(modal.type)">
-                            <input id="central-setting-input"
-                                   :type="modal.type" 
-                                   :name="'settings[' + modal.configuration_token + ']'" 
-                                   x-model="modal.configuration_payload" 
-                                   :aria-label="modal.title"
-                                   x-tooltip="'{{ addslashes(lexicon('tooltip_setting_EnterSettingPayload', 'Enter the new configuration payload')) }}'"
-                                   class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent">
-                        </template>
+                        <span class="text-lg font-bold text-h" x-text="modals.config.label || '{{ addslashes(lexicon('modal_settings_EditTitle', 'Modify Configuration')) }}'"></span>
+                        <span class="font-mono text-xs text-accent" x-text="modals.config.configuration_token"></span>
                     </div>
-
-                    <div class="border-t-actions pt-6 mt-4 flex flex-row flex-wrap items-center justify-end gap-md">
-                        <x-button type="button" 
-                                  variant="secondary" 
-                                  @click="modal.open = false"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_common_Cancel', 'Cancel and close modal')) }}'"
-                                  aria-label="{{ lexicon('tooltip_common_Cancel', 'Cancel and close modal') }}">
-                            {{ lexicon('btn_common_Cancel', 'Cancel') }}
-                        </x-button>
-                        <x-button type="submit" 
-                                  variant="primary"
-                                  ::disabled="submitting"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_setting_SaveSetting', 'Save configuration change')) }}'"
-                                  aria-label="{{ lexicon('tooltip_setting_SaveSetting', 'Save configuration change') }}"
-                                  x-text="submitting ? '{{ addslashes(lexicon('msg_common_Saving', 'Saving...')) }}' : '{{ addslashes(lexicon('btn_common_Save', 'Save Changes')) }}'">
-                            {{ lexicon('btn_common_Save', 'Save Changes') }}
-                        </x-button>
-                    </div>
-                </form>
-            </x-modal>
-
-            {{-- MODAL 2: TIME SYSTEM EDITOR MODAL --}}
-            <x-modal show="tsModal.open" maxWidth="max-w-lg">
-                <x-slot:top>
-                    <span x-text="tsModal.isEdit ? '{{ addslashes(lexicon('label_setting_EditTimeSystem', 'Edit Time System')) }}' : '{{ addslashes(lexicon('label_setting_NewTimeSystem', 'New Time System')) }}'"></span>
                 </x-slot:top>
-                
-                <form :action="tsModal.isEdit ? `/admin/chronological-engines/${tsModal.data.id}` : '/admin/chronological-engines'" 
-                      method="POST" 
-                      class="flex flex-col gap-md" 
-                      x-data="ajaxForm" 
-                      @submit.prevent="submit($event)">
-                    @csrf
-                    <template x-if="tsModal.isEdit">
-                        <input type="hidden" name="_method" value="PUT">
-                    </template>
-                    
-                    <x-form-input name="engine_title"
-                        id="ts-name-input"
-                        :label="lexicon('label_setting_TimeSystemName', 'System Name (e.g., TNG Stardate)')"
-                        :tooltip="lexicon('tooltip_setting_TimeSystemNameInput', 'Enter the display name for this universe time system')"
-                        xModel="tsModal.data.engine_title"
-                        :required="true" />
 
-                        <div class="flex flex-col gap-xs">
-                            <label for="ts-engine-type-select" class="text-xs font-bold text-input-muted">
-                                <span>{{ lexicon('label_setting_MathEngine', 'Math Engine') }}</span>
-                            </label>
-                            <select id="ts-engine-type-select"
-                                    name="calculation_algorithm" 
-                                    x-model="tsModal.data.calculation_algorithm" 
-                                    aria-label="{{ lexicon('label_setting_MathEngine', 'Math Engine') }}"
-                                    x-tooltip="'{{ addslashes(lexicon('tooltip_setting_MathEngineSelect', 'Choose how dates are calculated and formatted')) }}'"
-                                    class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent">
-                                <option value="real_world">{{ lexicon('label_setting_OptEngineRealWorld', 'Real World (No Math)') }}</option>
-                                <option value="fractional">{{ lexicon('label_setting_OptEngineFractional', 'Fractional Base (Stardates)') }}</option>
-                                <option value="offset">{{ lexicon('label_setting_LinearOffset', 'Linear Offset (Fantasy/Sci-Fi Years)') }}</option>
-                            </select>
-                        </div>
+                <x-meta type="modal" xAction="modals.config.action" xMethod="modals.config.method">
+                    <input type="hidden" name="configuration_token" :value="modals.config.configuration_token">
 
-                        <div class="grid grid-cols-1 md-grid-cols-2 gap-md" x-show="tsModal.data.calculation_algorithm !== 'real_world'" x-cloak>
-                            <x-form-input name="date_prefix"
-                                          id="ts-prefix-input"
-                                          :label="lexicon('label_setting_PrefixString', 'Prefix String')"
-                                          :placeholder="lexicon('label_setting_PlaceholderPrefix', 'e.g. Stardate ')"
-                                          :tooltip="lexicon('tooltip_setting_PrefixInput', 'Text prepended before the calculated date figure')"
-                                          xModel="tsModal.data.date_prefix" />
-                        
-                            <x-form-input name="date_suffix"
-                                          id="ts-suffix-input"
-                                          :label="lexicon('label_setting_SuffixString', 'Suffix String')"
-                                          :placeholder="lexicon('label_setting_PlaceholderSuffix', 'e.g.  AD')"
-                                          :tooltip="lexicon('tooltip_setting_SuffixInput', 'Text appended after the calculated date figure')"
-                                          xModel="tsModal.data.date_suffix" />
-                        
-                            <x-form-input name="base_earth_year"
-                                          id="ts-base-earth-year-input"
-                                          type="number"
-                                          :label="lexicon('label_setting_BaseEarthYear', 'Base Earth Year')"
-                                          placeholder="2026"
-                                          :tooltip="lexicon('tooltip_setting_BaseEarthYearInput', 'Reference Earth year used as the zero point')"
-                                          xModel="tsModal.data.base_earth_year" />
-                        
-                            <x-form-input name="base_earth_modifier"
-                                          id="ts-base-earth-modifier-input"
-                                          type="number"
-                                          :label="lexicon('label_setting_BaseEarthModifier', 'Base Earth Year Modifier')"
-                                          placeholder="0"
-                                          :tooltip="lexicon('tooltip_setting_BaseEarthModifierInput', 'Year offset added when converting stardates back to calendar dates')"
-                                          xModel="tsModal.data.base_earth_modifier" />
-                        
-                            <div x-show="tsModal.data.calculation_algorithm === 'fractional'" x-cloak>
-                                <x-form-input name="base_system_value"
-                                              id="ts-base-system-num-input"
-                                              type="number"
-                                              :label="lexicon('label_setting_BaseSystemNum', 'Base System Number')"
-                                              placeholder="100000"
-                                              :tooltip="lexicon('tooltip_setting_BaseSystemNumInput', 'Starting stardate or fractional base number')"
-                                              xModel="tsModal.data.base_system_value" />
-                            </div>
-                        
-                            <div x-show="tsModal.data.calculation_algorithm === 'fractional'" x-cloak>
-                                <x-form-input name="temporal_multiplier"
-                                              id="ts-multiplier-input"
-                                              type="number"
-                                              step="0.01"
-                                              :label="lexicon('label_setting_Multiplier', 'Multiplier')"
-                                              placeholder="1000"
-                                              :tooltip="lexicon('tooltip_setting_MultiplierInput', 'Units added per Earth year')"
-                                              xModel="tsModal.data.temporal_multiplier" />
-                            </div>
-                        </div>
+                    <p class="text-xs text-muted m-0" x-show="modals.config.hint" x-text="modals.config.hint"></p>
 
-                    <div class="border-t-actions pt-6 mt-4 flex flex-row flex-wrap items-center justify-end gap-md">
-                        <x-button type="button" 
-                                  variant="secondary" 
-                                  @click="tsModal.open = false"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_common_Cancel', 'Cancel and close modal')) }}'"
-                                  aria-label="{{ lexicon('tooltip_common_Cancel', 'Cancel and close modal') }}">
+                    <x-metadata type="text"
+                                name="configuration_payload"
+                                xModel="modals.config.configuration_payload"
+                                :label="lexicon('label_settings_ValuePayload', 'Configuration Value')"
+                                :tooltip="lexicon('tooltip_settings_ValuePayload', 'Enter the updated value for this configuration token')" />
+
+                    <x-slot:footer>
+                        <x-button type="button"
+                                  variant="secondary"
+                                  :tooltip="lexicon('tooltip_common_Cancel', 'Cancel and close modal')"
+                                  @click="closeModal('config')">
                             {{ lexicon('btn_common_Cancel', 'Cancel') }}
                         </x-button>
-                        <x-button type="submit" 
-                                  variant="primary"
-                                  ::disabled="submitting"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_setting_SaveTimeSystem', 'Save time system configuration')) }}'"
-                                  aria-label="{{ lexicon('tooltip_setting_SaveTimeSystem', 'Save time system configuration') }}"
-                                  x-text="submitting ? '{{ addslashes(lexicon('msg_common_Saving', 'Saving...')) }}' : '{{ addslashes(lexicon('btn_setting_SaveTimeSystem', 'Save System')) }}'">
-                            {{ lexicon('btn_setting_SaveTimeSystem', 'Save System') }}
-                        </x-button>
-                    </div>
-                </form>
-            </x-modal>
-        </x-slot:bottom>
 
-    </x-grid-wrapper>
-</div>
+                        <x-button type="submit"
+                                  variant="primary"
+                                  icon="bi-save"
+                                  :tooltip="lexicon('tooltip_common_Save', 'Save configuration setting')">
+                            {{ lexicon('btn_common_Save', 'Save Setting') }}
+                        </x-button>
+                    </x-slot:footer>
+                </x-meta>
+            </x-modal>
+
+            {{-- MODAL 2: CREATE / EDIT CHRONOLOGICAL ENGINE --}}
+            <x-modal show="modals.engine.open" onClose="closeModal('engine')" maxWidth="max-w-lg">
+                <x-slot:top>
+                    <span x-text="modals.engine.mode === 'edit'
+                        ? '{{ addslashes(lexicon('modal_ts_EditEngine', 'Edit Chronological Engine')) }}'
+                        : '{{ addslashes(lexicon('modal_ts_CreateEngine', 'Create Chronological Engine')) }}'"></span>
+                </x-slot:top>
+
+                <x-meta type="modal" xAction="modals.engine.action" xMethod="modals.engine.method">
+                    <x-metadata type="text"
+                                name="engine_title"
+                                xModel="modals.engine.engine_title"
+                                :label="lexicon('label_ts_EngineTitle', 'Engine Title')"
+                                :placeholder="lexicon('placeholder_ts_EngineTitle', 'e.g. TNG Stardate or 3025 Inner Sphere')"
+                                :tooltip="lexicon('tooltip_ts_EngineTitle', 'Display name of this time system')"
+                                :required="true" />
+
+                    <x-metadata type="select"
+                                name="calculation_algorithm"
+                                xModel="modals.engine.calculation_algorithm"
+                                :label="lexicon('label_ts_Algorithm', 'Calculation Algorithm')"
+                                :tooltip="lexicon('tooltip_ts_Algorithm', 'Mathematical formula used to convert real dates')">
+                        <option value="stardate">{{ lexicon('option_ts_Stardate', 'Linear Stardate / Multiplier') }}</option>
+                        <option value="year_offset">{{ lexicon('option_ts_YearOffset', 'Year Offset Calendar (e.g. +360 Years)') }}</option>
+                        <option value="custom_epoch">{{ lexicon('option_ts_CustomEpoch', 'Custom Epoch Counter') }}</option>
+                    </x-metadata>
+
+                    <div class="grid grid-cols-1 md-grid-cols-2 gap-md">
+                        <x-metadata type="text"
+                                    name="date_prefix"
+                                    xModel="modals.engine.date_prefix"
+                                    :label="lexicon('label_ts_DatePrefix', 'Date Prefix')"
+                                    :placeholder="lexicon('placeholder_ts_DatePrefix', 'e.g. SD ')"
+                                    :tooltip="lexicon('tooltip_ts_DatePrefix', 'Text prepended before the calculated date')" />
+
+                        <x-metadata type="text"
+                                    name="date_suffix"
+                                    xModel="modals.engine.date_suffix"
+                                    :label="lexicon('label_ts_DateSuffix', 'Date Suffix')"
+                                    :placeholder="lexicon('placeholder_ts_DateSuffix', 'e.g. ABY / BBY')"
+                                    :tooltip="lexicon('tooltip_ts_DateSuffix', 'Text appended after the calculated date')" />
+                    </div>
+
+                    <div class="grid grid-cols-1 md-grid-cols-2 gap-md">
+                        <x-metadata type="number"
+                                    name="base_earth_year"
+                                    xModel="modals.engine.base_earth_year"
+                                    :label="lexicon('label_ts_BaseEarthYear', 'Base Earth Year')"
+                                    :tooltip="lexicon('tooltip_ts_BaseEarthYear', 'Reference real-world year (e.g. 2026)')"
+                                    :required="true" />
+
+                        <x-metadata type="number"
+                                    name="base_earth_modifier"
+                                    xModel="modals.engine.base_earth_modifier"
+                                    :label="lexicon('label_ts_BaseModifier', 'Base Earth Modifier')"
+                                    :tooltip="lexicon('tooltip_ts_BaseModifier', 'Offset modifier applied to the base Earth year')" />
+                    </div>
+
+                    <div class="grid grid-cols-1 md-grid-cols-2 gap-md">
+                        <x-metadata type="number"
+                                    name="base_system_value"
+                                    xModel="modals.engine.base_system_value"
+                                    :label="lexicon('label_ts_BaseSystemValue', 'Base In-Universe Value')"
+                                    :tooltip="lexicon('tooltip_ts_BaseSystemValue', 'Starting stardate or in-universe year at the base Earth year')" />
+
+                        <x-metadata type="number"
+                                    name="temporal_multiplier"
+                                    xModel="modals.engine.temporal_multiplier"
+                                    :label="lexicon('label_ts_TemporalMultiplier', 'Temporal Multiplier')"
+                                    :tooltip="lexicon('tooltip_ts_TemporalMultiplier', 'Rate of in-universe time progression relative to real time')" />
+                    </div>
+
+                    <x-metadata type="checkbox"
+                                name="is_active"
+                                value="1"
+                                xModel="modals.engine.is_active"
+                                :label="lexicon('label_ts_IsActive', 'Set as Active Chronological Engine')"
+                                :tooltip="lexicon('tooltip_ts_IsActive', 'Enable this engine for portal-wide date conversions')" />
+
+                    <x-slot:footer>
+                        <x-button type="button"
+                                  variant="secondary"
+                                  :tooltip="lexicon('tooltip_common_Cancel', 'Cancel and close modal')"
+                                  @click="closeModal('engine')">
+                            {{ lexicon('btn_common_Cancel', 'Cancel') }}
+                        </x-button>
+
+                        <x-button type="submit"
+                                  variant="primary"
+                                  icon="bi-save"
+                                  :tooltip="lexicon('tooltip_common_Save', 'Save chronological engine')">
+                            {{ lexicon('btn_common_Save', 'Save Engine') }}
+                        </x-button>
+                    </x-slot:footer>
+                </x-meta>
+            </x-modal>
+
+        </div>
+    </x-slot:content>
+</x-grid-wrapper>
 @endsection
