@@ -14,7 +14,7 @@
     @endphp
 
     <!-- Top Page Header Bar -->
-    <x-page-header :title="lexicon('public_label_dashboard', 'Dashboard & Profile')" icon="bi-person-Lines-fill" />
+    <x-page-header :title="lexicon('public_label_dashboard', 'Dashboard & Profile')" icon="bi-person-lines-fill" />
 
     <x-grid-wrapper :book="$systemBook">
 
@@ -27,16 +27,10 @@
                        :title="lexicon('label_Dashboard_ProfileInformation', 'Profile Information')"
                        icon="bi-person-vcard"
                        :open="false">
-                    <form id="profile-update-form"
-                          method="POST"
-                          action="{{ route('profile.update') }}"
-                          x-data="ajaxForm"
-                          x-ref="profileForm"
-                          @submit.prevent="submit"
-                          class="flex flex-col gap-md">
-                        @csrf
-                        @method('patch')
-
+                    <x-meta id="profile-update-form"
+                            :action="route('profile.update')"
+                            method="PATCH"
+                            x-ref="profileForm">
                         <div class="flex flex-col gap-md" x-ref="profileFormFields">
                             <x-metadata type="text"
                                         name="name"
@@ -84,14 +78,14 @@
                             </div>
                         </div>
 
-                        <div class="border-t-actions pt-4 mt-2 flex flex-row flex-wrap items-center justify-end gap-sm">
+                        <x-slot:bottom>
                             <x-button type="submit"
                                       variant="primary"
                                       :tooltip="lexicon('tooltip_Dashboard_SaveProfile', 'Save your profile details')">
                                 {{ lexicon('btn_common_SaveChanges', 'Save Changes') }}
                             </x-button>
-                        </div>
-                    </form>
+                        </x-slot:bottom>
+                    </x-meta>
                 </x-tab>
 
                 <!-- 2. Leave of Absence (LOA / ELOA) Panel -->
@@ -145,13 +139,7 @@
                             {{ lexicon('msg_Dashboard_LoaDescription', 'Going away? Set a return date to place your characters on LOA (up to 30 days) or ELOA (over 30 days) and log it in your service record.') }}
                         </span>
 
-                        <form method="POST"
-                              action="{{ route('dashboard.loa') }}"
-                              x-data="ajaxForm"
-                              @submit.prevent="submit"
-                              class="flex flex-col gap-md">
-                            @csrf
-
+                        <x-meta :action="route('dashboard.loa')" method="POST">
                             <x-metadata type="select"
                                         id="is_on_loa"
                                         name="is_on_loa"
@@ -195,14 +183,14 @@
                                             " />
                             </div>
 
-                            <div class="border-t-actions pt-4 mt-2 flex flex-row flex-wrap items-center justify-end gap-sm">
+                            <x-slot:bottom>
                                 <x-button type="submit"
                                           variant="primary"
                                           :tooltip="lexicon('tooltip_Dashboard_UpdateLoa', 'Update your duty availability and character statuses')">
                                     {{ lexicon('btn_Dashboard_UpdateLoa', 'Update Availability') }}
                                 </x-button>
-                            </div>
-                        </form>
+                            </x-slot:bottom>
+                        </x-meta>
                     </div>
                 </x-tab>
 
@@ -211,13 +199,7 @@
                        :title="lexicon('label_Profile_Preferences', 'Account Preferences')"
                        icon="bi-sliders"
                        :open="false">
-                    <form method="POST"
-                          action="{{ route('profile.update') }}"
-                          x-data="ajaxForm"
-                          @submit.prevent="submit"
-                          class="flex flex-col gap-md">
-                        @csrf
-                        @method('patch')
+                    <x-meta :action="route('profile.update')" method="PATCH">
                         <x-metadata type="hidden" name="name" :value="$currentUser?->name" />
                         <x-metadata type="hidden" name="email" :value="$currentUser?->email" />
 
@@ -226,7 +208,7 @@
                                 <span class="text-xs font-bold text-h">{{ lexicon('label_Profile_ContentShieldBypass', 'Auto-Bypass Mature Content Shield') }}</span>
                                 <span class="text-xs text-muted">{{ lexicon('msg_Profile_ContentShieldHint', 'Automatically reveal mature content without clicking warning gates.') }}</span>
                             </div>
-                            <input type="hidden" name="content_shield_bypass" value="0">
+                            <x-metadata type="hidden" name="content_shield_bypass" value="0" />
                             <x-metadata type="checkbox"
                                         id="content_shield_bypass"
                                         name="content_shield_bypass"
@@ -235,14 +217,14 @@
                                         :checked="(bool) old('content_shield_bypass', $currentUser?->content_shield_bypass)" />
                         </div>
 
-                        <div class="border-t-actions pt-4 mt-2 flex flex-row flex-wrap items-center justify-end gap-sm">
+                        <x-slot:bottom>
                             <x-button type="submit"
                                       variant="primary"
                                       :tooltip="lexicon('tooltip_Dashboard_SavePreferences', 'Save your account preferences')">
                                 {{ lexicon('btn_common_SaveChanges', 'Save Changes') }}
                             </x-button>
-                        </div>
-                    </form>
+                        </x-slot:bottom>
+                    </x-meta>
                 </x-tab>
 
             </div>
@@ -257,15 +239,9 @@
                    class="h-full">
                 <div class="flex flex-col gap-md">
                     <span class="text-sm text-muted block">{{ lexicon('msg_Dashboard_UpdatePassword', 'Ensure your account is using a long, random password to stay secure.') }}</span>
-                    <form method="POST"
-                          action="{{ route('password.update') }}"
-                          x-data="ajaxForm"
-                          x-ref="passwordForm"
-                          @submit.prevent="submit"
-                          class="flex flex-col gap-md">
-                        @csrf
-                        @method('put')
-
+                    <x-meta :action="route('password.update')"
+                            method="PUT"
+                            x-ref="passwordForm">
                         <x-metadata type="password"
                                     id="current_password"
                                     name="current_password"
@@ -287,14 +263,14 @@
                                     autocomplete="new-password"
                                     :required="true" />
 
-                        <div class="border-t-actions pt-4 mt-2 flex flex-row flex-wrap items-center justify-end gap-sm">
+                        <x-slot:bottom>
                             <x-button type="submit"
                                       variant="primary"
                                       :tooltip="lexicon('tooltip_Dashboard_UpdatePassword', 'Save your new account password')">
                                 {{ lexicon('btn_common_UpdatePassword', 'Update Password') }}
                             </x-button>
-                        </div>
-                    </form>
+                        </x-slot:bottom>
+                    </x-meta>
                 </div>
             </x-tab>
         </x-slot:updatepassword>
@@ -308,29 +284,23 @@
                    class="border-danger h-full">
                 <div class="flex flex-col gap-md">
                     <span class="text-sm text-muted block">{{ lexicon('msg_Dashboard_DeleteAccount', 'Once your account is deleted, all resources and data will be permanently deleted.') }}</span>
-                    <form method="POST"
-                          action="{{ route('profile.destroy') }}"
-                          x-data="ajaxForm"
-                          x-ref="deleteAccountForm"
-                          @submit.prevent="submit"
-                          class="flex flex-col gap-md">
-                        @csrf
-                        @method('delete')
-
+                    <x-meta :action="route('profile.destroy')"
+                            method="DELETE"
+                            x-ref="deleteAccountForm">
                         <x-metadata type="password"
                                     id="delete_password"
                                     name="password"
                                     :label="lexicon('label_common_Password', 'Password')"
                                     :required="true" />
 
-                        <div class="border-t-actions pt-4 mt-2 flex flex-row flex-wrap items-center justify-end gap-sm">
+                        <x-slot:bottom>
                             <x-button type="submit"
                                       variant="danger"
                                       :tooltip="lexicon('tooltip_Dashboard_DeleteAccount', 'Permanently delete your user account and data')">
                                 {{ lexicon('btn_Dashboard_PermanentlyDeleteAccount', 'Permanently Delete Account') }}
                             </x-button>
-                        </div>
-                    </form>
+                        </x-slot:bottom>
+                    </x-meta>
                 </div>
             </x-tab>
         </x-slot:deleteaccount>

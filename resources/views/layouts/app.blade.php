@@ -20,6 +20,9 @@
     <!-- Dynamic Skin Favicon -->
     <link rel="icon" type="image/png" href="{{ asset('skins/' . $currentSkin . '/images/site/favicon.png') }}">
 
+    <!-- Skin CSS (Ready to uncomment when building is complete) -->
+    <!-- <link rel="stylesheet" href="{{ asset('skins/' . $currentSkin . '/css/theme.css') }}?v={{ $themeVersion }}"> -->
+
     <!-- Vite handles 3rd-party vendor styles & core CSS/JS -->
     @vite([
         'resources/css/app.css',
@@ -61,10 +64,10 @@
                  :violenceRatings="$violenceRatings ?? collect()" />
     @endauth
 
-    @stack('scripts')
-
     @guest
-        @includeIf('layouts.partials.auth-modal')
+        <x-modal type="auth" />
     @endguest
+
+    @stack('scripts')
 </body>
 </html>

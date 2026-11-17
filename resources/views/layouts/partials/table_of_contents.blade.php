@@ -20,12 +20,10 @@
 
             <!-- Primary Navigation Links -->
             <div data-global-nav="primary" class="flex flex-row flex-wrap items-center gap-md">
-                @foreach($topLevelNav as $entry)
+                @foreach($topLevelNav as$entry)
                     @php
-                        $children = $childNav->get($entry->id, collect());
-                        $entryLabel = lexicon(
-                            $entry->translation_code_key,
-                            \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $entry->translation_code_key))
+                        $children =$childNav->get($entry->id, collect());$entryLabel = lexicon(
+                            $entry->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '',$entry->translation_code_key))
                         );
                     @endphp
 
@@ -51,11 +49,11 @@
                                  x-transition.opacity.duration.200ms
                                  x-cloak
                                  class="bg-panel-body border-panel border-rounded shadow-panel flex flex-col absolute top-4 z-100 mt-4 w-48 overflow-hidden">
-                                @foreach($children as $child)
+                                @foreach($children as$child)
                                     <a href="{{ $child->destination_url }}"
                                        target="{{ $child->window_target }}"
                                        class="inline-block p-2 text-sm text-p border-b-table-row hover-bg-panel-hover hover-text-h transition-colors no-underline">
-                                        {{ lexicon($child->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $child->translation_code_key))) }}
+                                        {{ lexicon($child->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '',$child->translation_code_key))) }}
                                     </a>
                                 @endforeach
                             </div>
@@ -74,10 +72,7 @@
             <div class="flex flex-row flex-wrap gap-sm items-center justify-center">
                 @auth
                     @php
-                        $user = auth()->user();
-                        $hasTwitter = !empty($user->twitter_handle);
-                        $hasFacebook = !empty($user->facebook_handle);
-                        $currentBookAddress = urlencode(request()->fullUrl());
+                        $user = auth()->user();$hasTwitter = !empty($user->twitter_handle);$hasFacebook = !empty($user->facebook_handle);$currentBookAddress = urlencode(request()->fullUrl());
                     @endphp
 
                     <x-button type="button"
@@ -94,11 +89,11 @@
                               :tooltip="lexicon('tooltip_nav_WriteFolio', 'Write a new story folio')"
                               @click="$dispatch('open-folio-modal')" />
 
-                    @if($hasTwitter || $hasFacebook)
+                    @if($hasTwitter \vert{}\vert{}$hasFacebook)
                         <div class="hidden-mobile flex flex-row items-center gap-xs">
                             @if($hasTwitter)
                                 @php $cleanTwitter = ltrim($user->twitter_handle, '@'); @endphp
-                                <a href="https://twitter.com/intent/tweet?text={{ $currentBookAddress }}&via={{ $cleanTwitter }}"
+                                <a href="https://twitter.com/intent/tweet?text={{ $currentBookAddress }}&via={{$cleanTwitter }}"
                                    target="_blank"
                                    rel="noopener noreferrer"
                                    class="text-muted hover-text-accent cursor-pointer flex items-center justify-center no-underline p-1"
@@ -168,18 +163,17 @@
                 @endguest
 
                 @auth
-                    <form method="POST" action="/logout">
-                        @csrf
+                    <x-meta action="/logout" method="POST" :ajax="false">
                         <x-button type="submit"
                                   variant="danger"
                                   class="w-full"
                                   :tooltip="lexicon('tooltip_auth_Logout', 'Sign out of your account')">
                             {{ lexicon('btn_common_Logout', 'Logout') }}
                         </x-button>
-                    </form>
+                    </x-meta>
                 @endauth
 
-                @foreach($groupedDrawerNav as $group => $entries)
+                @foreach($groupedDrawerNav as $group =>$entries)
                     @if($group)
                         <div class="flex flex-col gap-sm mb-4" x-data="{ expanded: false }">
                             <button type="button"
@@ -187,16 +181,15 @@
                                     class="text-xs font-bold text-muted uppercase text-wider border-b-panel bg-transparent hover-text-h flex flex-row flex-wrap items-center justify-between w-full p-2 cursor-pointer border-rounded-sm"
                                     x-tooltip="'{{ addslashes(lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel')) }}'"
                                     title="{{ lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel') }}">
-                                <span>{{ lexicon('label_nav_group_' . \Illuminate\Support\Str::slug($group, '_'), $group) }}</span>
+                                <span>{{ lexicon('label_nav_group_' . \Illuminate\Support\Str::slug($group, '_'),$group) }}</span>
                                 <span class="text-xs text-muted" x-text="expanded ? '▼' : '▶'"></span>
                             </button>
 
                             <div class="flex flex-col gap-xs" x-show="expanded" x-collapse x-cloak>
-                                @foreach($entries as $entry)
+                                @foreach($entries as$entry)
                                     @php
                                         $drawerEntryLabel = lexicon(
-                                            $entry->translation_code_key,
-                                            \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $entry->translation_code_key))
+                                            $entry->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '',$entry->translation_code_key))
                                         );
                                     @endphp
                                     @if($entry->destination_url === '/folios/create')
@@ -223,11 +216,10 @@
                         </div>
                     @else
                         <div class="flex flex-col gap-xs mb-4">
-                            @foreach($entries as $entry)
+                            @foreach($entries as$entry)
                                 @php
                                     $drawerEntryLabel = lexicon(
-                                        $entry->translation_code_key,
-                                        \Illuminate\Support\Str::headline(str_replace('nav_link_', '', $entry->translation_code_key))
+                                        $entry->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '',$entry->translation_code_key))
                                     );
                                 @endphp
                                 @if($entry->destination_url === '/folios/create')
