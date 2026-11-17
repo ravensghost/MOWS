@@ -1,255 +1,302 @@
 // resources/js/managers/divisionManager.js
-export default (config = {}) => ({
-    // 1. State Properties Upfront (Unified Modals & State Contract)
-    modals: {
-        section: {
-            open: false,
-            mode: 'create',
-            id: '',
-            division_title: '',
-            division_base_colour: '#374151ff',
-            division_description: '',
-            division_sort_order: 0,
-            is_visible: true,
-            division_catalogue_id: '',
-            action: '/admin/divisions',
-            method: 'POST'
+
+export default function divisionManager(config = {}) {
+    const divisionState = {
+        isOpen: false,
+        open: false,
+        mode: 'create',
+        id: '',
+        division_title: '',
+        division_base_colour: '#374151FF',
+        division_description: '',
+        division_sort_order: 0,
+        is_visible: true,
+        division_catalogue_id: '',
+        insignia_catalogue_id: '',
+        action: '/admin/divisions',
+        method: 'POST'
+    };
+
+    const assignmentState = {
+        isOpen: false,
+        open: false,
+        mode: 'create',
+        id: '',
+        division_id: '',
+        assignment_title: '',
+        assignment_description: '',
+        maximum_occupants: 1,
+        max_assignees: 1,
+        is_recruitment_open: true,
+        is_open: true,
+        is_visible: true,
+        division_title: '',
+        division_base_colour: '#374151FF',
+        action: '/admin/assignments',
+        method: 'POST'
+    };
+
+    return {
+        // 1. State Properties Upfront (Unified Modals & Search Contract)
+        modals: {
+            division: divisionState,
+            section: divisionState,
+            assignment: assignmentState,
+            position: assignmentState,
+            catalogue: {
+                isOpen: false,
+                open: false,
+                mode: 'create',
+                id: '',
+                catalogue_title: '',
+                catalogue_description: '',
+                is_visible: true,
+                action: '/admin/divisions/catalogues',
+                method: 'POST'
+            },
+            import: {
+                isOpen: false,
+                open: false,
+                mode: 'create',
+                action: '/admin/divisions/import',
+                method: 'POST'
+            }
         },
-        position: {
-            open: false,
-            mode: 'create',
-            id: '',
-            division_id: '',
-            assignment_title: '',
-            assignment_description: '',
-            max_assignees: 1,
-            is_open: true,
-            is_visible: true,
-            division_title: '',
-            division_base_colour: '',
-            action: '/admin/assignments',
-            method: 'POST'
+        searchQuery: '',
+        searchHelperInstance: null,
+        filteredIds: null,
+        isGeneratingAi: false,
+        divisionTomSelect: null,
+        aiEndpoint: config.aiEndpoint || '/admin/divisions/generate-description',
+        emptyNameMsg: config.emptyNameMsg || 'Please enter a Division Title first.',
+        importMode: 'merge',
+
+        // 2. Lifecycle Hook
+        init() {
+            this.initSearch();
+            this.$nextTick(() => {
+                this.initTomSelect();
+            });
         },
-        import: {
-            open: false,
-            mode: 'create',
-            action: '/admin/divisions/import',
-            method: 'POST'
-        }
-    },
-    modal: null,
-    searchQuery: '',
-    isGeneratingAi: false,
-    sectionTomSelect: null,
-    aiEndpoint: config.aiEndpoint || '/admin/sections/generate-description',
-    emptyNameMsg: config.emptyNameMsg || 'Please enter a Section Name first.',
-    importMode: 'merge',
 
-    // 2. Lifecycle Hook
-    init() {
-        this.$nextTick(() => {
-            this.initTomSelect();
-        });
-    },
+        // 3. Search & Filtering (Fuse.js Integration)
+        initSearch() {
+            if (window.Search && this.$el && this.$el.querySelector('[data-search-item], [data-division-item]')) {
+                try {
+                    this.searchHelperInstance = window.Search.create(
+                        '[data-search-item], [data-division-item]',
+                        ['division_title', 'division_description', 'assignment_title'],
+                        { threshold: 0.35 }
+                    );
+                } catch (e) {
+                    this.searchHelperInstance = null;
+                }
+            }
+            this.$watch('searchQuery', (val) => {
+                if (!val.trim() || !this.searchHelperInstance) {
+                    this.filteredIds = null;
+                    return;
+                }
+                const results = this.searchHelperInstance.search(val.trim());
+                this.filteredIds = results ? results.map(id => Number(id)) : [];
+            });
+        },
 
-    // 3. Search & Filtering (Fuse.js Integration)
-    matchesSearch(secName, secDesc, posNames) {
-        if (!this.searchQuery.trim()) return true;
-        const q = this.searchQuery.trim();
-        const haystack = [secName || '', secDesc || '', ...(posNames || [])];
+        matchesSearch(divTitle, divDesc, assignTitles = []) {
+            const q = this.searchQuery.trim().toLowerCase();
+            if (!q) return true;
+            const haystack = [divTitle || '', divDesc || '', ...(Array.isArray(assignTitles) ? assignTitles : [])];
+            return haystack.some(text => String(text).toLowerCase().includes(q));
+        },
 
-        if (window.Fuse) {
-            const fuse = new window.Fuse(
-                haystack.map(item => ({ text: String(item) })),
-                { keys: ['text'], threshold: 0.35 }
+        isItemVisible(assignTitleOrId, assignDesc = '', divTitle = '') {
+            const q = this.searchQuery.trim().toLowerCase();
+            if (!q) return true;
+            if (typeof assignTitleOrId === 'number' && this.filteredIds !== null) {
+                return this.filteredIds.includes(Number(assignTitleOrId));
+            }
+            if (String(divTitle || '').toLowerCase().includes(q)) return true;
+            return [assignTitleOrId || '', assignDesc || ''].some(text =>
+                String(text).toLowerCase().includes(q)
             );
-            return fuse.search(q).length > 0;
-        }
-        return haystack.some(text => String(text).toLowerCase().includes(q.toLowerCase()));
-    },
+        },
 
-    isItemVisible(posName, posDesc, secName) {
-        if (!this.searchQuery.trim()) return true;
-        const q = this.searchQuery.trim();
-        if (String(secName || '').toLowerCase().includes(q.toLowerCase())) return true;
-        const haystack = [posName || '', posDesc || ''];
+        initTomSelect() {
+            const selectEl = document.getElementById('edit_assignment_division_id') || document.getElementById('edit_position_division_id');
+            if (selectEl && window.Select && !this.divisionTomSelect) {
+                this.divisionTomSelect = window.Select.init(selectEl, {
+                    create: false,
+                    onChange: (val) => {
+                        this.modals.assignment.division_id = val;
+                    }
+                });
+            }
+        },
 
-        if (window.Fuse) {
-            const fuse = new window.Fuse(
-                haystack.map(item => ({ text: String(item) })),
-                { keys: ['text'], threshold: 0.35 }
-            );
-            return fuse.search(q).length > 0;
-        }
-        return haystack.some(text => String(text).toLowerCase().includes(q.toLowerCase()));
-    },
-
-    initTomSelect() {
-        const selectEl = document.getElementById('edit_position_division_id');
-        if (selectEl && window.Select && !this.sectionTomSelect) {
-            this.sectionTomSelect = window.Select.init(selectEl, {
-                create: false,
-                onChange: (val) => {
-                    this.modals.position.division_id = val;
+        refreshAutosize() {
+            this.$nextTick(() => {
+                if (window.Autosize) {
+                    document.querySelectorAll('textarea[name="division_description"], textarea[name="assignment_description"]').forEach(el => {
+                        window.Autosize.update(el);
+                    });
                 }
             });
-        }
-    },
+        },
 
-    refreshAutosize() {
-        this.$nextTick(() => {
-            if (window.Autosize) {
-                document.querySelectorAll('textarea[name="division_description"], textarea[name="assignment_description"]').forEach(el => {
-                    window.Autosize.update(el);
-                });
-            }
-        });
-    },
+        // 4. Modal & Action Handlers (Using window.Modal & window.Fetch)
+        openModal(mode = 'create', data = {}, type = 'division') {
+            const divisionBaseUrl = '/admin/divisions';
+            const assignmentBaseUrl = '/admin/assignments';
 
-    // 4. Modal Handlers (Using window.Modal utility)
-    openModal(mode = 'create', data = {}, type = 'division') {
-        const divisionBaseUrl = '/admin/divisions';
-        const assignmentBaseUrl = '/admin/assignments';
-
-        if (type === 'division') {
-            if (mode === 'create') {
-                window.Modal.create(this.modals.section, {
-                    division_title: '',
-                    division_base_colour: '#374151ff',
-                    division_description: '',
-                    division_sort_order: 0,
-                    is_visible: true,
-                    division_catalogue_id: ''
-                }, divisionBaseUrl);
-                this.modals.section.method = 'POST';
-                this.modal = 'section-create';
-            } else if (mode === 'edit') {
-                window.Modal.edit(this.modals.section, {
-                    id: data.id,
-                    division_title: data.division_title || data.name || '',
-                    division_base_colour: data.division_base_colour || data.color || '#374151ff',
-                    division_description: data.division_description || data.description || '',
-                    division_sort_order: data.division_sort_order ?? data.order ?? 0,
-                    is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true,
-                    division_catalogue_id: data.division_catalogue_id ?? ''
-                }, (id) => `${divisionBaseUrl}/${id}`);
-                this.modals.section.method = 'PUT';
-                this.modal = 'section-edit';
-            }
-            this.modals.section.open = true;
-            this.refreshAutosize();
-        } else if (type === 'assignment') {
-            if (mode === 'create') {
-                window.Modal.create(this.modals.position, {
-                    division_id: data.division_id,
-                    division_title: data.division_title || data.section_name || '',
-                    division_base_colour: data.division_base_colour || data.section_color || '#374151ff',
-                    assignment_title: '',
-                    assignment_description: '',
-                    max_assignees: 1,
-                    is_open: true,
-                    is_visible: true
-                }, assignmentBaseUrl);
-                this.modals.position.method = 'POST';
-                this.modal = 'position-create';
+            if (type === 'division' || type === 'section') {
+                if (mode === 'create') {
+                    window.Modal.create(this.modals.division, {
+                        division_title: '',
+                        division_base_colour: '#374151FF',
+                        division_description: '',
+                        division_sort_order: 0,
+                        is_visible: true,
+                        division_catalogue_id: data.division_catalogue_id ?? '',
+                        insignia_catalogue_id: data.insignia_catalogue_id ?? ''
+                    }, divisionBaseUrl);
+                } else {
+                    window.Modal.edit(this.modals.division, {
+                        id: data.id,
+                        division_title: data.division_title ?? data.name ?? '',
+                        division_base_colour: data.division_base_colour ?? data.color ?? '#374151FF',
+                        division_description: data.division_description ?? data.description ?? '',
+                        division_sort_order: data.division_sort_order ?? data.order ?? 0,
+                        is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true,
+                        division_catalogue_id: data.division_catalogue_id ?? '',
+                        insignia_catalogue_id: data.insignia_catalogue_id ?? ''
+                    }, (id) => `${divisionBaseUrl}/${id}`);
+                }
                 this.refreshAutosize();
-            } else if (mode === 'edit') {
-                window.Modal.edit(this.modals.position, {
-                    id: data.id,
-                    division_id: String(data.division_id),
-                    assignment_title: data.assignment_title || data.name || '',
-                    assignment_description: data.assignment_description || data.description || '',
-                    max_assignees: data.max_assignees ?? data.capacity ?? 1,
-                    is_open: Boolean(data.is_open),
-                    is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true
-                }, (id) => `${assignmentBaseUrl}/${id}`);
-                this.modals.position.method = 'PUT';
-                this.modal = 'position-edit';
+                return;
+            }
 
-                this.$nextTick(() => {
-                    const selectEl = document.getElementById('edit_position_division_id');
-                    if (selectEl && window.Select) {
-                        window.Select.setValue(selectEl, String(data.division_id), true);
-                    }
+            if (type === 'assignment' || type === 'position') {
+                if (mode === 'create') {
+                    window.Modal.create(this.modals.assignment, {
+                        division_id: data.division_id ?? '',
+                        division_title: data.division_title ?? data.section_name ?? '',
+                        division_base_colour: data.division_base_colour ?? data.section_color ?? '#374151FF',
+                        assignment_title: '',
+                        assignment_description: '',
+                        maximum_occupants: 1,
+                        max_assignees: 1,
+                        is_recruitment_open: true,
+                        is_open: true,
+                        is_visible: true
+                    }, assignmentBaseUrl);
                     this.refreshAutosize();
+                } else {
+                    const maxOcc = data.maximum_occupants ?? data.max_assignees ?? data.capacity ?? 1;
+                    const isOpen = data.is_recruitment_open !== undefined
+                        ? Boolean(data.is_recruitment_open)
+                        : Boolean(data.is_open ?? true);
+
+                    window.Modal.edit(this.modals.assignment, {
+                        id: data.id,
+                        division_id: String(data.division_id ?? ''),
+                        assignment_title: data.assignment_title ?? data.name ?? '',
+                        assignment_description: data.assignment_description ?? data.description ?? '',
+                        maximum_occupants: maxOcc,
+                        max_assignees: maxOcc,
+                        is_recruitment_open: isOpen,
+                        is_open: isOpen,
+                        is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true
+                    }, (id) => `${assignmentBaseUrl}/${id}`);
+
+                    this.$nextTick(() => {
+                        const selectEl = document.getElementById('edit_assignment_division_id') || document.getElementById('edit_position_division_id');
+                        if (selectEl && window.Select) {
+                            window.Select.setValue(selectEl, String(data.division_id ?? ''), true);
+                        }
+                        this.refreshAutosize();
+                    });
+                }
+                return;
+            }
+
+            if (type === 'catalogue') {
+                const catalogueBaseUrl = `${divisionBaseUrl}/catalogues`;
+                if (mode === 'edit') {
+                    window.Modal.edit(this.modals.catalogue, data, (id) => `${catalogueBaseUrl}/${id}`);
+                } else {
+                    window.Modal.create(this.modals.catalogue, {
+                        catalogue_title: '',
+                        catalogue_description: '',
+                        is_visible: true
+                    }, catalogueBaseUrl);
+                }
+                return;
+            }
+
+            if (type === 'import') {
+                window.Modal.create(this.modals.import, {}, `${divisionBaseUrl}/import`);
+            }
+        },
+
+        closeModal(target = null) {
+            window.Modal.close(this.modals, target);
+        },
+
+        async generateAiDescription() {
+            const title = this.modals.division.division_title || '';
+            if (!title.trim()) {
+                if (window.Swal && typeof window.Swal.fire === 'function') {
+                    window.Swal.fire({
+                        icon: 'warning',
+                        title: this.emptyNameMsg,
+                        ...window.Swal.themeConfig()
+                    });
+                }
+                return;
+            }
+
+            this.isGeneratingAi = true;
+            try {
+                const { ok, data } = await window.Fetch.post(this.aiEndpoint, {
+                    name: title,
+                    division_title: title
+                }, {
+                    loading: false,
+                    showError: false
                 });
+
+                if (ok && data && (data.division_description || data.description)) {
+                    this.modals.division.division_description = data.division_description || data.description;
+                    this.refreshAutosize();
+                }
+            } catch (error) {
+                console.error('[DivisionManager] AI description generation failed:', error);
+            } finally {
+                this.isGeneratingAi = false;
             }
-            this.modals.position.open = true;
-        } else if (type === 'import') {
-            window.Modal.create(this.modals.import, {}, `${divisionBaseUrl}/import`);
-            this.modals.import.open = true;
-            this.modal = 'import';
-        }
-    },
+        },
 
-    closeModal() {
-        window.Modal.close(this.modals.section);
-        window.Modal.close(this.modals.position);
-        window.Modal.close(this.modals.import);
-        this.modals.section.open = false;
-        this.modals.position.open = false;
-        this.modals.import.open = false;
-        this.modal = null;
-    },
-
-    async generateAiDescription() {
-        const title = this.modals.section.division_title || '';
-        if (!title.trim()) {
-            if (window.Swal && typeof window.Swal.fire === 'function') {
-                window.Swal.fire({
-                    icon: 'warning',
-                    title: this.emptyNameMsg,
-                    ...window.Swal.themeConfig()
-                });
+        async handleImportSuccess(response) {
+            this.closeModal('import');
+            if (window.Swal && typeof window.Swal.toast === 'function') {
+                window.Swal.toast('success', response?.message || 'Divisions and assignments imported successfully.');
             }
-            return;
-        }
+            await this.refreshDOM();
+        },
 
-        this.isGeneratingAi = true;
-        try {
-            const { ok, data } = await window.Fetch.post(this.aiEndpoint, { name: title, division_title: title }, {
-                loading: false,
-                showError: false
-            });
-
-            if (ok && data && (data.description || data.division_description)) {
-                this.modals.section.division_description = data.division_description || data.description;
-                this.refreshAutosize();
-            }
-        } catch (error) {
-            console.error(error);
-        } finally {
-            this.isGeneratingAi = false;
-        }
-    },
-
-    handleImportSuccess(response) {
-        this.closeModal();
-        if (window.Swal && typeof window.Swal.fire === 'function') {
-            window.Swal.fire({
-                icon: 'success',
-                title: 'Import Successful',
-                text: response.message || 'Sections and positions have been imported.',
-                ...window.Swal.themeConfig()
-            }).then(() => {
-                window.location.reload();
-            });
-        } else {
-            window.location.reload();
-        }
-    },
-
-    // 5. DOM Refresh Handler (sanitize = false)
-    async refreshDOM() {
-        if (typeof window.updateDOM === 'function') {
-            await window.updateDOM(this.$refs, ['sectionsContainer'], () => {
+        // 5. DOM Refresh Handler (sanitize = false)
+        async refreshDOM() {
+            if (typeof window.updateDOM === 'function') {
+                await window.updateDOM(this.$refs, ['sectionsContainer', 'divisionsContainer'], () => {
+                    this.closeModal();
+                    this.$nextTick(() => {
+                        this.initSearch();
+                        this.initTomSelect();
+                    });
+                }, false);
+            } else {
                 this.closeModal();
-                this.$nextTick(() => {
-                    this.initTomSelect();
-                });
-            }, false);
-        } else {
-            this.closeModal();
+            }
         }
-    }
-});
+    };
+}

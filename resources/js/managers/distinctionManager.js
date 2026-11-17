@@ -1,27 +1,36 @@
 // resources/js/managers/distinctionManager.js
+
 export default function distinctionManager() {
+    const defaultDistinctionState = {
+        isOpen: false,
+        open: false,
+        mode: 'create',
+        id: null,
+        distinction_title: '',
+        distinction_description: '',
+        scope_target: 'BOTH',
+        distinction_catalogue_id: '',
+        distinction_base_colour: '#1a1a1aFF',
+        mid_layer_mode: 'css',
+        mid_layer_asset: '',
+        mid_layer_modifier: 'original',
+        mid_layer_hue: '#1a1a1aFF',
+        top_layer_mode: 'image',
+        top_layer_asset: '',
+        top_layer_modifier: '',
+        top_layer_hue: '#ffffffFF',
+        available_images: [],
+        loading_images: false,
+        action: '/admin/distinctions',
+        method: 'POST'
+    };
+
     return {
-        // 1. State Properties Upfront (Unified Modals & State Contract)
+        // 1. State Properties Upfront (Unified Modals & Search Contract)
         modals: {
-            distinction: {
-                open: false,
-                mode: 'create',
-                id: null,
-                distinction_title: '',
-                distinction_description: '',
-                scope_target: 'BOTH',
-                distinction_catalogue_id: '',
-                distinction_base_colour: '#1a1a1a',
-                mid_layer_mode: 'css',
-                mid_layer_asset: '',
-                mid_layer_modifier: 'original',
-                top_layer_mode: '',
-                top_layer_asset: '',
-                top_layer_modifier: '',
-                action: '/admin/distinctions',
-                method: 'POST'
-            },
+            distinction: { ...defaultDistinctionState },
             catalogue: {
+                isOpen: false,
                 open: false,
                 mode: 'create',
                 id: null,
@@ -30,21 +39,6 @@ export default function distinctionManager() {
                 method: 'POST'
             }
         },
-        modalOpen: false,
-        catalogueModalOpen: false,
-        isEdit: false,
-        id: null,
-        distinction_title: '',
-        distinction_description: '',
-        scope_target: 'BOTH',
-        distinction_catalogue_id: '',
-        distinction_base_colour: '#1a1a1a',
-        mid_layer_mode: 'css',
-        mid_layer_asset: '',
-        mid_layer_modifier: 'original',
-        top_layer_mode: '',
-        top_layer_asset: '',
-        top_layer_modifier: '',
         available_images: [],
         active_skin: 'default',
         loading_images: false,
@@ -60,10 +54,10 @@ export default function distinctionManager() {
 
         // 3. Search & Filtering (Fuse.js Integration)
         initSearch() {
-            if (window.Search && this.$el && this.$el.querySelector('[data-distinction-item]')) {
+            if (window.Search && this.$el && this.$el.querySelector('[data-search-item], [data-distinction-item]')) {
                 try {
                     this.searchHelperInstance = window.Search.create(
-                        '[data-distinction-item]',
+                        '[data-search-item], [data-distinction-item]',
                         ['distinction_title', 'distinction_description'],
                         { threshold: 0.35 }
                     );
@@ -86,17 +80,19 @@ export default function distinctionManager() {
             return this.filteredIds.includes(Number(id));
         },
 
-        updateColorFromPicker(model, value) {
-            if (typeof this[model] !== 'undefined') {
-                this[model] = value;
-            }
+        updateColourFromPicker(model, value) {
             if (this.modals.distinction && typeof this.modals.distinction[model] !== 'undefined') {
                 this.modals.distinction[model] = value;
             }
         },
 
+        updateColorFromPicker(model, value) {
+            this.updateColourFromPicker(model, value);
+        },
+
         async loadImages() {
             this.loading_images = true;
+            this.modals.distinction.loading_images = true;
             try {
                 const { ok, data } = await window.Fetch.get('/admin/distinctions/images', {
                     loading: false,
@@ -114,86 +110,58 @@ export default function distinctionManager() {
                 this.available_images = [];
                 this.active_skin = 'default';
             } finally {
+                this.modals.distinction.available_images = this.available_images;
+                this.modals.distinction.loading_images = false;
                 this.loading_images = false;
             }
         },
 
         // 4. Modal Handlers (Using window.Modal utility)
         openModal(mode = 'create', data = {}, target = 'distinction') {
-            this.isEdit = mode === 'edit';
-
             if (target === 'catalogue') {
                 const baseUrl = '/admin/distinctions/catalogues';
                 if (mode === 'edit') {
                     window.Modal.edit(this.modals.catalogue, data, (id) => `${baseUrl}/${id}`);
-                    this.modals.catalogue.method = 'PUT';
                 } else {
                     window.Modal.create(this.modals.catalogue, { catalogue_title: '' }, baseUrl);
-                    this.modals.catalogue.method = 'POST';
                 }
-                this.modals.catalogue.open = true;
-                this.catalogueModalOpen = true;
                 return;
             }
 
             const baseUrl = '/admin/distinctions';
-            const record = mode === 'edit' ? data : {};
-
-            this.id = record.id || null;
-            this.distinction_title = record.distinction_title || '';
-            this.distinction_description = record.distinction_description || '';
-            this.scope_target = record.scope_target || 'BOTH';
-            this.distinction_catalogue_id = record.distinction_catalogue_id || '';
-            this.distinction_base_colour = record.distinction_base_colour || '#1a1a1a';
-            this.mid_layer_mode = record.mid_layer_mode || 'css';
-            this.mid_layer_asset = record.mid_layer_asset || '';
-            this.mid_layer_modifier = record.mid_layer_modifier || 'original';
-            this.top_layer_mode = record.top_layer_mode || '';
-            this.top_layer_asset = record.top_layer_asset || '';
-            this.top_layer_modifier = record.top_layer_modifier || '';
-
             if (mode === 'edit') {
-                window.Modal.edit(this.modals.distinction, record, (id) => `${baseUrl}/${id}`);
-                this.modals.distinction.method = 'PUT';
+                window.Modal.edit(this.modals.distinction, {
+                    ...defaultDistinctionState,
+                    ...data,
+                    distinction_base_colour: data.distinction_base_colour || '#1a1a1aFF',
+                    available_images: this.available_images,
+                    loading_images: false
+                }, (id) => `${baseUrl}/${id}`);
             } else {
                 window.Modal.create(this.modals.distinction, {
-                    scope_target: 'BOTH',
-                    distinction_base_colour: '#1a1a1a',
-                    mid_layer_mode: 'css',
-                    mid_layer_modifier: 'original'
+                    ...defaultDistinctionState,
+                    available_images: this.available_images,
+                    loading_images: false,
+                    ...data
                 }, baseUrl);
-                this.modals.distinction.method = 'POST';
             }
-
-            this.modals.distinction.open = true;
-            this.modalOpen = true;
         },
 
-        closeModal(target = 'distinction') {
-            if (target === 'catalogue') {
-                window.Modal.close(this.modals.catalogue);
-                this.modals.catalogue.open = false;
-                this.catalogueModalOpen = false;
-                return;
-            }
-            window.Modal.close(this.modals.distinction);
-            this.modals.distinction.open = false;
-            this.modalOpen = false;
+        closeModal(target = null) {
+            window.Modal.close(this.modals, target);
         },
 
         // 5. DOM Refresh Handler (sanitize = false)
         async refreshDOM() {
             if (typeof window.updateDOM === 'function') {
                 await window.updateDOM(this.$refs, ['distinctionsTableWrapper'], () => {
-                    this.closeModal('distinction');
-                    this.closeModal('catalogue');
+                    this.closeModal();
                     this.$nextTick(() => {
                         this.initSearch();
                     });
                 }, false);
             } else {
-                this.closeModal('distinction');
-                this.closeModal('catalogue');
+                this.closeModal();
             }
         }
     };
