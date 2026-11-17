@@ -1,773 +1,436 @@
+{{-- resources/views/admin/divisions.blade.php --}}
 @extends('layouts.app')
 
-@section('title', lexicon('admin_label_SectionsPositions', 'Sections & Positions'))
+@php
+    $divisionsList = $divisions ?? $sections ?? collect();
+    $rankCatalogues = $insigniaCatalogues ?? $rankSets ?? collect();
+    $divisionCatalogues = $divisionCatalogues ?? $catalogues ?? collect();
+@endphp
+
+@section('title', lexicon('admin_label_SectionsPositions', 'Divisions & Duty Assignments'))
 
 @section('content')
-<div x-data="sectionManager({
-        aiEndpoint: '{{ route('admin.divisions.generate_description') }}',
-        emptyNameMsg: '{{ addslashes(lexicon('msg_SectionsPositions_EnterNameFirst', 'Please enter a Section Name first.')) }}'
-    })"
-    @ajax-success.window="handleAjaxSuccess()">
-
-    <x-grid-wrapper :book="$systemBook">
-        <x-slot:content>
+<x-grid-wrapper :book="$systemBook">
+    <x-slot:content>
+        <div x-data="divisionManager({
+                 aiEndpoint: '{{ route('admin.divisions.generate_description') }}',
+                 emptyNameMsg: '{{ addslashes(lexicon('msg_divisions_EnterTitleFirst', 'Please enter a Division Title first.')) }}'
+             })"
+             @ajax-success.window="refreshDOM()"
+             x-ref="divisionsContainer"
+             class="flex flex-col gap-lg">
 
             {{-- Page Header --}}
-            <x-page-header :title="lexicon('admin_label_SectionsPositions', 'Sections & Positions')">
+            <x-page-header :title="lexicon('admin_label_SectionsPositions', 'Divisions & Duty Assignments')"
+                           :subtitle="lexicon('desc_admin_Divisions', 'Manage organisational divisions, colour bindings, linked rank catalogues, and duty assignment slots.')"
+                           icon="bi-diagram-3">
                 <x-slot:actions>
+                    <x-metadata type="search"
+                                name="division_search"
+                                :bare="true"
+                                xModel="searchQuery"
+                                :placeholder="lexicon('placeholder_divisions_Search', 'Search divisions or assignments...')"
+                                :tooltip="lexicon('tooltip_divisions_Search', 'Filter divisions and assignments by title or description')" />
+
                     @can('manage_sections')
-                    <div class="flex flex-row flex-wrap items-center gap-sm">
-                        {{-- Manage Catalogues Button --}}
-                        <x-button type="button"
-                            variant="secondary"
-                            class="p-btn-sm text-sm flex items-center gap-xs"
-                            @click="openCatalogueModal('create')"
-                            aria-label="{{ lexicon('tooltip_SectionsPositions_ManageCatalogues', 'Manage division catalogues (ships, stations, or locations)') }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_ManageCatalogues', 'Manage division catalogues (ships, stations, or locations)')) }}'">
-                            <i class="bi bi-folder-check" aria-hidden="true"></i>
-                            <span>{{ lexicon('btn_SectionsPositions_ManageCatalogues', 'Manage Catalogues') }}</span>
+                        <x-button tag="a"
+                                  href="{{ route('admin.divisions.export') }}"
+                                  variant="secondary"
+                                  size="sm"
+                                  icon="bi-download"
+                                  :tooltip="lexicon('tooltip_divisions_Export', 'Download divisions and assignments JSON manifest')">
+                            {{ lexicon('btn_common_Export', 'Export') }}
+                        </x-button>
+
+                        <x-button tag="a"
+                                  href="{{ route('admin.divisions.template') }}"
+                                  variant="secondary"
+                                  size="sm"
+                                  icon="bi-file-earmark-code"
+                                  :tooltip="lexicon('tooltip_divisions_Template', 'Download blank divisions JSON template')">
+                            {{ lexicon('btn_common_DownloadTemplate', 'Template') }}
                         </x-button>
 
                         <x-button type="button"
-                            variant="success"
-                            class="p-btn-sm text-sm flex items-center gap-xs"
-                            @click="openModal('create', {}, 'division')"
-                            aria-label="{{ lexicon('tooltip_SectionsPositions_CreateSection', 'Create a new organisational section') }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_CreateSection', 'Create a new organisational section')) }}'">
-                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                            <span>{{ lexicon('btn_SectionsPositions_CreateSection', 'Create Section') }}</span>
-                        </x-button>
-                        <x-button variant="secondary"
-                            tag="a"
-                            href="{{ route('admin.divisions.export') }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_Export', 'Download sections and positions JSON manifest')) }}'">
-                            <i class="bi bi-download"></i>
-                            <span>{{ lexicon('btn_common_Export', 'Export Sections & Positions') }}</span>
+                                  variant="secondary"
+                                  size="sm"
+                                  icon="bi-upload"
+                                  :tooltip="lexicon('tooltip_divisions_Import', 'Import divisions and assignments from JSON manifest')"
+                                  @click="openModal('create', {}, 'import')">
+                            {{ lexicon('btn_common_Import', 'Import') }}
                         </x-button>
 
-                        <x-button variant="secondary"
-                            tag="a"
-                            href="{{ route('admin.divisions.template') }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_Template', 'Download blank JSON manifest template')) }}'">
-                            <i class="bi bi-file-earmark-code"></i>
-                            <span>{{ lexicon('btn_common_DownloadTemplate', 'Download Blank Template') }}</span>
+                        <x-button type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  icon="bi-person-workspace"
+                                  :tooltip="lexicon('tooltip_assignments_Create', 'Create a new duty assignment')"
+                                  @click="openModal('create', {}, 'assignment')">
+                            + {{ lexicon('btn_assignments_New', 'New Assignment') }}
                         </x-button>
 
-                        <x-button variant="secondary"
-                            @click="importModalOpen = true"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_Import', 'Import sections and positions from JSON manifest')) }}'">
-                            <i class="bi bi-upload"></i>
-                            <span>{{ lexicon('btn_common_Import', 'Import Sections & Positions') }}</span>
+                        <x-button type="button"
+                                  variant="primary"
+                                  size="sm"
+                                  icon="bi-plus-lg"
+                                  :tooltip="lexicon('tooltip_divisions_Create', 'Create a new organisational division')"
+                                  @click="openModal('create', {}, 'division')">
+                            + {{ lexicon('btn_divisions_New', 'New Division') }}
                         </x-button>
-
-                        {{-- Import Modal --}}
-                        <x-modal show="importModalOpen" maxWidth="max-w-xl">
-                            <x-slot:top>
-                                <div class="flex flex-row items-center gap-xs">
-                                    <i class="bi bi-upload text-accent"></i>
-                                    <span>{{ lexicon('label_SectionsPositions_ImportModal', 'Import Sections & Positions Manifest') }}</span>
-                                </div>
-                            </x-slot:top>
-
-                            <div class="flex flex-col gap-md" @upload-completed.window="handleImportSuccess($event.detail)">
-                                <div class="flex flex-col gap-xs">
-                                    <label class="text-sm font-bold text-h">{{ lexicon('label_common_ImportMode', 'Import Mode') }}</label>
-                                    <select x-model="importMode" class="lumi-input">
-                                        <option value="merge">{{ lexicon('label_common_MergeUpsert', 'Merge / Upsert (Preserves active records)') }}</option>
-                                        <option value="replace">{{ lexicon('label_common_ReplaceAll', 'Replace All (Clears existing records)') }}</option>
-                                    </select>
-                                </div>
-
-                                <div class="flex flex-col gap-xs">
-                                    <label class="text-sm font-bold text-h">{{ lexicon('label_common_UploadJson', 'Upload JSON Manifest') }}</label>
-                                    <x-dropzone :url="route('admin.divisions.import')"
-                                        id="sections-import-dropzone"
-                                        :maxFiles="1"
-                                        acceptedFiles="application/json,.json,.txt"
-                                        :title="lexicon('label_SectionsPositions_DropzoneTitle', 'Drop manifest (.json) here')" />
-                                </div>
-                            </div>
-
-                            <x-slot:bottom>
-                                <x-button variant="secondary" @click="importModalOpen = false">
-                                    {{ lexicon('btn_common_Cancel', 'Cancel') }}
-                                </x-button>
-                            </x-slot:bottom>
-                        </x-modal>
-                    </div>
                     @endcan
                 </x-slot:actions>
             </x-page-header>
 
-            {{-- Search / Filter Bar --}}
-            <div class="bg-panel border border-panel rounded-panel p-panel shadow-panel mb-4">
-                <x-form-input name="filter_divisions"
-                    id="filter_divisions"
-                    xModel="searchQuery"
-                    :label="lexicon('label_SectionsPositions_FilterSections', 'Filter Sections & Positions')"
-                    :placeholder="lexicon('label_SectionsPositions_FilterPlaceholder', 'Search by division title, assignment title, or summary...')"
-                    :tooltip="lexicon('tooltip_SectionsPositions_FilterInput', 'Instantaneously filter divisions and assignments using fuzzy search')" />
-            </div>
+            {{-- Divisions & Assignments List --}}
+            <div x-ref="sectionsContainer" class="flex flex-col gap-lg">
+                @forelse($divisionsList as $division)
+                    @php
+                        $assignTitles = $division->assignments?->pluck('assignment_title')->values()->all() ?? [];
+                    @endphp
+                    <div data-search-item
+                         data-division-item
+                         data-id="{{ $division->id }}"
+                         data-division_title="{{ $division->division_title }}"
+                         data-division_description="{{ $division->division_description }}"
+                         x-show="matchesSearch('{{ addslashes($division->division_title) }}', '{{ addslashes($division->division_description ?? '') }}', {{ Js::from($assignTitles) }})">
 
-            {{-- Divisions Loop --}}
-            <div class="flex flex-col gap-lg" id="divisions-container" x-ref="sectionsContainer">
-                @forelse($sections as $sec)
-                @php
-                $assignmentsCollection = $sec->assignments ?? collect();
-                $posSearchList = $assignmentsCollection->pluck('assignment_title')->merge($assignmentsCollection->pluck('assignment_description'))->filter()->values()->all();
-                @endphp
-                <div x-show="matchesSearch('{{ addslashes($sec->division_title) }}', '{{ addslashes($sec->division_description ?? '') }}', @js($posSearchList))">
-                    <x-accordion-panel :title="$sec->division_title" :expanded="true" id="division-row-{{ $sec->id }}">
-                        <x-slot:top>
-                            @if(!$sec->is_visible)
-                            <x-badge variant="warning">{{ lexicon('label_common_Hidden', 'Hidden') }}</x-badge>
-                            @endif
-
-                            @if($sec->divisionCatalogue)
-                            <x-badge variant="secondary"
-                                aria-label="{{ lexicon('tooltip_SectionsPositions_LinkedDivisionCatalogue', 'Assigned Division Catalogue') }}"
-                                x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_LinkedDivisionCatalogue', 'Assigned Division Catalogue')) }}'">
-                                <i class="bi bi-folder2-open" aria-hidden="true"></i>
-                                <span>{{ $sec->divisionCatalogue->catalogue_title }}</span>
-                            </x-badge>
-                            @endif
-
-                            @if($sec->insigniaCatalogue)
-                            <x-badge variant="info"
-                                aria-label="{{ lexicon('tooltip_SectionsPositions_LinkedRankSet', 'Insignia catalogue assigned via Ranks Manager') }}"
-                                x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_LinkedRankSet', 'Insignia catalogue assigned via Ranks Manager')) }}'">
-                                <i class="bi bi-award" aria-hidden="true"></i>
-                                <span>{{ $sec->insigniaCatalogue->catalogue_title }}</span>
-                            </x-badge>
-                            @endif
-
-                            @can('manage_sections')
-                            <x-button type="button"
-                                variant="text"
-                                class="text-accent hover-text-h text-sm flex items-center gap-xs"
-                                @click="openModal('create', { division_id: {{ $sec->id }}, division_title: '{{ addslashes($sec->division_title) }}', division_base_colour: '{{ $sec->division_base_colour }}' }, 'assignment')"
-                                aria-label="{{ lexicon('tooltip_SectionsPositions_AddPosition', 'Add a new position to this section') }}"
-                                x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_AddPosition', 'Add a new position to this section')) }}'">
-                                <i class="bi bi-plus-circle" aria-hidden="true"></i>
-                                <span>{{ lexicon('btn_SectionsPositions_AddPosition', 'Add Position') }}</span>
-                            </x-button>
-
-                            <x-button type="button"
-                                variant="text"
-                                class="text-warning hover-text-h text-sm flex items-center gap-xs"
-                                @click="openModal('edit', { id: {{ $sec->id }}, division_title: '{{ addslashes($sec->division_title) }}', division_base_colour: '{{ $sec->division_base_colour }}', division_description: '{{ addslashes($sec->division_description) }}', division_sort_order: {{ $sec->division_sort_order }}, is_visible: {{ $sec->is_visible ? 'true' : 'false' }}, division_catalogue_id: {{ $sec->division_catalogue_id ?? 'null' }} }, 'division')"
-                                aria-label="{{ lexicon('tooltip_SectionsPositions_EditSection', 'Edit section details and colour') }}"
-                                x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_EditSection', 'Edit section details and colour')) }}'">
-                                <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                                <span>{{ lexicon('btn_SectionsPositions_EditSection', 'Edit Section') }}</span>
-                            </x-button>
-
-                            <x-button type="button"
-                                variant="text"
-                                class="text-danger hover-text-h text-sm flex items-center gap-xs"
-                                x-data="deleteAction('/admin/divisions/{{ $sec->id }}', 'DELETE', '{{ addslashes($sec->division_title) }}')"
-                                @click.prevent="confirmDelete()"
-                                aria-label="{{ lexicon('tooltip_SectionsPositions_DeleteSection', 'Delete this section and its positions') }}"
-                                x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_DeleteSection', 'Delete this section and its positions')) }}'">
-                                <i class="bi bi-trash" aria-hidden="true"></i>
-                                <span>{{ lexicon('btn_common_Delete', 'Delete') }}</span>
-                            </x-button>
-                            @endcan
-                        </x-slot:top>
-
-                        @if($sec->division_description)
-                        <span class="text-xs text-muted border-b border-panel pb-2 block">{{ $sec->division_description }}</span>
-                        @endif
-
-                        {{-- Assignments Grid --}}
-                        @if($assignmentsCollection->count() > 0)
-                        <div class="grid grid-cols-1 lg-grid-cols-3 gap-md w-full">
-                            @foreach($assignmentsCollection as $pos)
-                            @php
-                            $assignedCount = $pos->personae ? $pos->personae->count() : 0;
-                            $slotsAvailable = max(0, $pos->maximum_occupants - $assignedCount);
-                            $isRecruitmentOpen = (bool) ($pos->is_recruitment_open ?? true);
-                            @endphp
-                            <div class="bg-panel-sub border border-panel rounded-panel p-3 flex flex-row flex-wrap justify-between items-start gap-sm"
-                                x-show="isItemVisible('{{ addslashes($pos->assignment_title) }}', '{{ addslashes($pos->assignment_description ?? '') }}', '{{ addslashes($sec->division_title) }}')">
-                                <div class="flex flex-col gap-xs flex-grow">
-                                    <div class="flex flex-row items-center gap-xs">
-                                        <span class="font-bold text-p block">{{ $pos->assignment_title }}</span>
-                                        @if(!$pos->is_visible)
-                                        <x-badge variant="warning" class="text-xs py-0 px-1">{{ lexicon('label_common_Hidden', 'Hidden') }}</x-badge>
-                                        @endif
-                                    </div>
-                                    @if($pos->assignment_description)
-                                    <span class="text-xs text-muted block">{{ $pos->assignment_description }}</span>
+                        <x-tab type="accordion"
+                               :title="$division->division_title"
+                               icon="bi-building"
+                               :open="true">
+                            <x-slot:top>
+                                <div class="flex flex-row flex-wrap items-center gap-xs" @click.stop>
+                                    @if($division->insigniaCatalogue)
+                                        <x-badge type="pill" variant="info">
+                                            {{ $division->insigniaCatalogue->catalogue_title }}
+                                        </x-badge>
                                     @endif
-                                    <div class="flex flex-row flex-wrap items-center gap-xs mt-1">
-                                        @if(!$isRecruitmentOpen)
-                                        <x-badge variant="warning"
-                                            aria-label="{{ lexicon('tooltip_SectionsPositions_PositionClosed', 'This position is currently closed to applications') }}"
-                                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_PositionClosed', 'This position is currently closed to applications')) }}'">
-                                            <i class="bi bi-lock-fill" aria-hidden="true"></i>
-                                            <span>{{ lexicon('label_SectionsPositions_Closed', 'Closed') }}</span>
-                                        </x-badge>
-                                        @else
-                                        <x-badge :variant="$slotsAvailable > 0 ? 'success' : 'danger'"
-                                            aria-label="{{ lexicon('tooltip_SectionsPositions_SlotAvailability', 'Current position slot capacity') }}"
-                                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_SlotAvailability', 'Current position slot capacity')) }}'">
-                                            {{ $slotsAvailable > 0 ? $slotsAvailable . ' ' . lexicon('label_SectionsPositions_SlotsOpen', 'Slot(s) Open') : lexicon('label_SectionsPositions_SlotsFilled', 'Filled') }}
-                                        </x-badge>
-                                        @endif
-                                        <span class="text-xs text-muted"
-                                            aria-label="{{ lexicon('tooltip_SectionsPositions_AssignedVsCapacity', 'Active personae assigned versus maximum capacity') }}"
-                                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_AssignedVsCapacity', 'Active personae assigned versus maximum capacity')) }}'">
-                                            ({{ $assignedCount }}/{{ $pos->maximum_occupants }})
-                                        </span>
-                                    </div>
+
+                                    <x-badge type="pill" :variant="$division->is_visible ? 'success' : 'muted'">
+                                        {{ $division->is_visible ? lexicon('status_common_Visible', 'Visible') : lexicon('status_common_Hidden', 'Hidden') }}
+                                    </x-badge>
+
+                                    @can('manage_sections')
+                                        <x-button type="button"
+                                                  variant="secondary"
+                                                  size="sm"
+                                                  icon="bi-plus-lg"
+                                                  :tooltip="lexicon('tooltip_assignments_AddInDivision', 'Add a duty assignment to this division')"
+                                                  @click="openModal('create', {
+                                                      division_id: {{ $division->id }},
+                                                      division_title: '{{ addslashes($division->division_title) }}',
+                                                      division_base_colour: '{{ $division->division_base_colour ?? '#374151FF' }}'
+                                                  }, 'assignment')">
+                                            + {{ lexicon('btn_assignments_Add', 'Add Assignment') }}
+                                        </x-button>
+
+                                        <x-button type="button"
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  icon="bi-pencil"
+                                                  :tooltip="lexicon('tooltip_divisions_Edit', 'Edit this division')"
+                                                  @click="openModal('edit', {{ Js::from([
+                                                      'id' => $division->id,
+                                                      'division_title' => $division->division_title,
+                                                      'division_description' => $division->division_description ?? '',
+                                                      'division_base_colour' => $division->division_base_colour ?? '#374151FF',
+                                                      'division_sort_order' => $division->division_sort_order ?? 0,
+                                                      'division_catalogue_id' => $division->division_catalogue_id ?? '',
+                                                      'insignia_catalogue_id' => $division->insignia_catalogue_id ?? '',
+                                                      'is_visible' => (bool) $division->is_visible,
+                                                  ]) }}, 'division')">
+                                            {{ lexicon('btn_common_Edit', 'Edit') }}
+                                        </x-button>
+
+                                        <x-button type="button"
+                                                  variant="danger"
+                                                  size="sm"
+                                                  icon="bi-trash"
+                                                  :tooltip="lexicon('tooltip_divisions_Delete', 'Delete this division and its assignments')"
+                                                  x-data="deleteAction('{{ route('admin.divisions.destroy', $division) }}', 'DELETE', '{{ addslashes($division->division_title) }}')"
+                                                  @click="confirmDelete()">
+                                            {{ lexicon('btn_common_Delete', 'Delete') }}
+                                        </x-button>
+                                    @endcan
                                 </div>
-                                @can('manage_sections')
-                                <div class="flex flex-col gap-sm items-end text-right">
-                                    <x-button type="button"
-                                        variant="text"
-                                        class="text-xs text-warning hover-text-h p-0 flex items-center gap-xs"
-                                        @click="openModal('edit', { id: {{ $pos->id }}, division_id: '{{ $pos->division_id }}', assignment_title: '{{ addslashes($pos->assignment_title) }}', assignment_description: '{{ addslashes($pos->assignment_description) }}', maximum_occupants: {{ $pos->maximum_occupants ?? 1 }}, is_recruitment_open: {{ $isRecruitmentOpen ? 'true' : 'false' }}, is_visible: {{ $pos->is_visible ? 'true' : 'false' }} }, 'assignment')"
-                                        aria-label="{{ lexicon('tooltip_SectionsPositions_EditPosition', 'Edit this position') }}"
-                                        x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_EditPosition', 'Edit this position')) }}'">
-                                        <i class="bi bi-pencil" aria-hidden="true"></i>
-                                        <span>{{ lexicon('btn_common_Edit', 'Edit') }}</span>
-                                    </x-button>
-                                    <x-button type="button"
-                                        variant="text"
-                                        class="text-xs text-danger hover-text-h p-0 flex items-center gap-xs"
-                                        x-data="deleteAction('/admin/assignments/{{ $pos->id }}', 'DELETE', '{{ addslashes($pos->assignment_title) }}')"
-                                        @click.prevent="confirmDelete()"
-                                        aria-label="{{ lexicon('tooltip_SectionsPositions_DeletePosition', 'Delete this position') }}"
-                                        x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_DeletePosition', 'Delete this position')) }}'">
-                                        <i class="bi bi-trash" aria-hidden="true"></i>
-                                        <span>{{ lexicon('btn_common_Delete', 'Delete') }}</span>
-                                    </x-button>
-                                </div>
-                                @endcan
-                            </div>
-                            @endforeach
-                        </div>
-                        @else
-                        <span class="text-sm text-muted italic p-2 block">{{ lexicon('msg_SectionsPositions_NoPositions', 'No positions have been assigned to this section yet.') }}</span>
-                        @endif
-                    </x-accordion-panel>
-                </div>
+                            </x-slot:top>
+
+                            @if($division->division_description)
+                                <p class="text-sm text-muted m-0">{{ $division->division_description }}</p>
+                            @endif
+
+                            <x-table type="admin"
+                                     :headers="[
+                                         lexicon('col_assignments_Title', 'Assignment Title'),
+                                         lexicon('col_assignments_Description', 'Description'),
+                                         lexicon('col_assignments_Capacity', 'Max Occupants'),
+                                         lexicon('col_assignments_Recruitment', 'Recruitment'),
+                                         lexicon('col_common_Actions', 'Actions')
+                                     ]"
+                                     :emptyText="lexicon('msg_assignments_NoneInDivision', 'No duty assignments configured for this division.')">
+                                @foreach($division->assignments ?? [] as $assignment)
+                                    <tr class="border-b-table-row hover-bg-panel-hover transition-colors"
+                                        x-show="isItemVisible('{{ addslashes($assignment->assignment_title) }}', '{{ addslashes($assignment->assignment_description ?? '') }}', '{{ addslashes($division->division_title) }}')">
+                                        <td class="p-4 font-bold text-h">{{ $assignment->assignment_title }}</td>
+                                        <td class="p-4 text-sm text-muted">{{ $assignment->assignment_description ?: '—' }}</td>
+                                        <td class="p-4 font-mono text-xs text-p">
+                                            {{ $assignment->personae?->count() ?? 0 }} / {{ $assignment->maximum_occupants }}
+                                        </td>
+                                        <td class="p-4">
+                                            <x-badge type="pill" :variant="$assignment->is_recruitment_open ? 'success' : 'warning'">
+                                                {{ $assignment->is_recruitment_open
+                                                    ? lexicon('status_assignments_Open', 'Open')
+                                                    : lexicon('status_assignments_Closed', 'Closed') }}
+                                            </x-badge>
+                                        </td>
+                                        <td class="p-4 text-right">
+                                            @can('manage_sections')
+                                                <div class="flex flex-row flex-wrap justify-end items-center gap-xs">
+                                                    <x-button type="button"
+                                                              variant="ghost"
+                                                              size="sm"
+                                                              icon="bi-pencil"
+                                                              :tooltip="lexicon('tooltip_assignments_Edit', 'Edit this duty assignment')"
+                                                              @click="openModal('edit', {{ Js::from([
+                                                                  'id' => $assignment->id,
+                                                                  'division_id' => $assignment->division_id,
+                                                                  'assignment_title' => $assignment->assignment_title,
+                                                                  'assignment_description' => $assignment->assignment_description ?? '',
+                                                                  'maximum_occupants' => $assignment->maximum_occupants ?? 1,
+                                                                  'is_recruitment_open' => (bool) $assignment->is_recruitment_open,
+                                                                  'is_visible' => (bool) $assignment->is_visible,
+                                                              ]) }}, 'assignment')">
+                                                        {{ lexicon('btn_common_Edit', 'Edit') }}
+                                                    </x-button>
+
+                                                    <x-button type="button"
+                                                              variant="danger"
+                                                              size="sm"
+                                                              icon="bi-trash"
+                                                              :tooltip="lexicon('tooltip_assignments_Delete', 'Delete this duty assignment')"
+                                                              x-data="deleteAction('{{ route('admin.assignments.destroy', $assignment) }}', 'DELETE', '{{ addslashes($assignment->assignment_title) }}')"
+                                                              @click="confirmDelete()">
+                                                        {{ lexicon('btn_common_Delete', 'Delete') }}
+                                                    </x-button>
+                                                </div>
+                                            @endcan
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </x-table>
+                        </x-tab>
+                    </div>
                 @empty
-                <div class="bg-panel border border-panel rounded-panel p-6 text-center text-muted italic">
-                    <span class="block">{{ lexicon('msg_SectionsPositions_NoSections', 'No sections or positions have been created.') }}</span>
-                </div>
+                    <x-tab type="panel">
+                        <p class="text-center text-muted font-italic m-0">
+                            {{ lexicon('msg_divisions_Empty', 'No organisational divisions have been created yet.') }}
+                        </p>
+                    </x-tab>
                 @endforelse
             </div>
 
-            @can('manage_sections')
-            {{-- MODAL 1: Create Division --}}
-            <x-modal show="modal === 'section-create'" onClose="closeModal()" maxWidth="max-w-4xl">
+            {{-- MODAL 1: CREATE / EDIT DIVISION --}}
+            <x-modal show="modals.division.open" onClose="closeModal('division')" maxWidth="max-w-lg">
                 <x-slot:top>
-                    {{ lexicon('label_SectionsPositions_CreateSection', 'Create Section') }}
+                    <span x-text="modals.division.mode === 'edit'
+                        ? '{{ addslashes(lexicon('modal_divisions_Edit', 'Edit Division')) }}'
+                        : '{{ addslashes(lexicon('modal_divisions_Create', 'Create Division')) }}'"></span>
                 </x-slot:top>
 
-                <form action="/admin/divisions" method="POST" class="flex flex-col gap-md" x-data="ajaxForm" @submit.prevent="submit">
-                    @csrf
-                    <div class="grid grid-cols-1 md-grid-cols-2 gap-md bg-panel-sub border border-panel rounded-panel p-3">
-                        <x-form-input name="division_title"
-                            id="create_division_title"
-                            xModel="section.division_title"
-                            :label="lexicon('label_SectionsPositions_SectionName', 'Section Name')"
-                            :tooltip="lexicon('tooltip_SectionsPositions_SectionNameInput', 'Enter the display title for this organisational section')"
-                            :required="true" />
-
-                        <div class="flex flex-col gap-xs">
-                            <x-colour-picker name="division_base_colour"
-                                :label="lexicon('label_SectionsPositions_DeptColor', 'Department Colour')"
-                                xModel="section.division_base_colour" />
-                        </div>
-                    </div>
-
-                    <div class="flex flex-col gap-xs bg-panel-sub border border-panel rounded-panel p-3">
-                        <label for="create_division_catalogue_id" class="text-xs font-bold text-input-muted">
-                            {{ lexicon('label_SectionsPositions_DivisionCatalogue', 'Division Catalogue (Optional)') }}
-                        </label>
-                        <select id="create_division_catalogue_id"
-                            name="division_catalogue_id"
-                            x-model="section.division_catalogue_id"
-                            class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent">
-                            <option value="">{{ lexicon('label_common_None', 'None / Unassigned') }}</option>
-                            @foreach($catalogues ?? [] as $cat)
-                            <option value="{{ $cat->id }}">{{ $cat->catalogue_title }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="flex flex-col gap-xs">
-                        <div class="flex flex-row flex-wrap items-center justify-between gap-xs">
-                            <label for="create_division_desc" class="text-xs font-bold text-input-muted">
-                                {{ lexicon('label_SectionsPositions_SectionDesc', 'Description (Optional)') }}
-                            </label>
-                            <x-button type="button"
-                                variant="text"
-                                class="text-xs text-accent hover-text-h flex items-center gap-xs"
-                                @click="generateAiDescription()"
-                                aria-label="{{ lexicon('tooltip_SectionsPositions_GenerateAiDesc', 'Generate a thematic section description based on the section title') }}"
-                                x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_GenerateAiDesc', 'Generate a thematic section description based on the section title')) }}'">
-                                <i class="bi bi-magic" aria-hidden="true"></i>
-                                <span x-text="isGeneratingAi ? '{{ addslashes(lexicon('msg_SectionsPositions_GeneratingDesc', 'Generating...')) }}' : '{{ addslashes(lexicon('btn_SectionsPositions_GenerateAiDesc', 'Auto-Generate Description')) }}'"></span>
-                            </x-button>
-                        </div>
-                        <textarea id="create_division_desc"
-                            x-model="section.division_description"
-                            name="division_description"
-                            rows="2"
-                            aria-label="{{ lexicon('label_SectionsPositions_SectionDesc', 'Description (Optional)') }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_SectionDescInput', 'Provide a brief overview of this section\'s duties')) }}'"
-                            x-init="window.autosize && window.autosize($el)"
-                            class="bg-input text-input border-input rounded-input p-input outline-none w-full box-border focus-border-accent focus-shadow-accent"></textarea>
-                    </div>
-
-                    <div class="grid grid-cols-1 md-grid-cols-2 gap-md items-center">
-                        <div class="w-48">
-                            <x-form-input name="division_sort_order"
-                                id="create_division_sort_order"
-                                type="number"
-                                xModel="section.division_sort_order"
-                                :label="lexicon('label_common_SortOrder', 'Sort Order')"
-                                :tooltip="lexicon('tooltip_SectionsPositions_SectionSortOrder', 'Numeric display sort order on the roster and manifest')" />
-                        </div>
-                        <div class="flex flex-row items-center gap-sm mt-4">
-                            <input type="hidden" name="is_visible" value="0">
-                            <input type="checkbox"
-                                name="is_visible"
-                                id="division_is_visible"
-                                value="1"
-                                x-model="section.is_visible"
-                                class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
-                            <label for="division_is_visible" class="text-sm font-bold text-muted cursor-pointer">
-                                {{ lexicon('label_common_ShowOnSite', 'Show on Site') }}
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="border-t-actions pt-6 text-right mt-4 flex flex-row flex-wrap items-center justify-end gap-sm">
-                        <x-button type="button"
-                            variant="secondary"
-                            @click="closeModal()"
-                            aria-label="{{ lexicon('tooltip_common_Cancel', 'Cancel and close modal') }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_common_Cancel', 'Cancel and close modal')) }}'">
-                            {{ lexicon('btn_common_Cancel', 'Cancel') }}
-                        </x-button>
-                        <x-button type="submit"
-                            variant="primary"
-                            aria-label="{{ lexicon('tooltip_SectionsPositions_SaveSection', 'Save this new section') }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_SaveSection', 'Save this new section')) }}'">
-                            <span x-text="loading ? '{{ addslashes(lexicon('msg_common_Saving', 'Saving...')) }}' : '{{ addslashes(lexicon('btn_SectionsPositions_SaveSection', 'Save Section')) }}'"></span>
-                        </x-button>
-                    </div>
-                </form>
-            </x-modal>
-
-            {{-- MODAL 2: Edit Division --}}
-            <x-modal show="modal === 'section-edit'" onClose="closeModal()" maxWidth="max-w-4xl">
-                <x-slot:top>
-                    {{ lexicon('label_SectionsPositions_EditSection', 'Edit Section') }}
-                </x-slot:top>
-
-                <form :action="'/admin/divisions/' + section.id" method="POST" class="flex flex-col gap-md" x-data="ajaxForm" @submit.prevent="submit">
-                    @csrf
-                    @method('PUT')
-                    <div class="grid grid-cols-1 md-grid-cols-2 gap-md bg-panel-sub border border-panel rounded-panel p-3">
-                        <x-form-input name="division_title"
-                            id="edit_division_title"
-                            xModel="section.division_title"
-                            :label="lexicon('label_SectionsPositions_SectionName', 'Section Name')"
-                            :tooltip="lexicon('tooltip_SectionsPositions_SectionNameInput', 'Enter the display title for this organisational section')"
-                            :required="true" />
-
-                        <div class="flex flex-col gap-xs">
-                            <x-colour-picker name="division_base_colour"
-                                :label="lexicon('label_SectionsPositions_DeptColor', 'Department Colour')"
-                                xModel="section.division_base_colour" />
-                        </div>
-                    </div>
-
-                    <div class="flex flex-col gap-xs bg-panel-sub border border-panel rounded-panel p-3">
-                        <label for="edit_division_catalogue_id" class="text-xs font-bold text-input-muted">
-                            {{ lexicon('label_SectionsPositions_DivisionCatalogue', 'Division Catalogue (Optional)') }}
-                        </label>
-                        <select id="edit_division_catalogue_id"
-                            name="division_catalogue_id"
-                            x-model="section.division_catalogue_id"
-                            class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent">
-                            <option value="">{{ lexicon('label_common_None', 'None / Unassigned') }}</option>
-                            @foreach($catalogues ?? [] as $cat)
-                            <option value="{{ $cat->id }}">{{ $cat->catalogue_title }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="flex flex-col gap-xs">
-                        <div class="flex flex-row flex-wrap items-center justify-between gap-xs">
-                            <label for="edit_division_desc" class="text-xs font-bold text-input-muted">
-                                {{ lexicon('label_SectionsPositions_SectionDesc', 'Description (Optional)') }}
-                            </label>
-                            <x-button type="button"
-                                variant="text"
-                                class="text-xs text-accent hover-text-h flex items-center gap-xs"
-                                @click="generateAiDescription()"
-                                aria-label="{{ lexicon('tooltip_SectionsPositions_GenerateAiDesc', 'Generate a thematic section description based on the section title') }}"
-                                x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_GenerateAiDesc', 'Generate a thematic section description based on the section title')) }}'">
-                                <i class="bi bi-magic" aria-hidden="true"></i>
-                                <span x-text="isGeneratingAi ? '{{ addslashes(lexicon('msg_SectionsPositions_GeneratingDesc', 'Generating...')) }}' : '{{ addslashes(lexicon('btn_SectionsPositions_GenerateAiDesc', 'Auto-Generate Description')) }}'"></span>
-                            </x-button>
-                        </div>
-                        <textarea id="edit_division_desc"
-                            x-model="section.division_description"
-                            name="division_description"
-                            rows="2"
-                            aria-label="{{ lexicon('label_SectionsPositions_SectionDesc', 'Description (Optional)') }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_SectionDescInput', 'Provide a brief overview of this section\'s duties')) }}'"
-                            x-init="window.autosize && window.autosize($el)"
-                            class="bg-input text-input border-input rounded-input p-input outline-none w-full box-border focus-border-accent focus-shadow-accent"></textarea>
-                    </div>
-
-                    <div class="grid grid-cols-1 md-grid-cols-2 gap-md items-center">
-                        <div class="w-48">
-                            <x-form-input name="division_sort_order"
-                                id="edit_division_sort_order"
-                                type="number"
-                                xModel="section.division_sort_order"
-                                :label="lexicon('label_common_SortOrder', 'Sort Order')"
-                                :tooltip="lexicon('tooltip_SectionsPositions_SectionSortOrder', 'Numeric display sort order on the roster and manifest')"
+                <x-meta type="modal" xAction="modals.division.action" xMethod="modals.division.method">
+                    <x-metadata type="text"
+                                name="division_title"
+                                xModel="modals.division.division_title"
+                                :label="lexicon('label_divisions_Title', 'Division Title')"
+                                :placeholder="lexicon('placeholder_divisions_Title', 'e.g. Command, Engineering, Operations')"
+                                :tooltip="lexicon('tooltip_divisions_Title', 'Name of the organisational division')"
                                 :required="true" />
-                        </div>
-                        <div class="flex flex-row items-center gap-sm mt-4">
-                            <input type="hidden" name="is_visible" value="0">
-                            <input type="checkbox"
-                                name="is_visible"
-                                id="edit_division_is_visible"
-                                value="1"
-                                x-model="section.is_visible"
-                                class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
-                            <label for="edit_division_is_visible" class="text-sm font-bold text-muted cursor-pointer">
-                                {{ lexicon('label_common_ShowOnSite', 'Show on Site') }}
-                            </label>
-                        </div>
-                    </div>
 
-                    <div class="border-t-actions pt-6 text-right mt-4 flex flex-row flex-wrap items-center justify-end gap-sm">
-                        <x-button type="button"
-                            variant="secondary"
-                            @click="closeModal()"
-                            aria-label="{{ lexicon('tooltip_common_Cancel', 'Cancel and close modal') }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_common_Cancel', 'Cancel and close modal')) }}'">
-                            {{ lexicon('btn_common_Cancel', 'Cancel') }}
-                        </x-button>
-                        <x-button type="submit"
-                            variant="primary"
-                            aria-label="{{ lexicon('tooltip_SectionsPositions_UpdateSection', 'Save changes to this section') }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_UpdateSection', 'Save changes to this section')) }}'">
-                            <span x-text="loading ? '{{ addslashes(lexicon('msg_common_Saving', 'Saving...')) }}' : '{{ addslashes(lexicon('btn_SectionsPositions_UpdateSection', 'Update Section')) }}'"></span>
-                        </x-button>
-                    </div>
-                </form>
-            </x-modal>
-
-            {{-- MODAL 3: Add Assignment --}}
-            <x-modal show="modal === 'position-create'" onClose="closeModal()" maxWidth="max-w-4xl">
-                <x-slot:top>
-                    <div class="flex flex-row flex-wrap items-center gap-sm">
-                        <span>{{ lexicon('label_SectionsPositions_CreatePosition', 'Add Position') }}</span>
-                        <span class="text-accent" x-text="'- ' + position.division_title"></span>
-                    </div>
-                </x-slot:top>
-
-                <form :action="'/admin/assignments/divisions/' + position.division_id" method="POST" class="flex flex-col gap-md" x-data="ajaxForm" @submit.prevent="submit">
-                    @csrf
-                    <div class="grid grid-cols-1 md-grid-cols-2 gap-md bg-panel-sub border border-panel rounded-panel p-3">
-                        <x-form-input name="assignment_title"
-                            id="create_assignment_title"
-                            xModel="position.assignment_title"
-                            :label="lexicon('label_SectionsPositions_PositionName', 'Position Name')"
-                            :tooltip="lexicon('tooltip_SectionsPositions_PositionNameInput', 'Enter the role or duty title')"
-                            :required="true" />
-
-                        <x-form-input name="maximum_occupants"
-                            id="create_assignment_capacity"
-                            type="number"
-                            min="1"
-                            max="999"
-                            xModel="position.maximum_occupants"
-                            class="text-center"
-                            :label="lexicon('label_SectionsPositions_Capacity', 'Max Capacity')"
-                            :tooltip="lexicon('tooltip_SectionsPositions_CapacityInput', 'Maximum number of active personae that can hold this position')"
-                            :required="true" />
-                    </div>
-
-                    <div class="grid grid-cols-1 md-grid-cols-2 gap-md bg-panel-sub border border-panel rounded-panel p-3 items-center">
-                        <div class="flex flex-row flex-wrap items-center gap-sm">
-                            <input type="hidden" name="is_recruitment_open" value="0">
-                            <input type="checkbox"
-                                id="create_assignment_is_recruitment_open"
-                                name="is_recruitment_open"
-                                value="1"
-                                x-model="position.is_recruitment_open"
-                                aria-label="{{ lexicon('label_SectionsPositions_IsOpen', 'Open for Applications') }}"
-                                x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_IsOpenToggle', 'Allow applicants to apply for vacant slots in this position')) }}'"
-                                class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
-                            <label for="create_assignment_is_recruitment_open" class="text-xs font-bold text-input-muted cursor-pointer">
-                                {{ lexicon('label_SectionsPositions_IsOpen', 'Open for Applications') }}
-                            </label>
-                        </div>
-                        <div class="flex flex-row flex-wrap items-center gap-sm">
-                            <input type="hidden" name="is_visible" value="0">
-                            <input type="checkbox"
-                                id="create_assignment_is_visible"
-                                name="is_visible"
-                                value="1"
-                                x-model="position.is_visible"
-                                class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
-                            <label for="create_assignment_is_visible" class="text-xs font-bold text-input-muted cursor-pointer">
-                                {{ lexicon('label_common_ShowOnSite', 'Show on Site') }}
-                            </label>
-                        </div>
-                    </div>
+                    <x-colour-picker name="division_base_colour"
+                                     xModel="modals.division.division_base_colour"
+                                     :label="lexicon('label_divisions_Colour', 'Division Accent Colour (8-Digit Hex #RRGGBBAA)')"
+                                     :tooltip="lexicon('tooltip_divisions_Colour', 'Department colour applied to roster headers and rank insignia')" />
 
                     <div class="flex flex-col gap-xs">
-                        <label for="create_assignment_desc" class="text-xs font-bold text-input-muted">
-                            {{ lexicon('label_SectionsPositions_PositionDesc', 'Description (Optional)') }}
-                        </label>
-                        <textarea id="create_assignment_desc"
-                            x-model="position.assignment_description"
-                            name="assignment_description"
-                            rows="2"
-                            aria-label="{{ lexicon('label_SectionsPositions_PositionDesc', 'Description (Optional)') }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_PositionDescInput', 'Describe the responsibilities and expectations for this role')) }}'"
-                            x-init="window.autosize && window.autosize($el)"
-                            class="bg-input text-input border-input rounded-input p-input outline-none w-full box-border focus-border-accent focus-shadow-accent"></textarea>
-                    </div>
-
-                    <div class="border-t-actions pt-6 text-right mt-4 flex flex-row flex-wrap items-center justify-end gap-sm">
-                        <x-button type="button"
-                            variant="secondary"
-                            @click="closeModal()"
-                            aria-label="{{ lexicon('tooltip_common_Cancel', 'Cancel and close modal') }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_common_Cancel', 'Cancel and close modal')) }}'">
-                            {{ lexicon('btn_common_Cancel', 'Cancel') }}
-                        </x-button>
-                        <x-button type="submit"
-                            variant="primary"
-                            aria-label="{{ lexicon('tooltip_SectionsPositions_SavePosition', 'Save this new position') }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_SavePosition', 'Save this new position')) }}'">
-                            <span x-text="loading ? '{{ addslashes(lexicon('msg_common_Saving', 'Saving...')) }}' : '{{ addslashes(lexicon('btn_SectionsPositions_SavePosition', 'Save Position')) }}'"></span>
-                        </x-button>
-                    </div>
-                </form>
-            </x-modal>
-
-            {{-- MODAL 4: Edit Assignment --}}
-            <x-modal show="modal === 'position-edit'" onClose="closeModal()" maxWidth="max-w-4xl">
-                <x-slot:top>
-                    {{ lexicon('label_SectionsPositions_EditPosition', 'Edit Position') }}
-                </x-slot:top>
-
-                <form :action="'/admin/assignments/' + position.id" method="POST" class="flex flex-col gap-md" x-data="ajaxForm" @submit.prevent="submit">
-                    @csrf
-                    @method('PUT')
-
-                    <div class="flex flex-col gap-xs bg-panel-sub border border-panel rounded-panel p-3">
-                        <label for="edit_position_division_id" class="text-xs font-bold text-input-muted">
-                            {{ lexicon('label_SectionsPositions_SectionAssignment', 'Section Assignment') }}
-                        </label>
-                        <select id="edit_position_division_id"
-                            x-model="position.division_id"
-                            name="division_id"
-                            aria-label="{{ lexicon('label_SectionsPositions_SectionAssignment', 'Section Assignment') }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_SectionAssignmentSelect', 'Reassign this position to a different organisational section')) }}'"
-                            class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent">
-                            @foreach($sections as $sec)
-                            <option value="{{ $sec->id }}">{{ $sec->division_title }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="grid grid-cols-1 md-grid-cols-2 gap-md bg-panel-sub border border-panel rounded-panel p-3">
-                        <x-form-input name="assignment_title"
-                            id="edit_assignment_title"
-                            xModel="position.assignment_title"
-                            :label="lexicon('label_SectionsPositions_PositionName', 'Position Name')"
-                            :tooltip="lexicon('tooltip_SectionsPositions_PositionNameInput', 'Enter the role or duty title')"
-                            :required="true" />
-
-                        <x-form-input name="maximum_occupants"
-                            id="edit_assignment_capacity"
-                            type="number"
-                            min="1"
-                            max="999"
-                            xModel="position.maximum_occupants"
-                            class="text-center"
-                            :label="lexicon('label_SectionsPositions_Capacity', 'Max Capacity')"
-                            :tooltip="lexicon('tooltip_SectionsPositions_CapacityInput', 'Maximum number of active personae that can hold this position')"
-                            :required="true" />
-                    </div>
-
-                    <div class="grid grid-cols-1 md-grid-cols-2 gap-md bg-panel-sub border border-panel rounded-panel p-3 items-center">
-                        <div class="flex flex-row flex-wrap items-center gap-sm">
-                            <input type="hidden" name="is_recruitment_open" value="0">
-                            <input type="checkbox"
-                                id="edit_assignment_is_recruitment_open"
-                                name="is_recruitment_open"
-                                value="1"
-                                x-model="position.is_recruitment_open"
-                                aria-label="{{ lexicon('label_SectionsPositions_IsOpen', 'Open for Applications') }}"
-                                x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_IsOpenToggle', 'Allow applicants to apply for vacant slots in this position')) }}'"
-                                class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
-                            <label for="edit_assignment_is_recruitment_open" class="text-xs font-bold text-input-muted cursor-pointer">
-                                {{ lexicon('label_SectionsPositions_IsOpen', 'Open for Applications') }}
-                            </label>
-                        </div>
-                        <div class="flex flex-row flex-wrap items-center gap-sm">
-                            <input type="hidden" name="is_visible" value="0">
-                            <input type="checkbox"
-                                id="edit_assignment_is_visible"
-                                name="is_visible"
-                                value="1"
-                                x-model="position.is_visible"
-                                class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
-                            <label for="edit_assignment_is_visible" class="text-xs font-bold text-input-muted cursor-pointer">
-                                {{ lexicon('label_common_ShowOnSite', 'Show on Site') }}
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-col gap-xs">
-                        <label for="edit_assignment_desc" class="text-xs font-bold text-input-muted">
-                            {{ lexicon('label_SectionsPositions_PositionDesc', 'Description (Optional)') }}
-                        </label>
-                        <textarea id="edit_assignment_desc"
-                            x-model="position.assignment_description"
-                            name="assignment_description"
-                            rows="2"
-                            aria-label="{{ lexicon('label_SectionsPositions_PositionDesc', 'Description (Optional)') }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_PositionDescInput', 'Describe the responsibilities and expectations for this role')) }}'"
-                            x-init="window.autosize && window.autosize($el)"
-                            class="bg-input text-input border-input rounded-input p-input outline-none w-full box-border focus-border-accent focus-shadow-accent"></textarea>
-                    </div>
-
-                    <div class="border-t-actions pt-6 text-right mt-4 flex flex-row flex-wrap items-center justify-end gap-sm">
-                        <x-button type="button"
-                            variant="secondary"
-                            @click="closeModal()"
-                            aria-label="{{ lexicon('tooltip_common_Cancel', 'Cancel and close modal') }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_common_Cancel', 'Cancel and close modal')) }}'">
-                            {{ lexicon('btn_common_Cancel', 'Cancel') }}
-                        </x-button>
-                        <x-button type="submit"
-                            variant="primary"
-                            aria-label="{{ lexicon('tooltip_SectionsPositions_UpdatePosition', 'Save changes to this position') }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_UpdatePosition', 'Save changes to this position')) }}'">
-                            <span x-text="loading ? '{{ addslashes(lexicon('msg_common_Saving', 'Saving...')) }}' : '{{ addslashes(lexicon('btn_SectionsPositions_UpdatePosition', 'Update Position')) }}'"></span>
-                        </x-button>
-                    </div>
-                </form>
-            </x-modal>
-
-            {{-- ========================================================= --}}
-            {{-- DIVISION CATALOGUE MODALS                                 --}}
-            {{-- ========================================================= --}}
-
-            {{-- Catalogue Management Modal --}}
-            <x-modal show="catalogueModalOpen" onClose="catalogueModalOpen = false" maxWidth="max-w-2xl">
-                <x-slot:top>
-                    {{ lexicon('label_SectionsPositions_ManageCatalogues', 'Manage Division Catalogues') }}
-                </x-slot:top>
-
-                <div class="flex flex-col gap-md">
-                    <form @submit.prevent="submitCatalogue()" class="bg-panel-sub border border-panel rounded-panel p-3 flex flex-col gap-sm">
-                        <x-form-input name="catalogue_title"
-                            id="catalogue_title"
-                            xModel="catalogueTitle"
-                            :label="lexicon('label_SectionsPositions_CatalogueTitle', 'Catalogue Name')"
-                            :placeholder="lexicon('label_SectionsPositions_CataloguePlaceholder', 'e.g. USS Enterprise, Deep Space 9...')"
-                            :tooltip="lexicon('tooltip_SectionsPositions_CatalogueTitleInput', 'Enter the display title for this division catalogue')"
-                            :required="true" />
-
-                        <div class="flex flex-col gap-xs">
-                            <label for="catalogue_description" class="text-xs font-bold text-input-muted">
-                                {{ lexicon('label_SectionsPositions_CatalogueDesc', 'Catalogue Description (Optional)') }}
-                            </label>
-                            <textarea id="catalogue_description"
-                                x-model="catalogueDesc"
-                                name="catalogue_description"
-                                rows="2"
-                                aria-label="{{ lexicon('label_SectionsPositions_CatalogueDesc', 'Catalogue Description (Optional)') }}"
-                                x-tooltip="'{{ addslashes(lexicon('tooltip_SectionsPositions_CatalogueDescInput', 'Provide a brief overview of this ship, station, or group')) }}'"
-                                class="bg-input text-input border-input rounded-input p-input outline-none w-full box-border focus-border-accent focus-shadow-accent"></textarea>
-                        </div>
-
-                        <div class="flex justify-end gap-xs">
-                            <x-button type="submit" variant="primary">
-                                <span x-text="catalogueMode === 'edit' ? '{{ addslashes(lexicon('btn_common_Update', 'Update')) }}' : '{{ addslashes(lexicon('btn_common_Save', 'Save')) }}'"></span>
+                        <div class="flex flex-row justify-between items-center">
+                            <span class="text-xs font-bold text-input-muted uppercase text-wider">
+                                {{ lexicon('label_common_Description', 'Division Description') }}
+                            </span>
+                            <x-button type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      icon="bi-stars"
+                                      :tooltip="lexicon('tooltip_divisions_AiGenerate', 'Generate lore-aware division description using AI')"
+                                      @click="generateAiDescription()">
+                                <span x-text="isGeneratingAi
+                                    ? '{{ addslashes(lexicon('msg_common_Generating', 'Generating...')) }}'
+                                    : '{{ addslashes(lexicon('btn_divisions_AiGenerate', 'AI Generate')) }}'"></span>
                             </x-button>
                         </div>
-                    </form>
 
-                    <div class="flex flex-col gap-xs max-h-64 overflow-y-auto">
-                        @forelse($catalogues ?? [] as $cat)
-                        <div class="flex items-center justify-between bg-panel-sub border border-panel rounded-panel p-3">
-                            <div>
-                                <span class="font-bold text-h">{{ $cat->catalogue_title }}</span>
-                                <span class="text-xs text-muted ml-2">({{ $cat->divisions->count() }} divisions)</span>
-                            </div>
-                            <div class="flex items-center gap-xs">
-                                <x-button type="button" variant="secondary" class="p-btn-sm text-xs" @click="openAssignCatalogueModal({{ $cat->id }}, @js($cat->divisions->pluck('id')))">
-                                    <i class="bi bi-diagram-3 mr-1"></i> Assign
-                                </x-button>
-                                <x-button type="button" variant="danger" class="p-btn-sm text-xs" @click="deleteCatalogue({{ $cat->id }})">
-                                    <i class="bi bi-trash"></i>
-                                </x-button>
-                            </div>
-                        </div>
-                        @empty
-                        <p class="text-sm text-muted text-center py-4 italic">{{ lexicon('msg_SectionsPositions_NoCatalogues', 'No division catalogues defined.') }}</p>
-                        @endforelse
+                        <x-metadata type="textarea"
+                                    name="division_description"
+                                    xModel="modals.division.division_description"
+                                    :tooltip="lexicon('tooltip_divisions_Description', 'Describe the responsibilities of this division')" />
                     </div>
+
+                    <div class="grid grid-cols-1 md-grid-cols-2 gap-md">
+                        <x-metadata type="select"
+                                    name="insignia_catalogue_id"
+                                    xModel="modals.division.insignia_catalogue_id"
+                                    :label="lexicon('label_divisions_RankSet', 'Linked Insignia Catalogue')"
+                                    :tooltip="lexicon('tooltip_divisions_RankSet', 'Select which rank insignia set applies to this division')">
+                            <option value="">{{ lexicon('option_common_None', '— None —') }}</option>
+                            @foreach($rankCatalogues as $rc)
+                                <option value="{{ $rc->id }}">{{ $rc->catalogue_title }}</option>
+                            @endforeach
+                        </x-metadata>
+
+                        <x-metadata type="number"
+                                    name="division_sort_order"
+                                    xModel="modals.division.division_sort_order"
+                                    :label="lexicon('label_common_SortOrder', 'Sort Order')"
+                                    :tooltip="lexicon('tooltip_common_SortOrder', 'Numeric display order (lower numbers appear first)')" />
+                    </div>
+
+                    <x-metadata type="checkbox"
+                                name="is_visible"
+                                value="1"
+                                xModel="modals.division.is_visible"
+                                :label="lexicon('label_common_ShowOnSite', 'Show on Site (Visible)')"
+                                :tooltip="lexicon('tooltip_divisions_Visible', 'Toggle whether this division appears on public rosters')" />
+
+                    <x-slot:footer>
+                        <x-button type="button"
+                                  variant="secondary"
+                                  :tooltip="lexicon('tooltip_common_Cancel', 'Cancel and close modal')"
+                                  @click="closeModal('division')">
+                            {{ lexicon('btn_common_Cancel', 'Cancel') }}
+                        </x-button>
+
+                        <x-button type="submit"
+                                  variant="primary"
+                                  icon="bi-save"
+                                  :tooltip="lexicon('tooltip_common_Save', 'Save division changes')">
+                            {{ lexicon('btn_common_Save', 'Save Division') }}
+                        </x-button>
+                    </x-slot:footer>
+                </x-meta>
+            </x-modal>
+
+            {{-- MODAL 2: CREATE / EDIT DUTY ASSIGNMENT --}}
+            <x-modal show="modals.assignment.open" onClose="closeModal('assignment')" maxWidth="max-w-lg">
+                <x-slot:top>
+                    <span x-text="modals.assignment.mode === 'edit'
+                        ? '{{ addslashes(lexicon('modal_assignments_Edit', 'Edit Duty Assignment')) }}'
+                        : '{{ addslashes(lexicon('modal_assignments_Create', 'Create Duty Assignment')) }}'"></span>
+                </x-slot:top>
+
+                <x-meta type="modal" xAction="modals.assignment.action" xMethod="modals.assignment.method">
+                    <x-metadata type="select"
+                                id="edit_assignment_division_id"
+                                name="division_id"
+                                xModel="modals.assignment.division_id"
+                                :label="lexicon('label_assignments_Division', 'Parent Division')"
+                                :tooltip="lexicon('tooltip_assignments_Division', 'Select which division this duty assignment belongs to')"
+                                :required="true">
+                        <option value="">{{ lexicon('option_divisions_Select', '— Select Division —') }}</option>
+                        @foreach($divisionsList as $divOpt)
+                            <option value="{{ $divOpt->id }}">{{ $divOpt->division_title }}</option>
+                        @endforeach
+                    </x-metadata>
+
+                    <x-metadata type="text"
+                                name="assignment_title"
+                                xModel="modals.assignment.assignment_title"
+                                :label="lexicon('label_assignments_Title', 'Assignment Title')"
+                                :placeholder="lexicon('placeholder_assignments_Title', 'e.g. Chief Engineer, Commanding Officer')"
+                                :tooltip="lexicon('tooltip_assignments_Title', 'Official title of this duty position')"
+                                :required="true" />
+
+                    <x-metadata type="textarea"
+                                name="assignment_description"
+                                xModel="modals.assignment.assignment_description"
+                                :label="lexicon('label_common_Description', 'Assignment Description')"
+                                :tooltip="lexicon('tooltip_assignments_Description', 'Brief summary of duties and billet expectations')" />
+
+                    <x-metadata type="number"
+                                name="maximum_occupants"
+                                xModel="modals.assignment.maximum_occupants"
+                                :label="lexicon('label_assignments_MaxOccupants', 'Maximum Occupants')"
+                                :tooltip="lexicon('tooltip_assignments_MaxOccupants', 'Maximum number of personae who can hold this billet simultaneously')"
+                                :required="true" />
+
+                    <div class="flex flex-col gap-sm pt-2">
+                        <x-metadata type="checkbox"
+                                    name="is_recruitment_open"
+                                    value="1"
+                                    xModel="modals.assignment.is_recruitment_open"
+                                    :label="lexicon('label_assignments_RecruitmentOpen', 'Open for Candidate Recruitment')"
+                                    :tooltip="lexicon('tooltip_assignments_RecruitmentOpen', 'Allow applicants to petition for this assignment')" />
+
+                        <x-metadata type="checkbox"
+                                    name="is_visible"
+                                    value="1"
+                                    xModel="modals.assignment.is_visible"
+                                    :label="lexicon('label_common_ShowOnSite', 'Show on Site (Visible)')"
+                                    :tooltip="lexicon('tooltip_assignments_Visible', 'Display this assignment on the public manifest')" />
+                    </div>
+
+                    <x-slot:footer>
+                        <x-button type="button"
+                                  variant="secondary"
+                                  :tooltip="lexicon('tooltip_common_Cancel', 'Cancel and close modal')"
+                                  @click="closeModal('assignment')">
+                            {{ lexicon('btn_common_Cancel', 'Cancel') }}
+                        </x-button>
+
+                        <x-button type="submit"
+                                  variant="primary"
+                                  icon="bi-save"
+                                  :tooltip="lexicon('tooltip_common_Save', 'Save duty assignment')">
+                            {{ lexicon('btn_common_Save', 'Save Assignment') }}
+                        </x-button>
+                    </x-slot:footer>
+                </x-meta>
+            </x-modal>
+
+            {{-- MODAL 3: IMPORT DIVISIONS & ASSIGNMENTS MANIFEST --}}
+            <x-modal show="modals.import.open" onClose="closeModal('import')" maxWidth="max-w-lg">
+                <x-slot:top>
+                    <div class="flex flex-row items-center gap-xs">
+                        <i class="bi bi-upload text-accent"></i>
+                        <span>{{ lexicon('modal_divisions_ImportTitle', 'Import Divisions & Assignments Manifest') }}</span>
+                    </div>
+                </x-slot:top>
+
+                <div class="flex flex-col gap-md" @upload-completed.window="handleImportSuccess($event.detail)">
+                    <x-metadata type="select"
+                                name="import_mode"
+                                xModel="importMode"
+                                :label="lexicon('label_common_ImportMode', 'Import Mode')"
+                                :tooltip="lexicon('tooltip_common_ImportMode', 'Choose whether to merge with or replace existing divisions')">
+                        <option value="merge">{{ lexicon('label_common_MergeUpsert', 'Merge / Upsert (Preserves active records)') }}</option>
+                        <option value="replace">{{ lexicon('label_common_ReplaceAll', 'Replace All (Clears existing divisions)') }}</option>
+                    </x-metadata>
+
+                    <x-dropzone :url="route('admin.divisions.import')"
+                                id="divisions-import-dropzone"
+                                :maxFiles="1"
+                                acceptedFiles="application/json,.json,.txt"
+                                :title="lexicon('label_divisions_DropzoneTitle', 'Drop divisions manifest (.json) here')" />
                 </div>
 
                 <x-slot:bottom>
-                    <x-button type="button" variant="secondary" @click="catalogueModalOpen = false">
+                    <x-button type="button"
+                              variant="secondary"
+                              @click="closeModal('import')">
                         {{ lexicon('btn_common_Cancel', 'Cancel') }}
                     </x-button>
                 </x-slot:bottom>
             </x-modal>
 
-            {{-- Assign Divisions to Catalogue Modal --}}
-            <x-modal show="assignCatalogueModalOpen" onClose="assignCatalogueModalOpen = false" maxWidth="max-w-md">
-                <x-slot:top>
-                    Assign Divisions to Catalogue
-                </x-slot:top>
-
-                <form @submit.prevent="submitCatalogueAssignment()" class="flex flex-col gap-md">
-                    <div class="flex flex-col gap-xs max-h-64 overflow-y-auto bg-panel-sub border border-panel rounded-panel p-3">
-                        @foreach($sections as $sec)
-                        <label class="flex items-center gap-sm cursor-pointer p-1">
-                            <input type="checkbox" value="{{ $sec->id }}" x-model="assignedSectionIds" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine cursor-pointer">
-                            <span class="text-sm text-p">{{ $sec->division_title }}</span>
-                        </label>
-                        @endforeach
-                    </div>
-
-                    <div class="flex justify-end gap-xs">
-                        <x-button type="button" variant="secondary" @click="assignCatalogueModalOpen = false">
-                            {{ lexicon('btn_common_Cancel', 'Cancel') }}
-                        </x-button>
-                        <x-button type="submit" variant="primary">
-                            {{ lexicon('btn_common_Save', 'Save Changes') }}
-                        </x-button>
-                    </div>
-                </form>
-            </x-modal>
-            @endcan
-
-        </x-slot:content>
-    </x-grid-wrapper>
-</div>
+        </div>
+    </x-slot:content>
+</x-grid-wrapper>
 @endsection
