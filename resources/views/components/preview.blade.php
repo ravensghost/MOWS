@@ -2,7 +2,9 @@
 @props([
     'type' => null,
     'label' => null,
+    'modalKey' => 'insignia',
     'baseLayer' => '#1a1a1aFF',
+    'departmentColour' => null,
     'departmentColor' => '#ffffffFF',
     'url' => null,
     'alt' => '',
@@ -10,10 +12,12 @@
 ])
 
 @php
+    $resolvedDeptColour = $departmentColour ?? $departmentColor ?? '#ffffffFF';
+
     if ($type === null) {
         if ($url !== null) {
             $type = 'image';
-        } elseif ($attributes->has('baseLayer') || func_num_args() > 0) {
+        } elseif ($attributes->has('baseLayer') || $departmentColour !== null) {
             $type = 'insignia';
         } else {
             $type = 'badge';
@@ -38,12 +42,12 @@
             <div class="flex items-center justify-center p-3 drop-shadow-badge w-full">
                 <x-badge type="insignia"
                          :baseLayer="$baseLayer"
-                         :departmentColour="$departmentColor"
+                         :departmentColour="$resolvedDeptColour"
                          :reactive="true" />
             </div>
             <div class="flex flex-col items-center gap-xs text-center">
-                <span class="font-bold text-h text-sm" x-text="modals.insignia.insignia_title || '{{ addslashes(lexicon('label_ranks_PreviewTitlePlaceholder', 'Insignia Title')) }}'"></span>
-                <span class="text-xs text-muted" x-text="modals.insignia.abbreviated_title ? '(' + modals.insignia.abbreviated_title + ')' : ''"></span>
+                <span class="font-bold text-h text-sm" x-text="modals.{{ $modalKey }}.insignia_title || '{{ addslashes(lexicon('label_ranks_PreviewTitlePlaceholder', 'Insignia Title')) }}'"></span>
+                <span class="text-xs text-muted" x-text="modals.{{ $modalKey }}.abbreviated_title ? '(' + modals.{{ $modalKey }}.abbreviated_title + ')' : ''"></span>
             </div>
             @break
 
