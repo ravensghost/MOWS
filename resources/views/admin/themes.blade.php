@@ -1,181 +1,184 @@
+{{-- resources/views/admin/themes.blade.php --}}
 @extends('layouts.app')
 
-@section('title', lexicon('admin_label_theme', 'Theme & Skin Engine'))
+@section('title', lexicon('admin_label_theme', 'Thematic Bindings & Skin Engine'))
 
 @section('content')
-<div x-data="themeManager()"
-    @ajax-success.window="refreshDOM()">
+<div x-data="thematicBindingManager()"
+     @ajax-success.window="refreshDOM()"
+     x-ref="thematicBindingsWrapper"
+     class="flex flex-col gap-lg">
 
     <x-grid-wrapper :book="$systemBook">
-
         <x-slot:top>
-            <x-page-header :title="lexicon('admin_label_theme', 'Theme & Skin Engine')" />
+            <x-page-header :title="lexicon('admin_label_theme', 'Thematic Bindings & Skin Engine')"
+                           :subtitle="lexicon('desc_admin_theme', 'Manage installed thematic skin packages, custom head font/CDN injections, and live CSS design tokens.')"
+                           icon="bi-palette2">
+                <x-slot:actions>
+                    @can('manage_themes')
+                        <x-button type="button"
+                                  variant="primary"
+                                  size="sm"
+                                  icon="bi-cloud-arrow-up"
+                                  :tooltip="lexicon('tooltip_Themes_UploadSkin', 'Upload a new .zip skin package')"
+                                  @click="openUploadModal('{{ route('admin.thematic_bindings.upload') }}')">
+                            + {{ lexicon('btn_Themes_UploadSkin', 'Upload Skin') }}
+                        </x-button>
+                    @endcan
+                </x-slot:actions>
+            </x-page-header>
 
-            @if (session('status'))
-                <div x-data="sessionAlert('{{ addslashes(session('status')) }}')"></div>
+            @if(session('status'))
+                <div x-init="window.Swal && window.Swal.toast('success', '{{ addslashes(session('status')) }}')"></div>
             @endif
         </x-slot:top>
 
         <x-slot:middle>
-            <div class="flex flex-col gap-md">
+            <div class="flex flex-col gap-lg">
                 {{-- ACCORDION 1: Installed Skins Manager --}}
-                <x-accordion-panel :title="lexicon('label_Themes_InstalledSkins', 'Installed Skin Packages')" :expanded="true">
-                    @can('manage_themes')
-                        <x-slot:top>
-                            <x-button type="button"
-                                      variant="primary"
-                                      class="p-btn-sm text-sm"
-                                      @click="modals.uploadSkin.open = true"
-                                      aria-label="{{ lexicon('tooltip_Themes_UploadSkin', 'Upload a new .zip skin package') }}"
-                                      x-tooltip="'{{ addslashes(lexicon('tooltip_Themes_UploadSkin', 'Upload a new .zip skin package')) }}'">
-                                <i class="bi bi-cloud-arrow-up mr-1" aria-hidden="true"></i>
-                                <span>{{ lexicon('btn_Themes_UploadSkin', 'Upload Skin') }}</span>
-                            </x-button>
-                        </x-slot:top>
-                    @endcan
+                <x-tab type="accordion"
+                       :title="lexicon('label_Themes_InstalledSkins', 'Installed Thematic Binding Packages')"
+                       icon="bi-box-seam"
+                       :open="true">
+                    <div id="skins-table-wrapper" x-ref="skinsTableWrapper">
+                        <x-table type="admin"
+                                 :headers="[
+                                     lexicon('label_Themes_SkinName', 'Binding Title'),
+                                     lexicon('label_Themes_DirectoryVersion', 'Directory / Version'),
+                                     lexicon('label_common_Status', 'Status'),
+                                     lexicon('label_common_Actions', 'Actions')
+                                 ]"
+                                 :emptyText="lexicon('msg_Themes_NoSkins', 'No custom thematic bindings installed.')">
+                            @foreach($skins ?? [] as $skin)
+                                <tr class="border-b-table-row hover-bg-panel-hover transition-colors">
+                                    <td class="p-4 font-bold text-h">{{ $skin->binding_title }}</td>
+                                    <td class="p-4 font-mono text-xs text-muted">
+                                        <div class="flex flex-row items-center gap-xs">
+                                            <span>/skins/{{ $skin->directory_name }}</span>
+                                            <x-button type="button"
+                                                      variant="ghost"
+                                                      size="sm"
+                                                      icon="bi-clipboard"
+                                                      :tooltip="lexicon('tooltip_Themes_CopyPath', 'Copy skin directory path')"
+                                                      x-clipboard="'/skins/{{ addslashes($skin->directory_name) }}'" />
+                                        </div>
+                                        <span class="block text-xs text-muted">v{{ $skin->package_version ?? '1.0' }}</span>
+                                    </td>
+                                    <td class="p-4">
+                                        @if($skin->is_global_default)
+                                            <x-badge type="pill"
+                                                     variant="success"
+                                                     icon="bi-check-circle"
+                                                     :tooltip="lexicon('tooltip_Themes_GlobalDefault', 'Active global default skin')">
+                                                {{ lexicon('label_Themes_StatusActive', 'Global Default') }}
+                                            </x-badge>
+                                        @else
+                                            <x-badge type="pill"
+                                                     variant="muted"
+                                                     :tooltip="lexicon('tooltip_Themes_StatusInactive', 'Installed but not set as global default')">
+                                                {{ lexicon('msg_Themes_StatusInactive', 'Inactive') }}
+                                            </x-badge>
+                                        @endif
+                                    </td>
+                                    <td class="p-4 text-right">
+                                        <div class="flex flex-row flex-wrap justify-end items-center gap-xs">
+                                            @can('manage_themes')
+                                                @if(!$skin->is_global_default)
+                                                    <x-meta type="default"
+                                                            :action="route('admin.thematic_bindings.activate', $skin->id)"
+                                                            method="POST"
+                                                            :loadingTitle="lexicon('msg_Themes_ActivatingSkin', 'Activating Skin...')">
+                                                        <x-button type="submit"
+                                                                  variant="primary"
+                                                                  size="sm"
+                                                                  icon="bi-lightning-charge"
+                                                                  :tooltip="lexicon('tooltip_Themes_ActivateSkin', 'Set this skin as the global site default')">
+                                                            {{ lexicon('btn_Themes_Activate', 'Activate') }}
+                                                        </x-button>
+                                                    </x-meta>
+                                                @endif
+                                            @endcan
 
-                    <x-table id="skins-table-wrapper" x-ref="skinsTableWrapper">
-                        <x-slot:headers>
-                            <th class="p-4 text-left">{{ lexicon('label_Themes_SkinName', 'Skin Name') }}</th>
-                            <th class="p-4 text-left">{{ lexicon('label_Themes_DirectoryVersion', 'Directory / Version') }}</th>
-                            <th class="p-4 text-left">{{ lexicon('label_common_Status', 'Status') }}</th>
-                            <th class="p-4 text-right">{{ lexicon('label_common_Actions', 'Actions') }}</th>
-                        </x-slot:headers>
-
-                        @forelse($skins as $skin)
-                            <tr class="border-b-table-row hover-bg-table-row">
-                                <td class="p-4 text-left font-bold text-p">
-                                    <span>{{ $skin->binding_title }}</span>
-                                </td>
-                                <td class="p-4 text-left font-mono text-xs text-muted">
-                                    <div class="flex flex-row items-center gap-xs">
-                                        <span>/skins/{{ $skin->directory_name }}</span>
-                                        <button type="button"
-                                                class="bg-transparent text-muted border-none hover-text-accent cursor-pointer p-0 text-xs"
-                                                x-clipboard="'/skins/{{ addslashes($skin->directory_name) }}'"
-                                                aria-label="{{ lexicon('tooltip_Themes_CopyPath', 'Copy skin directory path') }}"
-                                                x-tooltip="'{{ addslashes(lexicon('tooltip_Themes_CopyPath', 'Copy skin directory path')) }}'">
-                                            <i class="bi bi-clipboard" aria-hidden="true"></i>
-                                        </button>
-                                    </div>
-                                    <span class="block mt-1">v{{ $skin->package_version ?? '1.0' }}</span>
-                                </td>
-                                <td class="p-4 text-left">
-                                    @if($skin->is_global_default)
-                                        <x-badge variant="success"
-                                                 class="border"
-                                                 aria-label="{{ lexicon('tooltip_Themes_GlobalDefault', 'Active global default skin') }}"
-                                                 x-tooltip="'{{ addslashes(lexicon('tooltip_Themes_GlobalDefault', 'Active global default skin')) }}'">
-                                            <i class="bi bi-check-circle mr-1" aria-hidden="true"></i>
-                                            <span>{{ lexicon('label_Themes_StatusActive', 'Global Default') }}</span>
-                                        </x-badge>
-                                    @else
-                                        <x-badge variant="completed"
-                                                 class="border"
-                                                 aria-label="{{ lexicon('tooltip_Themes_StatusInactive', 'Installed but not set as global default') }}"
-                                                 x-tooltip="'{{ addslashes(lexicon('tooltip_Themes_StatusInactive', 'Installed but not set as global default')) }}'">
-                                            <span>{{ lexicon('msg_Themes_StatusInactive', 'Inactive') }}</span>
-                                        </x-badge>
-                                    @endif
-                                </td>
-                                <td class="p-4 text-right">
-                                    <div class="flex flex-row flex-wrap justify-end gap-sm items-center">
-                                        @can('manage_themes')
-                                            @if(!$skin->is_global_default)
-                                                <form action="/admin/themes/{{ $skin->id }}/activate"
-                                                      method="POST"
-                                                      x-data="ajaxForm"
-                                                      @submit.prevent="submit"
-                                                      data-loading-title="{{ lexicon('msg_Themes_ActivatingSkin', 'Activating Skin...') }}">
-                                                    @csrf
-                                                    <x-button type="submit"
-                                                              variant="text"
-                                                              class="text-accent hover-text-h text-sm"
-                                                              aria-label="{{ lexicon('tooltip_Themes_ActivateSkin', 'Set this skin as the global site default') }}"
-                                                              x-tooltip="'{{ addslashes(lexicon('tooltip_Themes_ActivateSkin', 'Set this skin as the global site default')) }}'">
-                                                        <i class="bi bi-lightning-charge mr-1" aria-hidden="true"></i>
-                                                        <span>{{ lexicon('btn_Themes_Activate', 'Activate') }}</span>
-                                                    </x-button>
-                                                </form>
-                                            @endif
-                                        @endcan
-                                        <x-button variant="text"
-                                                  href="/admin/themes/{{ $skin->id }}/export"
-                                                  class="text-sm"
-                                                  aria-label="{{ lexicon('tooltip_Themes_ExportSkin', 'Download this skin package as a .zip archive') }}"
-                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Themes_ExportSkin', 'Download this skin package as a .zip archive')) }}'">
-                                            <i class="bi bi-download mr-1" aria-hidden="true"></i>
-                                            <span>{{ lexicon('btn_Themes_Export', 'Export') }}</span>
-                                        </x-button>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="p-6 text-center text-muted italic">
-                                    <span>{{ lexicon('msg_Themes_NoSkins', 'No custom skins installed.') }}</span>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </x-table>
-                </x-accordion-panel>
+                                            <x-button variant="secondary"
+                                                      size="sm"
+                                                      href="{{ route('admin.thematic_bindings.export', $skin->id) }}"
+                                                      icon="bi-download"
+                                                      :tooltip="lexicon('tooltip_Themes_ExportSkin', 'Download this skin package as a .zip archive')">
+                                                {{ lexicon('btn_Themes_Export', 'Export') }}
+                                            </x-button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </x-table>
+                    </div>
+                </x-tab>
 
                 {{-- GLOBAL THEME VARIABLE & CUSTOM HEAD FORM --}}
-                <form action="/admin/themes/css"
-                      method="POST"
-                      class="flex flex-col gap-md"
-                      x-data="ajaxForm"
-                      @submit.prevent="submit"
-                      data-loading-title="{{ lexicon('msg_Themes_SavingCss', 'Saving Theme Variables...') }}">
-                    @csrf
+                <x-meta type="default"
+                        :action="route('admin.thematic_bindings.css')"
+                        method="POST"
+                        :loadingTitle="lexicon('msg_Themes_SavingCss', 'Saving Theme Variables...')">
 
                     {{-- ACCORDION 2: Custom Head Injection --}}
-                    <x-accordion-panel :title="lexicon('label_Themes_CustomHead', 'Custom <head> Injection (Fonts, CDNs, Meta)')">
+                    <x-tab type="accordion"
+                           :title="lexicon('label_Themes_CustomHead', 'Custom <head> Injection (Fonts, CDNs, Meta)')"
+                           icon="bi-code-square"
+                           :open="false">
                         <x-slot:top>
                             <span class="text-xs text-muted">{{ lexicon('msg_Themes_CustomHeadSub', 'Manage external scripts, fonts, and meta tags.') }}</span>
                         </x-slot:top>
 
-                        <div class="p-panel flex flex-col flex-grow bg-panel-sub border border-panel rounded-panel gap-xs">
-                            <textarea name="custom_head_injection"
-                                      aria-label="{{ lexicon('label_Themes_CustomHead', 'Custom <head> Injection (Fonts, CDNs, Meta)') }}"
-                                      x-tooltip="'{{ addslashes(lexicon('tooltip_Themes_CustomHeadInput', 'Enter custom HTML link or meta tags for the active skin')) }}'"
-                                      x-init="window.autosize && window.autosize($el)"
-                                      class="bg-input text-input border-input rounded-input p-input outline-none w-full box-border focus-border-accent focus-shadow-accent font-mono text-sm"
-                                      rows="3"
-                                      placeholder="{{ lexicon('label_Themes_CustomHeadPlaceholder', '<link href=\'https://fonts.googleapis.com/css2?family=Roboto&display=swap\' rel=\'stylesheet\'>') }}">{{ old('custom_head_injection', $skins->where('is_global_default', 1)->first()->custom_head_injection ?? '') }}</textarea>
-                            <span class="block text-xs text-muted border-l-2 border-accent pl-2">
-                                {{ lexicon('msg_Themes_CustomHeadHint', 'These tags will be injected directly into the master layout for the active skin. Do not include your core CSS files here.') }}
-                            </span>
-                        </div>
-                    </x-accordion-panel>
+                        <x-metadata type="textarea"
+                                    name="custom_head_injection"
+                                    class="font-mono"
+                                    :value="old('custom_head_injection', ($skins ?? collect())->where('is_global_default', 1)->first()->custom_head_injection ?? '')"
+                                    :placeholder="lexicon('label_Themes_CustomHeadPlaceholder', '<link href=\'https://fonts.googleapis.com/css2?family=Roboto&display=swap\' rel=\'stylesheet\'>')"
+                                    :tooltip="lexicon('tooltip_Themes_CustomHeadInput', 'Enter custom HTML link or meta tags for the active skin')"
+                                    x-init="window.Autosize && window.Autosize.init($el)" />
+
+                        <span class="block text-xs text-muted border-l-accent pl-2">
+                            {{ lexicon('msg_Themes_CustomHeadHint', 'These tags will be injected directly into the master layout for the active skin. Do not include your core CSS files here.') }}
+                        </span>
+                    </x-tab>
 
                     {{-- ACCORDION 3: Visual Theme Customiser --}}
-                    <x-accordion-panel :title="lexicon('label_Themes_Editor', 'Visual Theme Customiser')">
+                    <x-tab type="accordion"
+                           :title="lexicon('label_Themes_Editor', 'Visual Theme Token Customiser')"
+                           icon="bi-sliders"
+                           :open="true">
                         <x-slot:top>
-                            <span class="text-xs text-muted">{{ lexicon('msg_Themes_EditorDesc', 'Easily adjust the colours and settings of your active skin.') }}</span>
+                            <div @click.stop class="w-full md-w-64">
+                                <x-metadata type="search"
+                                            name="theme_var_search"
+                                            id="theme-var-search"
+                                            :bare="true"
+                                            xModel="varSearchQuery"
+                                            :placeholder="lexicon('label_Themes_SearchVarsPlaceholder', 'Search by token, label, or usage...')"
+                                            :tooltip="lexicon('tooltip_Themes_SearchVars', 'Instantaneously filter theme variables using fuzzy search')" />
+                            </div>
                         </x-slot:top>
 
-                        <div class="p-panel flex flex-col flex-grow overflow-y-auto gap-lg">
-                            <div class="w-full md-w-1-2">
-                                <x-form-input name="theme_var_search"
-                                              id="theme-var-search"
-                                              :label="lexicon('label_Themes_SearchVars', 'Filter Theme Variables')"
-                                              :placeholder="lexicon('label_Themes_SearchVarsPlaceholder', 'Search by variable name, CSS token, or selector...')"
-                                              :tooltip="lexicon('tooltip_Themes_SearchVars', 'Instantaneously filter theme variables using fuzzy search')"
-                                              xModel="varSearchQuery" />
-                            </div>
-
-                            @foreach($groupedVars as $groupName => $vars)
+                        <div class="flex flex-col gap-lg">
+                            @foreach($groupedVars ?? [] as $groupName => $vars)
                                 <div class="flex flex-col gap-md">
-                                    <span class="block font-bold text-accent pb-2 border-b uppercase tracking-wider text-sm">
+                                    <span class="block font-bold text-accent pb-2 border-b-panel uppercase text-wider text-sm">
                                         {{ $groupName }}
                                     </span>
 
-                                    <div class="grid grid-cols-1 lg-grid-cols-3 gap-sm w-full">
+                                    <div class="grid grid-cols-1 lg-grid-cols-3 gap-md w-full">
                                         @foreach($vars as $key => $varData)
-                                            <x-theme-var-card :varKey="$key"
-                                                              :varData="$varData"
-                                                              :structuralOptions="$structuralOptions" />
+                                            <div data-search-item
+                                                 data-theme-var-item
+                                                 data-id="{{ $key }}"
+                                                 data-key="{{ $key }}"
+                                                 data-label="{{ $varData['label'] ?? $key }}"
+                                                 data-usage="{{ $varData['shortUsageText'] ?? '' }}"
+                                                 x-show="matchesVarSearch('{{ addslashes($varData['label'] ?? $key) }}', '{{ addslashes($key) }}', '{{ addslashes($varData['shortUsageText'] ?? '') }}')">
+                                                <x-var :varKey="$key"
+                                                       :varData="$varData"
+                                                       :structuralOptions="$structuralOptions ?? []" />
+                                            </div>
                                         @endforeach
                                     </div>
                                 </div>
@@ -183,70 +186,58 @@
                         </div>
 
                         @can('manage_themes')
-                            <div class="border-t-actions pt-6 p-4 text-right bg-panel-sub">
+                            <div class="border-t-actions pt-4 flex flex-row justify-end">
                                 <x-button type="submit"
                                           variant="primary"
-                                          class="p-btn-lg text-base"
-                                          aria-label="{{ lexicon('tooltip_Themes_SaveCss', 'Save custom head tags and theme variables') }}"
-                                          x-tooltip="'{{ addslashes(lexicon('tooltip_Themes_SaveCss', 'Save custom head tags and theme variables')) }}'">
-                                    <i class="bi bi-floppy mr-1" aria-hidden="true"></i>
-                                    <span>{{ lexicon('btn_Themes_SaveCss', 'Save Theme Variables') }}</span>
+                                          size="lg"
+                                          icon="bi-floppy"
+                                          :tooltip="lexicon('tooltip_Themes_SaveCss', 'Save custom head tags and theme variables')">
+                                    {{ lexicon('btn_Themes_SaveCss', 'Save Theme Variables') }}
                                 </x-button>
                             </div>
                         @endcan
-                    </x-accordion-panel>
-                </form>
+                    </x-tab>
+                </x-meta>
             </div>
         </x-slot:middle>
 
         <x-slot:bottom>
             {{-- MODAL: UPLOAD SKIN PACKAGE --}}
             @can('manage_themes')
-                <x-modal show="modals.uploadSkin.open" maxWidth="max-w-lg">
+                <x-modal show="modals.uploadSkin.open" onClose="closeUploadModal()" maxWidth="max-w-lg">
                     <x-slot:top>
-                        {{ lexicon('label_Themes_UploadNew', 'Upload Skin Package') }}
+                        <span>{{ lexicon('label_Themes_UploadNew', 'Upload Skin Package (.zip)') }}</span>
                     </x-slot:top>
 
-                    <div class="flex flex-col gap-md">
-                        <div class="bg-panel-sub border border-panel rounded-panel p-4 flex flex-col gap-xs text-xs text-muted">
-                            <span class="block font-bold text-p">{{ lexicon('msg_Themes_UploadDesc', 'Your .zip file must match this exact folder structure:') }}</span>
-                            <ul class="font-mono flex flex-col gap-xs pl-2 border-l-2 border-accent">
-                                <li><i class="bi bi-folder2-open mr-1" aria-hidden="true"></i>css/
-                                    <ul class="pl-4"><li><i class="bi bi-filetype-css mr-1" aria-hidden="true"></i>theme.css</li></ul>
-                                </li>
-                                <li><i class="bi bi-folder2-open mr-1" aria-hidden="true"></i>images/
-                                    <ul class="pl-4">
-                                        <li><i class="bi bi-folder2-open mr-1" aria-hidden="true"></i>site/
-                                            <ul class="pl-4">
-                                                <li><i class="bi bi-file-earmark-image mr-1" aria-hidden="true"></i>banner.png</li>
-                                                <li><i class="bi bi-file-earmark-image mr-1" aria-hidden="true"></i>logo.png</li>
-                                                <li><i class="bi bi-file-earmark-image mr-1" aria-hidden="true"></i>favicon.png</li>
-                                            </ul>
-                                        </li>
-                                    </ul>
-                                </li>
+                    <div class="flex flex-col gap-md" @upload-completed.window="refreshDOM()">
+                        <x-tab type="sub">
+                            <span class="text-xs font-bold text-h">{{ lexicon('msg_Themes_UploadDesc', 'Your .zip file must match this exact folder structure:') }}</span>
+                            <ul class="font-mono text-xs text-muted flex flex-col gap-xs pl-4 m-0">
+                                <li><i class="bi bi-folder2-open text-accent"></i> css/theme.css</li>
+                                <li><i class="bi bi-folder2-open text-accent"></i> images/site/ (banner.png, logo.png, favicon.png)</li>
                             </ul>
-                        </div>
+                        </x-tab>
 
-                        <form action="/admin/themes/upload"
-                              method="POST"
-                              enctype="multipart/form-data"
-                              class="bg-panel-sub border-dashed-panel rounded-panel p-panel text-center cursor-pointer transition-colors hover-border-accent"
-                              aria-label="{{ lexicon('label_Themes_Package', 'Drop Skin Archive (.zip) here') }}"
-                              x-tooltip="'{{ addslashes(lexicon('tooltip_Themes_DropzoneUpload', 'Drag and drop a .zip archive (max 10 MB) or click to browse')) }}'"
-                              x-data="themeUploader('{{ csrf_token() }}')">
-                            @csrf
-                            <div class="dz-message flex flex-col items-center justify-center gap-xs">
-                                <i class="bi bi-file-earmark-zip text-2xl text-accent" aria-hidden="true"></i>
-                                <span class="block font-bold text-p">{{ lexicon('label_Themes_Package', 'Drop Skin Archive (.zip) here') }}</span>
-                                <span class="block text-xs text-muted">{{ lexicon('msg_Themes_BrowseFiles', 'or click to browse your files') }}</span>
-                            </div>
-                        </form>
+                        <x-dropzone :url="route('admin.thematic_bindings.upload')"
+                                    id="skin-package-dropzone"
+                                    paramName="skin_zip"
+                                    :maxFiles="1"
+                                    :maxFilesize="10"
+                                    acceptedFiles=".zip,application/zip,application/x-zip-compressed"
+                                    :title="lexicon('label_Themes_Package', 'Drop Skin Archive (.zip) here')"
+                                    :tooltip="lexicon('tooltip_Themes_DropzoneUpload', 'Drag and drop a .zip archive (max 10 MB) or click to browse')" />
                     </div>
+
+                    <x-slot:bottom>
+                        <x-button type="button"
+                                  variant="secondary"
+                                  @click="closeUploadModal()">
+                            {{ lexicon('btn_common_Close', 'Close') }}
+                        </x-button>
+                    </x-slot:bottom>
                 </x-modal>
             @endcan
         </x-slot:bottom>
-
     </x-grid-wrapper>
 </div>
 @endsection
