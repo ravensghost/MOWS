@@ -1,32 +1,44 @@
 // resources/js/managers/thematicBindingManager.js
+
 export default function thematicBindingManager() {
     return {
         // 1. State Properties Upfront (Unified Modals & Search Contract)
         modals: {
             uploadSkin: {
+                isOpen: false,
                 open: false,
                 mode: 'create',
-                action: '/admin/themes/skins/upload',
+                id: '',
+                action: '/admin/thematic-bindings/upload',
                 method: 'POST'
             }
         },
+        searchQuery: '',
         varSearchQuery: '',
         searchHelperInstance: null,
+        filteredIds: null,
+        isLoading: false,
 
         // 2. Lifecycle Hook
         init() {
-            this.initFuse();
-            this.$watch('varSearchQuery', () => {
-                // Reactive trigger for searching variables
+            this.initSearch();
+            this.$watch('varSearchQuery', (val) => {
+                this.searchQuery = val;
+                if (!val.trim() || !this.searchHelperInstance) {
+                    this.filteredIds = null;
+                    return;
+                }
+                const results = this.searchHelperInstance.search(val.trim());
+                this.filteredIds = results ? results.map(String) : [];
             });
         },
 
         // 3. Search & Filtering (Fuse.js Integration)
-        initFuse() {
-            if (window.Search) {
+        initSearch() {
+            if (window.Search && this.$el && this.$el.querySelector('[data-search-item], [data-theme-var-item], [data-var-search-item]')) {
                 try {
                     this.searchHelperInstance = window.Search.create(
-                        '[data-theme-var-item], [data-var-search-item]',
+                        '[data-search-item], [data-theme-var-item], [data-var-search-item]',
                         ['label', 'key', 'usage'],
                         { threshold: 0.35 }
                     );
@@ -36,46 +48,46 @@ export default function thematicBindingManager() {
             }
         },
 
-        matchesVarSearch(label, key, usage) {
-            if (!this.varSearchQuery.trim()) return true;
+        initFuse() {
+            this.initSearch();
+        },
 
-            if (this.searchHelperInstance) {
-                const fuse = new window.Fuse([{ label, key, usage }], {
-                    keys: ['label', 'key', 'usage'],
-                    threshold: 0.35
-                });
-                return fuse.search(this.varSearchQuery.trim()).length > 0;
+        isItemVisible(idOrKey) {
+            const q = (this.varSearchQuery || this.searchQuery).trim().toLowerCase();
+            if (!q) return true;
+            if (this.filteredIds !== null && this.filteredIds.length > 0) {
+                return this.filteredIds.includes(String(idOrKey));
             }
+            return String(idOrKey || '').toLowerCase().includes(q);
+        },
 
-            const list = [{ label, key, usage }];
-            const fuse = new window.Fuse(list, {
-                keys: ['label', 'key', 'usage'],
-                threshold: 0.35
-            });
-            return fuse.search(this.varSearchQuery.trim()).length > 0;
+        matchesVarSearch(label = '', key = '', usage = '') {
+            const q = (this.varSearchQuery || this.searchQuery).trim().toLowerCase();
+            if (!q) return true;
+            if (this.filteredIds !== null && this.filteredIds.length > 0 && key && this.filteredIds.includes(String(key))) {
+                return true;
+            }
+            return [label, key, usage].some(val =>
+                String(val || '').toLowerCase().includes(q)
+            );
         },
 
         // 4. Modal Handlers (Using window.Modal utility)
-        openUploadModal() {
-            const baseUrl = '/admin/themes/skins/upload';
+        openUploadModal(baseUrl = '/admin/thematic-bindings/upload') {
             window.Modal.create(this.modals.uploadSkin, {}, baseUrl);
-            this.modals.uploadSkin.method = 'POST';
-            this.modals.uploadSkin.action = baseUrl;
-            this.modals.uploadSkin.open = true;
         },
 
         closeUploadModal() {
             window.Modal.close(this.modals.uploadSkin);
-            this.modals.uploadSkin.open = false;
         },
 
         // 5. DOM Refresh Handler (sanitize = false)
         async refreshDOM() {
             this.closeUploadModal();
             if (typeof window.updateDOM === 'function') {
-                await window.updateDOM(this.$refs, ['skinsTableWrapper'], () => {
+                await window.updateDOM(this.$refs, ['skinsTableWrapper', 'thematicBindingsWrapper'], () => {
                     this.$nextTick(() => {
-                        this.initFuse();
+                        this.initSearch();
                     });
                 }, false);
             }
