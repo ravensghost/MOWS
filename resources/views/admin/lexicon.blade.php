@@ -1,237 +1,255 @@
+{{-- resources/views/admin/lexicon.blade.php --}}
 @extends('layouts.app')
 
-@section('title', lexicon('admin_label_lexicon', 'Lexicon Manager'))
+@section('title', lexicon('admin_label_lexicon', 'Lexicon Codex Manager'))
 
 @section('content')
-<div x-data="lexiconManager" @ajax-success.window="refreshDOM()" @lexicon-clear.window="refreshDOM(true)">
-    <x-grid-wrapper :book="$systemBook">
+<div x-data="lexiconCodexManager()"
+     @ajax-success.window="refreshDOM()"
+     @lexicon-clear.window="refreshDOM(true)"
+     class="flex flex-col gap-lg">
 
+    <x-grid-wrapper :book="$systemBook">
         <x-slot:top>
-            <x-page-header :title="lexicon('admin_label_lexicon', 'Lexicon Manager')">
+            <x-page-header :title="lexicon('admin_label_lexicon', 'Lexicon Codex Manager')"
+                           :subtitle="lexicon('desc_admin_lexicon', 'Manage semantic tokens, prefix groups, custom conlang dialects, and AI-assisted locale packs.')"
+                           icon="bi-translate">
                 <x-slot:actions>
+                    <x-metadata type="search"
+                                name="lexicon_search"
+                                id="lexicon_search"
+                                :bare="true"
+                                xModel="searchQuery"
+                                :placeholder="lexicon('label_Lexicon_SearchPlaceholder', 'Search by token, group, or translation...')"
+                                :tooltip="lexicon('tooltip_Lexicon_SearchInput', 'Instantaneously filter lexicon terms using fuzzy search')" />
+
                     @can('manage_lexicon')
                         <x-button type="button"
                                   variant="success"
-                                  class="p-btn-sm text-sm"
-                                  @click="modals.importLang.open = true"
-                                  aria-label="{{ lexicon('tooltip_Lexicon_ImportLanguage', 'Import a translation JSON file') }}"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_ImportLanguage', 'Import a translation JSON file')) }}'">
-                            <i class="bi bi-upload"></i> {{ lexicon('btn_Lexicon_ImportLanguage', 'Import Language') }}
+                                  size="sm"
+                                  icon="bi-upload"
+                                  :tooltip="lexicon('tooltip_Lexicon_ImportLanguage', 'Import a translation JSON file')"
+                                  @click="openImportLangModal()">
+                            {{ lexicon('btn_Lexicon_ImportLanguage', 'Import Language') }}
                         </x-button>
 
                         <x-button variant="secondary"
-                                  href="/admin/lexicon/template/blank"
-                                  class="p-btn-sm text-sm"
+                                  size="sm"
+                                  href="{{ route('admin.lexicon_codex.template.blank') }}"
                                   target="_blank"
-                                  aria-label="{{ lexicon('tooltip_Lexicon_DownloadTemplate', 'Download a blank JSON translation template') }}"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_DownloadTemplate', 'Download a blank JSON translation template')) }}'">
-                            <i class="bi bi-file-earmark-code"></i> {{ lexicon('btn_Lexicon_DownloadBlankTemplate', 'Download Blank Template') }}
+                                  icon="bi-file-earmark-code"
+                                  :tooltip="lexicon('tooltip_Lexicon_DownloadTemplate', 'Download a blank JSON translation template')">
+                            {{ lexicon('btn_Lexicon_DownloadBlankTemplate', 'Blank Template') }}
                         </x-button>
 
                         <x-button type="button"
                                   variant="primary"
-                                  class="p-btn-sm text-sm"
-                                  @click="modals.addLang.open = true"
-                                  aria-label="{{ lexicon('tooltip_Lexicon_AddLanguage', 'Initialise a new custom or auto-translated language') }}"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_AddLanguage', 'Initialise a new custom or auto-translated language')) }}'">
-                            <i class="bi bi-translate"></i> {{ lexicon('btn_Lexicon_AddLanguage', 'Add Language') }}
+                                  size="sm"
+                                  icon="bi-plus-lg"
+                                  :tooltip="lexicon('tooltip_Lexicon_AddLanguage', 'Initialise a new custom or auto-translated language')"
+                                  @click="openAddLangModal('common')">
+                            + {{ lexicon('btn_Lexicon_AddLanguage', 'Add Language') }}
                         </x-button>
 
                         <x-button variant="secondary"
-                                  x-bind:href="'/admin/lexicon/export/' + activeTab"
-                                  class="p-btn-sm text-sm"
+                                  size="sm"
+                                  x-bind:href="'/admin/lexicon-codex/export/' + activeTab"
                                   target="_blank"
-                                  aria-label="{{ lexicon('tooltip_Lexicon_ExportLanguage', 'Export active language dictionary to JSON') }}"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_ExportLanguage', 'Export active language dictionary to JSON')) }}'">
-                            <i class="bi bi-download"></i> {{ lexicon('btn_Lexicon_ExportLanguage', 'Export') }}
+                                  icon="bi-download"
+                                  :tooltip="lexicon('tooltip_Lexicon_ExportLanguage', 'Export active language dictionary to JSON')">
+                            {{ lexicon('btn_Lexicon_ExportLanguage', 'Export') }}
                         </x-button>
                     @endcan
                 </x-slot:actions>
             </x-page-header>
 
-            <!-- Alpine-Driven Language Tabs Bar -->
-            <div id="lexicon-tabs-header" class="bg-panel-header rounded-t flex flex-row flex-wrap items-center p-2 gap-sm" x-ref="lexiconTabsHeader">
-                @foreach($locales as $code => $label)
-                    <button type="button"
-                            class="font-bold text-sm bg-transparent border-none hover-bg-panel-hover py-1 px-2 cursor-pointer transition-btn rounded-input"
-                            x-bind:class="activeTab === '{{ $code }}' ? 'text-p border-b-accent bg-panel-header' : 'text-muted border-b-2-transparent'"
-                            @click="activeTab = '{{ $code }}'"
-                            aria-label="{{ lexicon('tooltip_Lexicon_SelectTab', 'Switch active language view') }} {{ $label }}"
-                            x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_SelectTab', 'Switch active language view')) }}'">
-                        <span>{{ $label }}</span>
-                        <span class="text-xs opacity-50">({{ strtoupper($code) }})</span>
-                    </button>
-                @endforeach
-            </div>
+            {{-- Alpine-Driven Language Tabs & Active Locale Toolbar --}}
+            <x-tab type="panel">
+                <div id="lexicon-tabs-header"
+                     x-ref="lexiconTabsHeader"
+                     class="bg-panel-header border-b-panel p-2 flex flex-row flex-wrap items-center gap-xs border-rounded-sm">
+                    @foreach($locales as $code =>$label)
+                        <x-button type="button"
+                                  size="sm"
+                                  ::variant="activeTab === '{{ $code }}' ? 'primary' : 'ghost'"
+                                  :tooltip="lexicon('tooltip_Lexicon_SelectTab', 'Switch active language view') . ' (' . $label . ')'"
+                                  @click="activeTab = '{{ $code }}'">
+                            <span>{{ $label }}</span>
+                            <span class="text-xs text-muted">({{ strtoupper($code) }})</span>
+                        </x-button>
+                    @endforeach
+                </div>
 
-            <!-- Dynamic Active Language Toolbar -->
-            <div id="lexicon-active-toolbar" class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col gap-md overflow-hidden rounded-t-none border-t-0 mb-lg" x-ref="lexiconActiveToolbar" x-cloak>
-                @foreach($locales as $code => $label)
-                    <div x-show="activeTab === '{{ $code }}'" x-cloak class="bg-panel-header text-h border-b border-panel p-panel-header font-bold border-b-0 flex flex-row flex-wrap gap-md items-center justify-between p-3">
-                        <div class="flex flex-row items-center gap-sm">
-                            <span class="font-bold text-h">{{ $label }}</span>
-                            <x-badge type="info">{{ strtoupper($code) }}</x-badge>
-                        </div>
-                        @can('manage_lexicon')
-                            <div class="flex flex-row flex-wrap gap-sm items-center">
-                                <x-button type="button"
-                                          variant="text"
-                                          class="text-warning hover-warning text-sm px-2"
-                                          @click="openEditLangModal('{{ $code }}', '{{ addslashes($label) }}')"
-                                          aria-label="{{ lexicon('tooltip_Lexicon_EditLanguage', 'Edit language display name') }}"
-                                          x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_EditLanguage', 'Edit language display name')) }}'">
-                                    <i class="bi bi-pencil"></i> {{ lexicon('btn_common_Edit', 'Edit') }}
-                                </x-button>
-
-                                @if($code === 'gb' || $code === $activeSkin)
-                                    <x-button type="button"
-                                              variant="text"
-                                              class="text-danger hover-danger text-sm px-2"
-                                              x-data="deleteAction(`/admin/lexicon/language/{{ $code }}/clear`, 'DELETE', '{{ addslashes($label) }}', true)"
-                                              @click="confirmDelete"
-                                              aria-label="{{ lexicon('tooltip_Lexicon_ClearLanguage', 'Clear all custom translations for this language') }}"
-                                              x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_ClearLanguage', 'Clear all custom translations for this language')) }}'">
-                                        <i class="bi bi-eraser"></i> {{ lexicon('btn_Lexicon_ClearLanguage', 'Clear Language') }}
-                                    </x-button>
-                                @else
-                                    <x-button type="button"
-                                              variant="text"
-                                              class="text-danger hover-danger text-sm px-2"
-                                              x-data="deleteAction(`/admin/lexicon/language/{{ $code }}`, 'DELETE', '{{ addslashes($label) }}')"
-                                              @click="confirmDelete"
-                                              aria-label="{{ lexicon('tooltip_Lexicon_DeleteLanguage', 'Delete this language pack entirely') }}"
-                                              x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_DeleteLanguage', 'Delete this language pack entirely')) }}'">
-                                        <i class="bi bi-trash"></i> {{ lexicon('btn_Lexicon_DeleteLanguage', 'Delete Language') }}
-                                    </x-button>
-                                @endif
+                <div id="lexicon-active-toolbar" x-ref="lexiconActiveToolbar" x-cloak>
+                    @foreach($locales as $code =>$label)
+                        <div x-show="activeTab === '{{ $code }}'"
+                             x-cloak
+                             class="flex flex-row flex-wrap items-center justify-between gap-md pt-2">
+                            <div class="flex flex-row items-center gap-sm">
+                                <span class="font-bold text-h">{{ $label }}</span>
+                                <x-badge type="pill" variant="info">{{ strtoupper($code) }}</x-badge>
                             </div>
-                        @endcan
-                    </div>
-                @endforeach
-            </div>
 
-            <!-- Fuse.js Instant Search Filter Bar -->
-            <div class="bg-panel border border-panel rounded-panel shadow-panel p-4 mb-lg">
-                <x-form-input name="lexicon_search"
-                              id="lexicon_search"
-                              type="text"
-                              :label="lexicon('label_Lexicon_SearchTerms', 'Filter Lexicon Terms')"
-                              :placeholder="lexicon('label_Lexicon_SearchPlaceholder', 'Search by semantic token, prefix group, group title, or translation...')"
-                              :tooltip="lexicon('tooltip_Lexicon_SearchInput', 'Instantaneously filter lexicon terms using fuzzy search')"
-                              xModel="searchQuery" />
-            </div>
+                            @can('manage_lexicon')
+                                <div class="flex flex-row flex-wrap items-center gap-xs">
+                                    <x-button type="button"
+                                              variant="ghost"
+                                              size="sm"
+                                              icon="bi-pencil"
+                                              :tooltip="lexicon('tooltip_Lexicon_EditLanguage', 'Edit language display name')"
+                                              @click="openEditLangModal('{{ $code }}', '{{ addslashes($label) }}')">
+                                        {{ lexicon('btn_common_Edit', 'Edit Label') }}
+                                    </x-button>
+
+                                    @if($code === 'gb' || $code === ($activeSkin ?? ''))
+                                        <x-button type="button"
+                                                  variant="danger"
+                                                  size="sm"
+                                                  icon="bi-eraser"
+                                                  :tooltip="lexicon('tooltip_Lexicon_ClearLanguage', 'Clear all custom translations for this language')"
+                                                  x-data="deleteAction('/admin/lexicon-codex/language/{{ $code }}/clear', 'DELETE', '{{ addslashes($label) }}', 'This will clear all custom strings and rebuild defaults.', true)"
+                                                  @click="confirmDelete()">
+                                            {{ lexicon('btn_Lexicon_ClearLanguage', 'Clear Language') }}
+                                        </x-button>
+                                    @else
+                                        <x-button type="button"
+                                                  variant="danger"
+                                                  size="sm"
+                                                  icon="bi-trash"
+                                                  :tooltip="lexicon('tooltip_Lexicon_DeleteLanguage', 'Delete this language pack entirely')"
+                                                  x-data="deleteAction('/admin/lexicon-codex/language/{{ $code }}', 'DELETE', '{{ addslashes($label) }}')"
+                                                  @click="confirmDelete()">
+                                            {{ lexicon('btn_Lexicon_DeleteLanguage', 'Delete Language') }}
+                                        </x-button>
+                                    @endif
+                                </div>
+                            @endcan
+                        </div>
+                    @endforeach
+                </div>
+            </x-tab>
         </x-slot:top>
 
         <x-slot:middle>
             <div id="lexicon-table-content" x-ref="lexiconTableContent" class="flex flex-col gap-md">
-
-                @forelse($groupedTerms as $prefixGroup => $groups)
-                    <div x-show="masterVisible('{{ addslashes($prefixGroup) }}')" class="mb-2">
-                        <x-accordion-panel :title="$prefixGroup" :expanded="false">
+                @forelse($groupedTerms as $prefixGroup =>$groups)
+                    <div x-show="masterVisible('{{ addslashes($prefixGroup) }}')">
+                        <x-tab type="accordion"
+                               :title="$prefixGroup"
+                               icon="bi-folder2-open"
+                               :open="false">
                             <x-slot:top>
                                 @can('manage_lexicon')
-                                    <x-button type="button"
-                                              variant="text"
-                                              class="text-danger hover-danger flex-shrink-0 text-sm"
-                                              x-data="deleteAction(`/admin/lexicon/group/{{ $prefixGroup }}`, 'DELETE', 'Group {{ addslashes($prefixGroup) }}')"
-                                              @click.stop="confirmDelete"
-                                              aria-label="{{ lexicon('tooltip_Lexicon_DeleteGroup', 'Delete entire prefix group') }}"
-                                              x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_DeleteGroup', 'Delete entire prefix group')) }}'">
-                                        <i class="bi bi-trash"></i> {{ lexicon('btn_common_Delete', 'Delete') }}
-                                    </x-button>
+                                    <div @click.stop>
+                                        <x-button type="button"
+                                                  variant="danger"
+                                                  size="sm"
+                                                  icon="bi-trash"
+                                                  :tooltip="lexicon('tooltip_Lexicon_DeleteGroup', 'Delete entire prefix group')"
+                                                  x-data="deleteAction('/admin/lexicon-codex/group/{{ urlencode($prefixGroup) }}', 'DELETE', 'Group {{ addslashes($prefixGroup) }}')"
+                                                  @click="confirmDelete()">
+                                            {{ lexicon('btn_common_Delete', 'Delete Group') }}
+                                        </x-button>
+                                    </div>
                                 @endcan
                             </x-slot:top>
 
-                            <x-table class="border-t-0 rounded-none shadow-none">
-                                <x-slot:headers>
-                                    <th class="p-4 text-left w-48">{{ lexicon('label_Lexicon_Subgroup', 'Group Title') }}</th>
-                                    <th class="p-4 text-left">{{ lexicon('label_Lexicon_Term', 'Semantic Token') }}</th>
-                                    <th class="p-4 text-left">{{ lexicon('label_Lexicon_Translation', 'Translation') }}</th>
-                                    <th class="p-4 text-right w-48">{{ lexicon('label_common_Actions', 'Actions') }}</th>
-                                </x-slot:headers>
+                            <x-table type="admin"
+                                     :bareBody="true"
+                                     :headers="[
+                                         lexicon('label_Lexicon_Subgroup', 'Group Title'),
+                                         lexicon('label_Lexicon_Term', 'Semantic Token'),
+                                         lexicon('label_Lexicon_Translation', 'Translation Payload'),
+                                         lexicon('label_common_Actions', 'Actions')
+                                     ]">
+                                @foreach($groups as $groupTitle =>$groupEntries)
+                                    <tbody class="text-sm text-p"
+                                           x-data="{ subExpanded: false }"
+                                           x-show="subgroupVisible('{{ addslashes($prefixGroup) }}', '{{ addslashes($groupTitle) }}')">
 
-                                @foreach($groups as $groupTitle => $groupEntries)
-                                    <tbody x-data="{ subExpanded: false }" x-show="subgroupVisible('{{ addslashes($prefixGroup) }}', '{{ addslashes($groupTitle) }}')">
-
-                                        <!-- Clickable Group Header Row -->
-                                        <tr class="bg-panel-sub border-b-table-row hover-bg-panel-hover cursor-pointer"
+                                        {{-- Clickable Subgroup Header Row --}}
+                                        <tr class="bg-panel-sub border-b-table-row hover-bg-panel-hover cursor-pointer select-none"
                                             @click="subExpanded = !subExpanded"
-                                            aria-label="{{ lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel') }}"
                                             x-tooltip="'{{ addslashes(lexicon('tooltip_common_TogglePanel', 'Click to expand or collapse panel')) }}'">
-                                            <td colspan="4" class="p-2 pl-4 font-bold text-h">
-                                                <div class="flex flex-row items-center justify-between">
+                                            <td colspan="4" class="p-3 font-bold text-h">
+                                                <div class="flex flex-row items-center justify-between gap-sm">
                                                     <div class="flex flex-row items-center gap-sm">
                                                         <span class="text-xs text-muted" x-text="(subExpanded || searchQuery.trim() !== '') ? '▼' : '▶'"></span>
                                                         <span>{{ $groupTitle }}</span>
-                                                        <x-badge type="primary">{{ count($groupEntries) }} {{ lexicon('label_Lexicon_TermsCount', 'entries') }}</x-badge>
+                                                        <x-badge type="pill" variant="primary">
+                                                            {{ count($groupEntries) }} {{ lexicon('label_Lexicon_TermsCount', 'entries') }}
+                                                        </x-badge>
                                                     </div>
+
                                                     @can('manage_lexicon')
-                                                        <x-button type="button"
-                                                                  variant="text"
-                                                                  class="text-danger hover-danger text-xs px-2"
-                                                                  x-data="deleteAction(`/admin/lexicon/group/{{ $prefixGroup }}/{{ $groupTitle }}`, 'DELETE', 'Group {{ addslashes($groupTitle) }}')"
-                                                                  @click.stop="confirmDelete"
-                                                                  aria-label="{{ lexicon('tooltip_Lexicon_DeleteSubgroup', 'Delete this group and its entries') }}"
-                                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_DeleteSubgroup', 'Delete this group and its entries')) }}'">
-                                                            <i class="bi bi-trash"></i>
-                                                        </x-button>
+                                                        <div @click.stop>
+                                                            <x-button type="button"
+                                                                      variant="danger"
+                                                                      size="sm"
+                                                                      icon="bi-trash"
+                                                                      :tooltip="lexicon('tooltip_Lexicon_DeleteSubgroup', 'Delete this group and its entries')"
+                                                                      x-data="deleteAction('/admin/lexicon-codex/group/{{ urlencode($prefixGroup) }}/subgroup/{{ urlencode($groupTitle) }}', 'DELETE', 'Subgroup {{ addslashes($groupTitle) }}')"
+                                                                      @click="confirmDelete()" />
+                                                        </div>
                                                     @endcan
                                                 </div>
                                             </td>
                                         </tr>
 
-                                        <!-- Translation Entries -->
-                                        @foreach($groupEntries as $entry)
+                                        {{-- Translation Entries --}}
+                                        @foreach($groupEntries as$entry)
                                             <tr x-show="(subExpanded || searchQuery.trim() !== '') && termVisible({{ $entry->id }})"
+                                                x-cloak
+                                                data-search-item
                                                 data-term-row
                                                 data-id="{{ $entry->id }}"
                                                 data-master="{{ $prefixGroup }}"
+                                                data-prefix-group-title="{{ $prefixGroup }}"
                                                 data-sub="{{ $groupTitle }}"
+                                                data-group-title="{{ $groupTitle }}"
                                                 data-key="{{ $entry->semantic_token }}"
+                                                data-semantic-token="{{ $entry->semantic_token }}"
                                                 data-translation-payloads="{{ json_encode($entry->translation_payloads ?? []) }}"
-                                                class="border-b-table-row hover-bg-table-row"
-                                                x-cloak>
-                                                <td class="p-4 font-bold text-muted pl-8">↳ {{ $groupTitle }}</td>
-                                                <td class="p-4 font-mono text-accent text-sm">
+                                                class="border-b-table-row hover-bg-panel-hover transition-colors">
+                                                <td class="p-4 font-bold text-muted">↳ {{ $groupTitle }}</td>
+                                                <td class="p-4 font-mono text-accent text-xs">
                                                     <div class="flex flex-row items-center gap-xs">
                                                         <span>{{ $entry->semantic_token }}</span>
                                                         <x-button type="button"
-                                                                  variant="text"
-                                                                  class="text-xs text-muted hover-text-accent"
-                                                                  x-clipboard="'{{ addslashes($entry->semantic_token) }}'"
-                                                                  aria-label="{{ lexicon('tooltip_common_CopyToken', 'Copy token name to clipboard') }}"
-                                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_common_CopyToken', 'Copy token name to clipboard')) }}'">
-                                                            <i class="bi bi-clipboard"></i>
-                                                        </x-button>
+                                                                  variant="ghost"
+                                                                  size="sm"
+                                                                  icon="bi-clipboard"
+                                                                  :tooltip="lexicon('tooltip_common_CopyToken', 'Copy token name to clipboard')"
+                                                                  x-clipboard="'{{ addslashes($entry->semantic_token) }}'" />
                                                     </div>
                                                 </td>
                                                 <td class="p-4 text-p">
-                                                    @foreach($locales as $code => $label)
+                                                    @foreach($locales as $code =>$label)
                                                         <span x-show="activeTab === '{{ $code }}'" x-cloak>
-                                                            {{ $entry->translation_payloads[$code] ?? '' }}
+                                                            {{ $entry->translation_payloads[$code] ?? $entry->default_lexicon_string ?? '' }}
                                                         </span>
                                                     @endforeach
                                                 </td>
-                                                <td class="p-4 text-right flex flex-row items-center justify-end gap-sm text-sm">
+                                                <td class="p-4 text-right">
                                                     @can('manage_lexicon')
-                                                        <x-button type="button"
-                                                                  variant="text"
-                                                                  class="text-warning hover-warning"
-                                                                  @click="openTermModal('edit', {{ $entry->id }}, '{{ addslashes($entry->semantic_token) }}', '{{ addslashes($entry->prefix_group_title) }}', '{{ addslashes($entry->group_title) }}', {{ json_encode($entry->translation_payloads ?? []) }})"
-                                                                  aria-label="{{ lexicon('tooltip_Lexicon_EditTerm', 'Edit lexicon entry and translations') }}"
-                                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_EditTerm', 'Edit lexicon entry and translations')) }}'">
-                                                            <i class="bi bi-pencil"></i> {{ lexicon('btn_common_Edit', 'Edit') }}
-                                                        </x-button>
+                                                        <div class="flex flex-row flex-wrap items-center justify-end gap-xs">
+                                                            <x-button type="button"
+                                                                      variant="ghost"
+                                                                      size="sm"
+                                                                      icon="bi-pencil"
+                                                                      :tooltip="lexicon('tooltip_Lexicon_EditTerm', 'Edit lexicon entry and translations')"
+                                                                      @click="openTermModal('edit', {{ $entry->id }}, '{{ addslashes($entry->semantic_token) }}', '{{ addslashes($entry->prefix_group_title) }}', '{{ addslashes($entry->group_title) }}', {{ Js::from($entry->translation_payloads ?? []) }})">
+                                                                {{ lexicon('btn_common_Edit', 'Edit') }}
+                                                            </x-button>
 
-                                                        <x-button type="button"
-                                                                  variant="text"
-                                                                  class="text-danger hover-danger flex-shrink-0"
-                                                                  x-data="deleteAction(`/admin/lexicon/term/{{ $entry->id }}`, 'DELETE', 'Entry {{ addslashes($entry->semantic_token) }}')"
-                                                                  @click="confirmDelete"
-                                                                  aria-label="{{ lexicon('tooltip_Lexicon_DeleteTerm', 'Delete lexicon entry') }}"
-                                                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_DeleteTerm', 'Delete lexicon entry')) }}'">
-                                                            <i class="bi bi-trash"></i> {{ lexicon('btn_common_Delete', 'Delete') }}
-                                                        </x-button>
+                                                            <x-button type="button"
+                                                                      variant="danger"
+                                                                      size="sm"
+                                                                      icon="bi-trash"
+                                                                      :tooltip="lexicon('tooltip_Lexicon_DeleteTerm', 'Delete lexicon entry')"
+                                                                      x-data="deleteAction('/admin/lexicon-codex/term/{{ $entry->id }}', 'DELETE', 'Entry {{ addslashes($entry->semantic_token) }}')"
+                                                                      @click="confirmDelete()" />
+                                                        </div>
                                                     @endcan
                                                 </td>
                                             </tr>
@@ -239,204 +257,200 @@
                                     </tbody>
                                 @endforeach
                             </x-table>
-                        </x-accordion-panel>
+                        </x-tab>
                     </div>
                 @empty
-                    <div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col gap-md overflow-hidden p-6 text-center text-muted italic">
-                        <span>{{ lexicon('msg_Lexicon_NoTermsFound', 'No lexicon entries discovered yet.') }}</span>
-                    </div>
+                    <x-tab type="panel">
+                        <p class="text-center text-muted font-italic m-0">
+                            {{ lexicon('msg_Lexicon_NoTermsFound', 'No lexicon entries discovered yet.') }}
+                        </p>
+                    </x-tab>
                 @endforelse
             </div>
         </x-slot:middle>
 
         <x-slot:bottom>
-
-            <!-- ============================================== -->
-            <!-- MODAL: ENTRY EDIT                              -->
-            <!-- ============================================== -->
-            <x-modal show="modals.term.open" maxWidth="max-w-4xl">
+            {{-- MODAL 1: EDIT LEXICON TERM --}}
+            <x-modal show="modals.term.open" onClose="closeModals()" maxWidth="4xl">
                 <x-slot:top>
-                    <span>{{ lexicon('label_Lexicon_EditTerm', 'Edit Term') }}</span>
+                    <span x-text="'{{ addslashes(lexicon('label_Lexicon_EditTerm', 'Edit Lexicon Token')) }}: ' + (modals.term.semantic_token || '')"></span>
                 </x-slot:top>
 
-                <form :action="modals.term.action" method="POST" x-data="ajaxForm" @submit.prevent="submit" class="flex flex-col gap-md"
-                      data-loading-title="{{ lexicon('msg_common_Saving', 'Saving...') }}">
-                    @csrf
-                    <input type="hidden" name="_method" :value="modals.term.method">
+                <x-meta type="modal" xAction="modals.term.action" xMethod="modals.term.method">
                     <input type="hidden" name="id" :value="modals.term.id">
 
-                    <div class="grid grid-cols-1 gap-sm w-full lg-grid-cols-3">
-                        <x-form-input name="prefix_group_title"
-                                      id="term_prefix_group_title"
-                                      type="text"
-                                      :label="lexicon('label_Lexicon_MasterGroup', 'Prefix Group Title')"
-                                      :tooltip="lexicon('tooltip_Lexicon_MasterGroupInput', 'Primary category grouping (e.g. admin_label, label)')"
-                                      xModel="modals.term.prefix_group_title"
-                                      readonly
-                                      :required="true" />
+                    <div class="grid grid-cols-1 lg-grid-cols-3 gap-md">
+                        <x-metadata type="text"
+                                    name="prefix_group_title"
+                                    id="term_prefix_group_title"
+                                    xModel="modals.term.prefix_group_title"
+                                    :label="lexicon('label_Lexicon_MasterGroup', 'Prefix Group Title')"
+                                    :tooltip="lexicon('tooltip_Lexicon_MasterGroupInput', 'Primary category grouping (e.g. admin_label, label)')"
+                                    readonly
+                                    :required="true" />
 
-                        <x-form-input name="group_title"
-                                      id="term_group_title"
-                                      type="text"
-                                      :label="lexicon('label_Lexicon_Subgroup', 'Group Title')"
-                                      :tooltip="lexicon('tooltip_Lexicon_SubgroupInput', 'Secondary feature namespace (e.g. Lexicon, Navigation)')"
-                                      xModel="modals.term.group_title"
-                                      readonly
-                                      :required="true" />
+                        <x-metadata type="text"
+                                    name="group_title"
+                                    id="term_group_title"
+                                    xModel="modals.term.group_title"
+                                    :label="lexicon('label_Lexicon_Subgroup', 'Group Title')"
+                                    :tooltip="lexicon('tooltip_Lexicon_SubgroupInput', 'Secondary feature namespace (e.g. Lexicon, Navigation)')"
+                                    readonly
+                                    :required="true" />
 
-                        <x-form-input name="semantic_token"
-                                      id="term_semantic_token"
-                                      type="text"
-                                      :label="lexicon('label_Lexicon_CodeKey', 'Semantic Token')"
-                                      :tooltip="lexicon('tooltip_Lexicon_CodeKeyInput', 'Unique semantic token identifier')"
-                                      xModel="modals.term.semantic_token"
-                                      readonly
-                                      :required="true" />
+                        <x-metadata type="text"
+                                    name="semantic_token"
+                                    id="term_semantic_token"
+                                    xModel="modals.term.semantic_token"
+                                    :label="lexicon('label_Lexicon_CodeKey', 'Semantic Token')"
+                                    :tooltip="lexicon('tooltip_Lexicon_CodeKeyInput', 'Unique semantic token identifier')"
+                                    readonly
+                                    :required="true" />
                     </div>
 
-                    <div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col gap-md overflow-hidden mt-4">
-                        <div class="bg-panel-header text-h border-b border-panel p-panel-header font-bold text-sm p-3">
-                            <span>{{ lexicon('label_Lexicon_Translations', 'Translation Payloads') }}</span>
-                        </div>
-                        <div class="p-4 grid grid-cols-1 gap-sm w-full md-grid-cols-2 gap-md">
-                            @foreach($locales as $code => $label)
-                                <x-form-input name="translation_payloads[{{ $code }}]"
-                                              id="translation_payload_{{ $code }}"
-                                              type="text"
-                                              :label="$label . ' (' . strtoupper($code) . ')'"
-                                              :tooltip="lexicon('tooltip_Lexicon_TranslationInput', 'Translated string for this locale')"
-                                              xModel="modals.term.translation_payloads['{{ $code }}']" />
+                    <x-tab type="sub">
+                        <span class="text-xs font-bold text-h uppercase text-wider border-b-panel pb-2">
+                            {{ lexicon('label_Lexicon_Translations', 'Translation Payloads') }}
+                        </span>
+
+                        <div class="grid grid-cols-1 md-grid-cols-2 gap-md pt-2">
+                            @foreach($locales as $code =>$label)
+                                <x-metadata type="text"
+                                            name="translation_payloads[{{ $code }}]"
+                                            id="translation_payload_{{ $code }}"
+                                            xModel="modals.term.translation_payloads['{{ $code }}']"
+                                            :label="$label . ' (' . strtoupper($code) . ')'"
+                                            :tooltip="lexicon('tooltip_Lexicon_TranslationInput', 'Translated string for this locale')" />
                             @endforeach
                         </div>
-                    </div>
+                    </x-tab>
 
-                    <div class="border-t-actions pt-6 flex flex-row justify-end gap-sm mt-4">
+                    <x-slot:footer>
                         <x-button type="button"
                                   variant="secondary"
-                                  class="p-btn-sm text-sm"
-                                  @click="modals.term.open = false"
-                                  aria-label="{{ lexicon('tooltip_common_Cancel', 'Cancel and close modal') }}"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_common_Cancel', 'Cancel and close modal')) }}'">
+                                  :tooltip="lexicon('tooltip_common_Cancel', 'Cancel and close modal')"
+                                  @click="closeModals()">
                             {{ lexicon('btn_common_Cancel', 'Cancel') }}
                         </x-button>
 
                         <x-button type="submit"
                                   variant="primary"
-                                  class="p-btn-sm text-sm"
-                                  aria-label="{{ lexicon('tooltip_Lexicon_SaveTerm', 'Save translation term changes') }}"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_SaveTerm', 'Save translation term changes')) }}'">
+                                  icon="bi-save"
+                                  :tooltip="lexicon('tooltip_Lexicon_SaveTerm', 'Save translation term changes')">
                             {{ lexicon('btn_common_Save', 'Save Changes') }}
                         </x-button>
-                    </div>
-                </form>
+                    </x-slot:footer>
+                </x-meta>
             </x-modal>
 
-            <!-- ============================================== -->
-            <!-- MODAL: ADD LANGUAGE                            -->
-            <!-- ============================================== -->
-            <x-modal show="modals.addLang.open" maxWidth="max-w-lg">
+            {{-- MODAL 2: ADD LANGUAGE --}}
+            <x-modal show="modals.addLang.open" onClose="closeModals()" maxWidth="max-w-lg">
                 <x-slot:top>
-                    <span>{{ lexicon('label_Lexicon_AddLanguage', 'Add Language') }}</span>
+                    <span>{{ lexicon('label_Lexicon_AddLanguage', 'Initialise Language Pack') }}</span>
                 </x-slot:top>
 
-                <form method="POST" action="/admin/lexicon/language" x-data="ajaxForm" @submit.prevent="submit" class="flex flex-col gap-md"
-                      data-loading-title="{{ lexicon('msg_Lexicon_InitialisingLang', 'Initialising Language...') }}"
-                      data-loading-msg="{{ lexicon('msg_Lexicon_AITranslationWarning', 'This will use AI to translate all current English terms. This may take a moment.') }}">
-                    @csrf
+                <x-meta type="modal"
+                        xAction="modals.addLang.action"
+                        xMethod="modals.addLang.method"
+                        :loadingTitle="lexicon('msg_Lexicon_InitialisingLang', 'Initialising Language...')"
+                        :loadingMsg="lexicon('msg_Lexicon_AITranslationWarning', 'This will use AI to translate all current English terms. This may take a moment.')">
 
-                    <div class="flex flex-col gap-sm border-b pb-4">
-                        <label class="flex flex-row flex-wrap items-center gap-xs cursor-pointer">
-                            <input type="radio" name="lang_type" value="common" x-model="modals.addLang.langType" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine">
-                            <span class="text-sm font-bold">{{ lexicon('label_Lexicon_CommonLanguage', 'Real Language (AI Auto-Translate)') }}</span>
+                    <div class="flex flex-col gap-sm border-b-panel pb-3">
+                        <label class="flex flex-row items-center gap-sm cursor-pointer">
+                            <input type="radio"
+                                   name="lang_type"
+                                   value="common"
+                                   x-model="modals.addLang.langType"
+                                   class="w-4 h-4 m-0 bg-input border-input border-rounded-sm grid items-center justify-center checkbox-engine cursor-pointer">
+                            <span class="text-sm font-bold text-p">{{ lexicon('label_Lexicon_CommonLanguage', 'Real Language (AI Auto-Translate)') }}</span>
                         </label>
-                        <label class="flex flex-row flex-wrap items-center gap-xs cursor-pointer">
-                            <input type="radio" name="lang_type" value="custom" x-model="modals.addLang.langType" class="appearance-none bg-input m-0 w-4 h-4 border-input rounded-input-sm grid place-content-center checkbox-engine">
-                            <span class="text-sm font-bold">{{ lexicon('label_Lexicon_CustomLanguage', 'Custom Language (Blank Canvas)') }}</span>
+
+                        <label class="flex flex-row items-center gap-sm cursor-pointer">
+                            <input type="radio"
+                                   name="lang_type"
+                                   value="custom"
+                                   x-model="modals.addLang.langType"
+                                   class="w-4 h-4 m-0 bg-input border-input border-rounded-sm grid items-center justify-center checkbox-engine cursor-pointer">
+                            <span class="text-sm font-bold text-p">{{ lexicon('label_Lexicon_CustomLanguage', 'Custom Conlang / Dialect (Blank Canvas)') }}</span>
                         </label>
                     </div>
 
-                    <!-- Common Lang Wrapper (Tom Select) -->
                     <div x-show="modals.addLang.langType === 'common'" class="flex flex-col gap-xs">
-                        <label for="common_lang_code" class="text-xs font-bold text-input-muted">{{ lexicon('label_Lexicon_SelectLanguage', 'Select Language') }}</label>
+                        <label for="common_lang_code" class="text-xs font-bold text-input-muted uppercase text-wider">
+                            {{ lexicon('label_Lexicon_SelectLanguage', 'Select Target Language') }}
+                        </label>
                         <select id="common_lang_code"
                                 name="common_lang_code"
                                 x-ref="commonLangSelect"
-                                class="bg-input text-input border-input rounded-input p-input outline-none h-input w-full box-border focus-border-accent focus-shadow-accent"
-                                aria-label="{{ lexicon('tooltip_Lexicon_SelectCommonLang', 'Select a language for AI auto-translation') }}"
-                                x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_SelectCommonLang', 'Select a language for AI auto-translation')) }}'">
+                                class="w-full h-input p-input bg-input text-input border-input border-rounded text-sm transition-colors hover-border-accent">
                             <option value="es">{{ lexicon('label_Lexicon_OptLangEs', 'Spanish (ES)') }}</option>
                             <option value="fr">{{ lexicon('label_Lexicon_OptLangFr', 'French (FR)') }}</option>
                             <option value="de">{{ lexicon('label_Lexicon_OptLangDe', 'German (DE)') }}</option>
                             <option value="it">{{ lexicon('label_Lexicon_OptLangIt', 'Italian (IT)') }}</option>
                         </select>
-                        <span class="text-xs text-muted mt-2">{{ lexicon('msg_Lexicon_AITranslationWarning', 'This will use AI to translate all current English terms. This may take a moment.') }}</span>
+                        <span class="text-xs text-muted">{{ lexicon('msg_Lexicon_AITranslationWarning', 'This will use AI to translate all current English terms. This may take a moment.') }}</span>
                     </div>
 
-                    <!-- Custom Lang Wrapper -->
-                    <div x-show="modals.addLang.langType === 'custom'" class="grid grid-cols-1 gap-sm w-full md-grid-cols-2" x-cloak>
-                        <x-form-input name="custom_lang_name"
-                                      id="custom_lang_name"
-                                      type="text"
-                                      :label="lexicon('label_common_Name', 'Name')"
-                                      :placeholder="lexicon('label_Lexicon_NamePlaceholder', 'e.g. Pirate')"
-                                      :tooltip="lexicon('tooltip_Lexicon_CustomLangName', 'Display name for the custom language')" />
+                    <div x-show="modals.addLang.langType === 'custom'" x-cloak class="grid grid-cols-1 md-grid-cols-2 gap-md">
+                        <x-metadata type="text"
+                                    name="custom_lang_name"
+                                    id="custom_lang_name"
+                                    :label="lexicon('label_common_Name', 'Language Name')"
+                                    :placeholder="lexicon('label_Lexicon_NamePlaceholder', 'e.g. Romulan, Belter Creole')"
+                                    :tooltip="lexicon('tooltip_Lexicon_CustomLangName', 'Display name for the custom language')" />
 
-                        <x-form-input name="custom_lang_code"
-                                      id="custom_lang_code"
-                                      type="text"
-                                      :label="lexicon('label_Lexicon_ShortCode', 'Short Code')"
-                                      :placeholder="lexicon('label_Lexicon_CodePlaceholder', 'e.g. prt')"
-                                      :tooltip="lexicon('tooltip_Lexicon_CustomLangCode', 'Short unique locale code')" />
+                        <x-metadata type="text"
+                                    name="custom_lang_code"
+                                    id="custom_lang_code"
+                                    :label="lexicon('label_Lexicon_ShortCode', 'Short Locale Code')"
+                                    :placeholder="lexicon('label_Lexicon_CodePlaceholder', 'e.g. rom')"
+                                    :tooltip="lexicon('tooltip_Lexicon_CustomLangCode', 'Short unique locale code')" />
                     </div>
 
-                    <div class="border-t-actions pt-6 flex flex-row justify-end gap-sm mt-4">
+                    <x-slot:footer>
                         <x-button type="button"
                                   variant="secondary"
-                                  class="p-btn-sm text-sm"
-                                  @click="modals.addLang.open = false"
-                                  aria-label="{{ lexicon('tooltip_common_Cancel', 'Cancel and close modal') }}"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_common_Cancel', 'Cancel and close modal')) }}'">
+                                  :tooltip="lexicon('tooltip_common_Cancel', 'Cancel and close modal')"
+                                  @click="closeModals()">
                             {{ lexicon('btn_common_Cancel', 'Cancel') }}
                         </x-button>
 
                         <x-button type="submit"
                                   variant="primary"
-                                  class="p-btn-sm text-sm"
-                                  aria-label="{{ lexicon('tooltip_Lexicon_InitLang', 'Initialise language pack') }}"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_InitLang', 'Initialise language pack')) }}'">
+                                  icon="bi-translate"
+                                  :tooltip="lexicon('tooltip_Lexicon_InitLang', 'Initialise language pack')">
                             {{ lexicon('btn_Lexicon_InitializeLanguage', 'Initialise Language') }}
                         </x-button>
-                    </div>
-                </form>
+                    </x-slot:footer>
+                </x-meta>
             </x-modal>
 
-            <!-- ============================================== -->
-            <!-- MODAL: IMPORT LANGUAGE (DROPZONE)              -->
-            <!-- ============================================== -->
-            <x-modal show="modals.importLang.open" maxWidth="max-w-lg">
+            {{-- MODAL 3: IMPORT LANGUAGE (DROPZONE) --}}
+            <x-modal show="modals.importLang.open" onClose="closeModals()" maxWidth="max-w-lg">
                 <x-slot:top>
-                    <span>{{ lexicon('label_Lexicon_ImportLanguage', 'Import Language') }}</span>
+                    <span>{{ lexicon('label_Lexicon_ImportLanguage', 'Import Language Pack') }}</span>
                 </x-slot:top>
 
                 <div class="flex flex-col gap-md">
-                    <x-form-input name="import_lang_code"
-                                  id="import_lang_code"
-                                  type="text"
-                                  :label="lexicon('label_Lexicon_TargetLangCode', 'Target Language Code (Optional)')"
-                                  :placeholder="lexicon('label_Lexicon_ImportCodePlaceholder', 'e.g. klg')"
-                                  :tooltip="lexicon('tooltip_Lexicon_ImportLangCode', 'Optional override for imported language code')"
-                                  xModel="modals.importLang.langCode" />
-                    <span class="text-xs text-muted -mt-2">{{ lexicon('msg_Lexicon_ImportCodeHint', 'Leave blank if your JSON file was exported from this system (it contains the language code automatically).') }}</span>
+                    <x-metadata type="text"
+                                name="import_lang_code"
+                                id="import_lang_code"
+                                xModel="modals.importLang.langCode"
+                                :label="lexicon('label_Lexicon_TargetLangCode', 'Target Language Code (Optional)')"
+                                :placeholder="lexicon('label_Lexicon_ImportCodePlaceholder', 'e.g. klg')"
+                                :tooltip="lexicon('tooltip_Lexicon_ImportLangCode', 'Optional override for imported language code')" />
+
+                    <span class="text-xs text-muted">
+                        {{ lexicon('msg_Lexicon_ImportCodeHint', 'Leave blank if your JSON file was exported from this system (it contains the language code automatically).') }}
+                    </span>
 
                     <div class="flex flex-col gap-xs">
-                        <span class="text-xs font-bold text-input-muted">
-                            <span>{{ lexicon('label_Lexicon_UploadJson', 'Upload JSON File') }}</span>
-                            <span class="text-required">*</span>
+                        <span class="text-xs font-bold text-input-muted uppercase text-wider">
+                            {{ lexicon('label_Lexicon_UploadJson', 'Upload JSON File') }} <span class="text-required">*</span>
                         </span>
 
                         <div x-ref="lexiconDropzone"
-                             class="bg-panel-sub border-dashed-panel rounded-panel p-panel text-center cursor-pointer hover-bg-panel-hover transition-btn"
-                             aria-label="{{ lexicon('tooltip_Lexicon_DropzoneUpload', 'Drag and drop a .json lexicon file or click to browse') }}"
+                             class="dropzone bg-panel-sub border-dashed-panel border-rounded p-6 flex flex-col items-center justify-center gap-sm cursor-pointer transition-colors hover-border-accent text-center"
                              x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_DropzoneUpload', 'Drag and drop a .json lexicon file or click to browse')) }}'">
                             <div class="dz-message flex flex-col items-center justify-center gap-xs">
                                 <i class="bi bi-file-earmark-arrow-up text-2xl text-accent"></i>
@@ -445,75 +459,59 @@
                             </div>
                         </div>
                     </div>
-
-                    <div class="border-t-actions pt-6 flex flex-row justify-end gap-sm mt-4">
-                        <x-button type="button"
-                                  variant="secondary"
-                                  class="p-btn-sm text-sm"
-                                  @click="modals.importLang.open = false"
-                                  aria-label="{{ lexicon('tooltip_common_Cancel', 'Cancel and close modal') }}"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_common_Cancel', 'Cancel and close modal')) }}'">
-                            {{ lexicon('btn_common_Cancel', 'Cancel') }}
-                        </x-button>
-
-                        <x-button type="button"
-                                  variant="primary"
-                                  class="p-btn-sm text-sm"
-                                  @click="submitImport()"
-                                  aria-label="{{ lexicon('tooltip_Lexicon_UploadImport', 'Upload and merge lexicon file') }}"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_UploadImport', 'Upload and merge lexicon file')) }}'">
-                            {{ lexicon('btn_Lexicon_ImportFile', 'Import File') }}
-                        </x-button>
-                    </div>
                 </div>
+
+                <x-slot:bottom>
+                    <x-button type="button"
+                              variant="secondary"
+                              @click="closeModals()">
+                        {{ lexicon('btn_common_Cancel', 'Cancel') }}
+                    </x-button>
+
+                    <x-button type="button"
+                              variant="primary"
+                              icon="bi-upload"
+                              :tooltip="lexicon('tooltip_Lexicon_UploadImport', 'Upload and merge lexicon file')"
+                              @click="submitImport()">
+                        {{ lexicon('btn_Lexicon_ImportFile', 'Import File') }}
+                    </x-button>
+                </x-slot:bottom>
             </x-modal>
 
-            <!-- ============================================== -->
-            <!-- MODAL: EDIT LANGUAGE LABEL                     -->
-            <!-- ============================================== -->
-            <x-modal show="modals.editLang.open" maxWidth="max-w-lg">
+            {{-- MODAL 4: EDIT LANGUAGE LABEL --}}
+            <x-modal show="modals.editLang.open" onClose="closeModals()" maxWidth="max-w-lg">
                 <x-slot:top>
-                    <span>{{ lexicon('label_Lexicon_EditLanguageSettings', 'Edit Language Settings') }}</span>
+                    <span>{{ lexicon('label_Lexicon_EditLanguageSettings', 'Edit Language Label') }}</span>
                 </x-slot:top>
 
-                <form method="POST" action="/admin/lexicon/language" x-data="ajaxForm" @submit.prevent="submit" class="flex flex-col gap-md"
-                      data-loading-title="{{ lexicon('msg_Lexicon_UpdatingLang', 'Updating Language...') }}"
-                      data-loading-msg="{{ lexicon('msg_common_Saving', 'Saving...') }}">
-                    @csrf
-                    @method('PUT')
+                <x-meta type="modal" xAction="modals.editLang.action" xMethod="modals.editLang.method">
                     <input type="hidden" name="lang_code" :value="modals.editLang.code">
 
-                    <x-form-input name="lang_label"
-                                  id="edit_lang_label"
-                                  type="text"
-                                  :label="lexicon('label_Lexicon_DisplayLabel', 'Display Label')"
-                                  :tooltip="lexicon('tooltip_Lexicon_EditLangLabel', 'Update language display name')"
-                                  xModel="modals.editLang.label"
-                                  :required="true" />
+                    <x-metadata type="text"
+                                name="lang_label"
+                                id="edit_lang_label"
+                                xModel="modals.editLang.label"
+                                :label="lexicon('label_Lexicon_DisplayLabel', 'Display Label')"
+                                :tooltip="lexicon('tooltip_Lexicon_EditLangLabel', 'Update language display name')"
+                                :required="true" />
 
-                    <div class="border-t-actions pt-6 flex flex-row justify-end gap-sm mt-4">
+                    <x-slot:footer>
                         <x-button type="button"
                                   variant="secondary"
-                                  class="p-btn-sm text-sm"
-                                  @click="modals.editLang.open = false"
-                                  aria-label="{{ lexicon('tooltip_common_Cancel', 'Cancel and close modal') }}"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_common_Cancel', 'Cancel and close modal')) }}'">
+                                  @click="closeModals()">
                             {{ lexicon('btn_common_Cancel', 'Cancel') }}
                         </x-button>
 
                         <x-button type="submit"
                                   variant="primary"
-                                  class="p-btn-sm text-sm"
-                                  aria-label="{{ lexicon('tooltip_Lexicon_UpdateLang', 'Save language settings') }}"
-                                  x-tooltip="'{{ addslashes(lexicon('tooltip_Lexicon_UpdateLang', 'Save language settings')) }}'">
+                                  icon="bi-save"
+                                  :tooltip="lexicon('tooltip_Lexicon_UpdateLang', 'Save language settings')">
                             {{ lexicon('btn_common_Update', 'Update') }}
                         </x-button>
-                    </div>
-                </form>
+                    </x-slot:footer>
+                </x-meta>
             </x-modal>
-
         </x-slot:bottom>
-
     </x-grid-wrapper>
 </div>
 @endsection
