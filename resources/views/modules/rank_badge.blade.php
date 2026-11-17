@@ -1,49 +1,39 @@
-{{-- 
-@WidgetManifest({
-    "name": "Rank Badge",
-    "description": "Displays a standalone rank badge.",
-    "icon": "bi-shield-check",
-    "fields": {
-        "rank_set": { "type": "text", "label": "Rank Set Folder", "default": "DefaultSet" },
-        "base_color": { "type": "text", "label": "Base Colour (Hex)", "default": "#1a1a1a" },
-        "dept_color": { "type": "text", "label": "Department Colour (Hex)", "default": "#ffffff" },
-        "mid_type": { "type": "dropdown", "label": "Mid Type", "options": {"css": "CSS Class", "image": "Image"}, "default": "css" },
-        "mid_asset": { "type": "text", "label": "Mid Asset", "default": "" },
-        "top_type": { "type": "dropdown", "label": "Top Type", "options": {"css": "CSS Class", "image": "Image"}, "default": "image" },
-        "top_asset": { "type": "text", "label": "Top Asset", "default": "default.png" }
-    }
-})
---}}
+{{-- resources/views/modules/rank_badge.blade.php --}}
+{{-- @WidgetManifest({ "name": "Rank Badge", "description": "Displays a standalone rank badge.", "icon": "bi-shield-check", "fields": { "rank_set": { "type": "text", "label": "Rank Set Folder", "default": "DefaultSet" }, "base_color": { "type": "text", "label": "Base Colour (Hex)", "default": "#1a1a1aFF" }, "dept_color": { "type": "text", "label": "Department Colour (Hex)", "default": "#ffffffFF" }, "mid_type": { "type": "dropdown", "label": "Mid Type", "options": {"css": "CSS Class", "image": "Image"}, "default": "css" }, "mid_asset": { "type": "text", "label": "Mid Asset", "default": "" }, "top_type": { "type": "dropdown", "label": "Top Type", "options": {"css": "CSS Class", "image": "Image"}, "default": "image" }, "top_asset": { "type": "text", "label": "Top Asset", "default": "default.png" } } }) --}}
 @php
-    $options = is_string($widget->pivot->instance_options) ? json_decode($widget->pivot->instance_options, true) : ($widget->pivot->instance_options ?? []);
-    
-    $rankSet   = trim($options['rank_set'] ?? 'DefaultSet');
-    $baseLayer = trim($options['base_color'] ?? '#1a1a1a'); 
-    $deptColor = trim($options['dept_color'] ?? '#ffffff');
-    
-    $midType   = trim($options['mid_type'] ?? 'css');
-    $midAsset  = trim($options['mid_asset'] ?? '');
-    
-    $topType   = trim($options['top_type'] ?? 'image');
-    $topAsset  = trim($options['top_asset'] ?? 'default.png');
-    
-    $skin = $activeSkin->folder_name ?? ($skinSettings['active_skin'] ?? 'default');
+    $rawOptions =$moduleSettings
+        ?? $module?->pivot?->book_config
+        ?? $module?->pivot?->instance_options
+        ?? $widget?->pivot?->instance_options
+        ?? [];
+    $options = is_string($rawOptions) ? (json_decode($rawOptions, true) ?: []) : (is_array($rawOptions) ?$rawOptions : []);
+
+    $rankSet    = trim((string) ($options['rank_set'] ?? 'DefaultSet'));
+    $baseLayer  = trim((string) ($options['base_color'] ?? '#1a1a1aFF'));
+    $deptColour = trim((string) ($options['dept_color'] ?? '#ffffffFF'));
+
+    $midType  = trim((string) ($options['mid_type'] ?? 'css'));
+    $midAsset = trim((string) ($options['mid_asset'] ?? ''));
+
+    $topType  = trim((string) ($options['top_type'] ?? 'image'));
+    $topAsset = trim((string) ($options['top_asset'] ?? 'default.png'));
+
+    $skin = $activeSkin?->directory_name ?? ($skinSettings['active_skin'] ?? 'default');
 @endphp
 
-<div class="flex items-center justify-center mb-6" 
-     x-data
-     aria-label="{{ lexicon('tooltip_common_CharacterRank', 'Character Rank') }}"
-     x-tooltip="'{{ addslashes(lexicon('tooltip_common_CharacterRank', 'Character Rank')) }}'">
-    <x-rank-badge 
-        :rankSet="$rankSet" 
-        :baseLayer="$baseLayer" 
-        :departmentColor="$deptColor" 
-        :midType="$midType"
-        :midImage="$midType === 'image' ? $midAsset : null"
-        :midCss="$midType === 'css' ? $midAsset : ''"
-        :topType="$topType"
-        :topImage="$topType === 'image' ? $topAsset : null"
-        :topCss="$topType === 'css' ? $topAsset : ''"
-        :skin="$skin" 
-    />
-</div>
+<x-tab type="panel">
+    <div class="flex items-center justify-center p-2 w-full">
+        <x-badge type="insignia"
+                 :rankSet="$rankSet"
+                 :baseLayer="$baseLayer"
+                 :departmentColour="$deptColour"
+                 :midLayerMode="$midType"
+                 :midLayerAsset="$midType === 'image' ?$midAsset : null"
+                 :midLayerModifier="$midType === 'css' ?$midAsset : ''"
+                 :topLayerMode="$topType"
+                 :topLayerAsset="$topType === 'image' ?$topAsset : null"
+                 :topLayerModifier="$topType === 'css' ?$topAsset : ''"
+                 :skin="$skin"
+                 :tooltip="lexicon('tooltip_common_CharacterRank', 'Character Rank')" />
+    </div>
+</x-tab>
