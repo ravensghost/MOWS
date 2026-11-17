@@ -1,85 +1,163 @@
-// resources/js/third-party/searchHelper.js
-import Fuse from 'fuse.js';
+// resources/js/third-party/selectHelper.js
+import TomSelect from 'tom-select';
+import 'tom-select/dist/css/tom-select.default.css';
 
 /**
- * Global Search Helper Wrapper using Fuse.js
- * Supports CSS selectors, NodeLists, HTMLCollections, HTMLElement containers, or raw object arrays.
+ * Global Tom Select Helper Wrapper
+ * Standardises searchable selects, multi-select tags, and dynamic option syncing across Alpine managers.
  */
-window.Search = {
-    create(selectorOrItems, keys = ['name'], options = {}) {
-        let items = [];
-        let domElements = null;
+window.Select = {
+    instances: {},
 
-        if (typeof selectorOrItems === 'string') {
-            domElements = document.querySelectorAll(selectorOrItems);
-        } else if (selectorOrItems instanceof NodeList || selectorOrItems instanceof HTMLCollection) {
-            domElements = selectorOrItems;
-        } else if (selectorOrItems instanceof HTMLElement) {
-            domElements = selectorOrItems.querySelectorAll('[data-search-item]');
-        } else if (Array.isArray(selectorOrItems)) {
-            if (selectorOrItems.length > 0 && selectorOrItems[0] instanceof HTMLElement) {
-                domElements = selectorOrItems;
-            } else {
-                items = selectorOrItems;
-            }
+    /**
+     * Resolve a selector string, HTMLElement, or TomSelect instance into the underlying DOM element.
+     */
+    resolveElement(selectorOrEl) {
+        if (!selectorOrEl) return null;
+        if (typeof selectorOrEl === 'string') {
+            return document.querySelector(selectorOrEl);
+        }
+        if (selectorOrEl instanceof HTMLElement) {
+            return selectorOrEl;
+        }
+        if (selectorOrEl.input instanceof HTMLElement) {
+            return selectorOrEl.input;
+        }
+        return null;
+    },
+
+    /**
+     * Retrieve the active TomSelect instance for a given selector or element.
+     */
+    getInstance(selectorOrEl) {
+        if (!selectorOrEl) return null;
+        if (selectorOrEl instanceof TomSelect) {
+            return selectorOrEl;
+        }
+        const el = this.resolveElement(selectorOrEl);
+        if (!el) return null;
+
+        if (el.tomselect) {
+            return el.tomselect;
         }
 
-        if (domElements) {
-            items = Array.from(domElements).map(el => {
-                const item = { element: el };
+        const key = el.id || el.getAttribute('name');
+        return key && this.instances[key] ? this.instances[key] : null;
+    },
 
-                // Extract dataset attributes or attribute values based on specified keys
-                keys.forEach(key => {
-                    // Handle nested or dotted keys if needed (e.g., books.title)
-                    if (key.includes('.')) {
-                        const parts = key.split('.');
-                        let val = el;
-                        parts.forEach(p => {
-                            val = val ? (val.dataset ? val.dataset[p] : val[p]) : '';
-                        });
-                        item[key] = val || '';
-                    } else {
-                        item[key] = el.dataset[key] || el.getAttribute(`data-${key}`) || '';
-                    }
-                });
+    /**
+     * Initialise a Tom Select instance on a <select> or <input> element.
+     */
+    init(selectorOrEl, options = {}) {
+        const el = this.resolveElement(selectorOrEl);
+        if (!el) return null;
 
-                // Store original ID if available on dataset (supports numeric or string IDs)
-                if (el.dataset.id !== undefined) {
-                    const numId = Number(el.dataset.id);
-                    item.id = Number.isNaN(numId) ? el.dataset.id : numId;
-                }
-                return item;
-            });
+        // Destroy any existing instance on this element before re-initialising
+        if (el.tomselect) {
+            el.tomselect.destroy();
         }
+
+        const isMultiple = el.multiple || el.hasAttribute('multiple');
+        const defaultPlugins = isMultiple ? ['remove_button'] : [];
 
         const defaultOptions = {
-            keys: keys,
-            threshold: 0.3,
-            includeScore: false,
-            ...options
+            plugins: options.plugins || defaultPlugins,
+            create: false,
+            persist: false,
+            allowEmptyOption: true,
+            maxOptions: null,
+            ...options,
         };
 
-        const fuseInstance = new Fuse(items, defaultOptions);
+        const instance = new TomSelect(el, defaultOptions);
 
-        return {
-            fuse: fuseInstance,
-            search(query) {
-                if (!query || !query.trim()) {
-                    return items.map(item => item.id).filter(id => id !== undefined);
-                }
-                const results = fuseInstance.search(query.trim());
-                return results.map(result => result.item.id).filter(id => id !== undefined);
-            },
-            searchObjects(query) {
-                if (!query || !query.trim()) {
-                    return items;
-                }
-                return fuseInstance.search(query.trim()).map(result => result.item);
-            }
-        };
-    }
+        // Bridge wrapper.tomselect reference used by accessClearanceRoleManager.js
+        if (instance.wrapper) {
+            instance.wrapper.tomselect = instance;
+        }
+
+        const key = el.id || (typeof selectorOrEl === 'string' ? selectorOrEl : null);
+        if (key) {
+            this.instances[key] = instance;
+        }
+
+        return instance;
+    },
+
+    /**
+     * Alias for init() to maintain parity with other MOWS third-party helpers.
+     */
+    create(selectorOrEl, options = {}) {
+        return this.init(selectorOrEl, options);
+    },
+
+    /**
+     * Set the selected value(s) on a Tom Select instance.
+     */
+    setValue(selectorOrEl, value, silent = true) {
+        const instance = this.getInstance(selectorOrEl);
+        if (!instance) return;
+
+        const normalized = Array.isArray(value)
+            ? value.map(v => String(v))
+            : (value !== null && value !== undefined ? String(value) : '');
+
+        instance.setValue(normalized, silent);
+    },
+
+    /**
+     * Get the current value(s) from a Tom Select instance.
+     */
+    getValue(selectorOrEl) {
+        const instance = this.getInstance(selectorOrEl);
+        return instance ? instance.getValue() : null;
+    },
+
+    /**
+     * Clear the current selection on a Tom Select instance.
+     */
+    clear(selectorOrEl, silent = true) {
+        const instance = this.getInstance(selectorOrEl);
+        if (instance) {
+            instance.clear(silent);
+        }
+    },
+
+    /**
+     * Replace the option list on a Tom Select instance (used after DOM updates).
+     * Expects an array of { value, text } objects.
+     */
+    syncOptions(selectorOrEl, options = []) {
+        const instance = this.getInstance(selectorOrEl);
+        if (!instance) return;
+
+        const currentValue = instance.getValue();
+        instance.clearOptions();
+        instance.addOptions(options);
+        instance.refreshOptions(false);
+
+        if (currentValue && (Array.isArray(currentValue) ? currentValue.length > 0 : currentValue !== '')) {
+            instance.setValue(currentValue, true);
+        }
+    },
+
+    /**
+     * Destroy a Tom Select instance and clean up its registry entry.
+     */
+    destroy(selectorOrEl) {
+        const el = this.resolveElement(selectorOrEl);
+        const instance = this.getInstance(selectorOrEl);
+
+        if (instance) {
+            instance.destroy();
+        }
+
+        const key = el && el.id ? el.id : (typeof selectorOrEl === 'string' ? selectorOrEl : null);
+        if (key && this.instances[key]) {
+            delete this.instances[key];
+        }
+    },
 };
 
-window.Fuse = Fuse;
-
-export default Fuse;
+window.TomSelect = TomSelect;
+export default window.Select;
