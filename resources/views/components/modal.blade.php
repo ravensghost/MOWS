@@ -6,8 +6,6 @@
     'maxWidth' => 'max-w-lg',
     'closeOnOutside' => true,
     'backdropClass' => '',
-    'formAction' => null,
-    'formMethod' => 'POST',
     'activeBooks' => null,
     'allCharacters' => [],
     'languageRatings' => [],
@@ -39,6 +37,42 @@
 @endphp
 
 @switch($type)
+    @case('auth')
+        <div x-data="{ open: false, view: 'login' }"
+             @open-auth.window="open = true; view = $event.detail?.view || 'login'"
+             @close-auth.window="open = false"
+             data-global-sync="auth-modal"
+             class="relative">
+
+            <div class="fixed inset-0 z-100 backdrop-bg backdrop-blur flex items-center justify-center p-4 {{ $backdropClass }}" x-cloak x-show="open">
+                <div {{ $attributes->merge(['class' => 'bg-panel-body border-panel border-rounded shadow-lg w-full max-w-lg max-h-90vh flex flex-col overflow-hidden']) }}
+                     @click.outside="open = false">
+
+                    <div class="bg-panel-header text-h border-b-panel p-panel-header flex flex-row justify-between items-center gap-md">
+                        <div class="text-lg font-bold text-h flex flex-row items-center gap-sm">
+                            <i class="bi bi-shield-lock text-accent"></i>
+                            <span x-show="view === 'login'">{{ lexicon('public_label_Login', 'Account Login') }}</span>
+                            <span x-show="view === 'register'" x-cloak>{{ lexicon('public_label_Register', 'Create Account') }}</span>
+                            <span x-show="view === 'forgot'" x-cloak>{{ lexicon('public_label_ForgotPassword', 'Reset Password') }}</span>
+                        </div>
+                        <button type="button"
+                                @click="open = false"
+                                class="text-muted bg-transparent hover-text-h cursor-pointer border-none"
+                                x-tooltip="'{{ addslashes(lexicon('tooltip_common_CloseModal', 'Close Modal')) }}'"
+                                title="{{ lexicon('tooltip_common_CloseModal', 'Close Modal') }}"
+                                aria-label="{{ lexicon('tooltip_common_CloseModal', 'Close Modal') }}">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+
+                    <div class="p-panel-body overflow-y-auto flex flex-col gap-md flex-grow">
+                        <x-meta type="auth" />
+                    </div>
+                </div>
+            </div>
+        </div>
+        @break
+
     @case('messenger')
     @case('message')
     @case('correspondence')
@@ -144,21 +178,16 @@
                         <div class="flex flex-col gap-md">
                             <div x-show="activeTab === 'new'" x-cloak class="flex flex-col gap-md">
                                 <span class="font-bold text-lg text-h">{{ lexicon('label_messenger_StartNewConversation', 'Start a New Conversation') }}</span>
-                                <form action="/correspondence/new"
-                                      method="POST"
-                                      x-data="ajaxForm"
-                                      @submit.prevent="submit"
-                                      data-loading-title="{{ lexicon('msg_messenger_Sending', 'Sending Message...') }}"
-                                      class="flex flex-col gap-md">
-                                    @csrf
-
+                                <x-meta action="/correspondence/new"
+                                        method="POST"
+                                        :loadingTitle="lexicon('msg_messenger_Sending', 'Sending Message...')">
                                     <div class="grid grid-cols-1 md-grid-cols-2 gap-md bg-panel-sub border-panel border-rounded p-3">
                                         <x-metadata type="select"
                                                     id="modal_pm_type"
                                                     name="thread_mode"
                                                     :label="lexicon('label_common_Context', 'Context')"
                                                     :tooltip="lexicon('tooltip_messenger_ContextType', 'Choose Out-Of-Character (User) or In-Character (Character) message')"
-                                                    x-model="pmType"
+                                                    xModel="pmType"
                                                     required>
                                             <option value="OOC">{{ lexicon('label_messenger_OocUser', 'Out-Of-Character (User to User)') }}</option>
                                             <option value="IC">{{ lexicon('label_messenger_IcChar', 'In-Character (Character to Character)') }}</option>
@@ -201,14 +230,14 @@
                                                 x-init="window.Autosize && window.Autosize.init($el)"
                                                 required />
 
-                                    <div class="bg-panel-sub border-t-actions p-4 flex flex-row flex-wrap justify-end items-center gap-sm">
+                                    <x-slot:bottom>
                                         <x-button type="submit"
                                                   variant="primary"
                                                   :tooltip="lexicon('tooltip_messenger_SendMessage', 'Send this message')">
                                             {{ lexicon('btn_messenger_SendMessage', 'Send Message') }}
                                         </x-button>
-                                    </div>
-                                </form>
+                                    </x-slot:bottom>
+                                </x-meta>
                             </div>
 
                             @foreach($resolvedThreads as $t)
@@ -240,13 +269,10 @@
                                         @endforeach
                                     </div>
 
-                                    <form action="/correspondence/{{ $t->id }}/reply"
-                                          method="POST"
-                                          x-data="ajaxForm"
-                                          @submit.prevent="submit"
-                                          data-loading-title="{{ lexicon('msg_messenger_SendingReply', 'Sending Reply...') }}"
-                                          class="bg-panel-sub border-t-actions p-4 flex flex-col gap-sm border-rounded">
-                                        @csrf
+                                    <x-meta action="/correspondence/{{ $t->id }}/reply"
+                                            method="POST"
+                                            :loadingTitle="lexicon('msg_messenger_SendingReply', 'Sending Reply...')"
+                                            class="bg-panel-sub border-t-actions p-4 flex flex-col gap-sm border-rounded">
                                         @if($t->thread_mode === 'IC')
                                             <x-metadata type="select"
                                                         name="sender_persona_id"
@@ -273,7 +299,7 @@
                                                 {{ lexicon('btn_common_Send', 'Send') }}
                                             </x-button>
                                         </div>
-                                    </form>
+                                    </x-meta>
                                 </div>
                             @endforeach
                         </div>
@@ -313,13 +339,11 @@
                         </button>
                     </div>
 
-                    <form action="/folios"
-                          method="POST"
-                          x-data="ajaxForm"
-                          @submit.prevent="submit"
-                          class="flex flex-col flex-grow overflow-hidden">
-                        @csrf
-                        <div x-data="autoSave({{ $autoSaveInterval }})" class="p-panel-body overflow-y-auto flex flex-col gap-md flex-grow">
+                    <x-meta type="modal"
+                            action="/folios"
+                            method="POST"
+                            footerClass="bg-panel-sub border-t-actions p-4 flex flex-row flex-wrap justify-between items-center gap-sm">
+                        <div x-data="autoSave({{ $autoSaveInterval }})" class="flex flex-col gap-md">
                             <div class="flex flex-col gap-md">
                                 <span class="text-xs font-bold text-muted uppercase text-wider">{{ lexicon('label_WriteChapter_PlacementAndCharacter', 'Placement & Persona') }}</span>
 
@@ -414,7 +438,7 @@
                             </div>
                         </div>
 
-                        <div class="bg-panel-sub border-t-actions p-4 flex flex-row flex-wrap justify-between items-center gap-sm">
+                        <x-slot:bottom>
                             <x-metadata type="select"
                                         id="modal_folio_status"
                                         name="folio_status"
@@ -429,8 +453,8 @@
                                       :tooltip="lexicon('tooltip_WriteChapter_SaveFolio', 'Save this folio')">
                                 {{ lexicon('btn_WriteChapter_SaveFolio', 'Save Folio') }}
                             </x-button>
-                        </div>
-                    </form>
+                        </x-slot:bottom>
+                    </x-meta>
                 </div>
             </div>
         </div>
@@ -458,37 +482,14 @@
                     </div>
                 @endif
 
-                @if($formAction)
-                    <form x-data="ajaxForm"
-                          :action="{{ $formAction }}"
-                          method="POST"
-                          @submit.prevent="submit"
-                          class="flex flex-col flex-grow overflow-hidden">
-                        @csrf
-                        <template x-if="{{ $formMethod }} && {{ $formMethod }} !== 'POST'">
-                            <input type="hidden" name="_method" :value="{{ $formMethod }}">
-                        </template>
+                <div class="p-panel-body overflow-y-auto flex flex-col gap-md flex-grow">
+                    {{ $slot }}
+                </div>
 
-                        <div class="p-panel-body overflow-y-auto flex flex-col gap-md flex-grow">
-                            {{ $slot }}
-                        </div>
-
-                        @if(isset($bottom))
-                            <div class="bg-panel-sub border-t-actions p-4 flex flex-row flex-wrap justify-end items-center gap-sm">
-                                {{ $bottom }}
-                            </div>
-                        @endif
-                    </form>
-                @else
-                    <div class="p-panel-body overflow-y-auto flex flex-col gap-md flex-grow">
-                        {{ $slot }}
+                @if(isset($bottom))
+                    <div class="bg-panel-sub border-t-actions p-4 flex flex-row flex-wrap justify-end items-center gap-sm">
+                        {{ $bottom }}
                     </div>
-
-                    @if(isset($bottom))
-                        <div class="bg-panel-sub border-t-actions p-4 flex flex-row flex-wrap justify-end items-center gap-sm">
-                            {{ $bottom }}
-                        </div>
-                    @endif
                 @endif
             </div>
         </div>
