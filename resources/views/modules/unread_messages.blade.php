@@ -1,40 +1,93 @@
-{{-- 
-@WidgetManifest({
-    "name": "Unread Messages",
-    "description": "Displays the user's unread private messages.",
-    "icon": "bi-envelope",
-    "fields": {}
-})
---}}
-<div class="bg-panel border border-panel rounded-panel shadow-panel flex flex-col overflow-hidden mb-6 w-full" x-data>
-    <div class="bg-panel-header text-h border-b border-panel p-panel-header font-bold flex-shrink-0 flex flex-row flex-wrap justify-between items-center gap-md">
-        <span class="text-lg font-bold text-h">{{ lexicon('label_Dashboard_UnreadMessages', 'Unread Messages') }}</span>
-        <x-badge type="success" 
-                 variant="success"
-                 aria-label="{{ lexicon('tooltip_Dashboard_UnreadCount', 'Total unread messages') }}"
-                 x-tooltip="'{{ addslashes(lexicon('tooltip_Dashboard_UnreadCount', 'Total unread messages')) }}'">
-            {{ count($unreadMessages ?? []) }}
+{{-- resources/views/modules/unread_messages.blade.php --}}
+{{-- @WidgetManifest({ "name": "Unread Messages", "description": "Displays the user's unread private messages.", "icon": "bi-envelope", "fields": { "title": { "type": "text", "label": "Module Title", "default": "Unread Correspondence" } } }) --}}
+@php
+    $rawOptions =$moduleSettings
+        ?? $module?->pivot?->book_config
+        ?? $module?->pivot?->instance_options
+        ?? $widget?->pivot?->instance_options
+        ?? [];
+    $options = is_string($rawOptions) ? (json_decode($rawOptions, true) ?: []) : (is_array($rawOptions) ?$rawOptions : []);
+
+    $rawTitle = trim((string) ($options['title'] ?? ''));$title = $rawTitle !== '' ?$rawTitle : lexicon('label_UnreadMessages_DefaultTitle', 'Unread Correspondence');
+
+    $unreadThreads =$unreadMessages ?? collect();
+
+    if ($unreadThreads->isEmpty() && auth()->check()) {
+        $userId = auth()->id();$unreadThreads = \App\Models\CorrespondenceThread::whereHas('participants', function ($q) use ($userId) {
+                $q->where('user_id',$userId);
+            })
+            ->with(['messages' => function ($q) {$q->latest();
+            }, 'participants'])
+            ->orderByDesc('updated_at')
+            ->get()
+            ->filter(function ($thread) use ($userId) {$participant = $thread->participants->firstWhere('user_id',$userId);
+                $latestMessage =$thread->messages->first();
+                if (!$participant \vert{}\vert{} !$latestMessage) {
+                    return false;
+                }
+                if ((int) $latestMessage->user_id === (int)$userId) {
+                    return false;
+                }
+                return $participant->last_read_at === null || $latestMessage->created_at->gt($participant->last_read_at);
+            })
+            ->values();
+    }
+@endphp
+
+<x-tab type="accordion"
+       :title="$title"
+       icon="bi-envelope"
+       :open="true">
+    <x-slot:top>
+        <x-badge type="pill"
+                 :variant="$unreadThreads->isNotEmpty() ? 'warning' : 'muted'"
+                 :tooltip="lexicon('tooltip_UnreadMessages_Count', 'Unread conversation threads')">
+            {{ $unreadThreads->count() }}
         </x-badge>
-    </div>
-    <div class="p-panel flex flex-col flex-grow gap-sm" x-ref="unreadMessagesContainer">
-        @forelse($unreadMessages ?? [] as $message)
-            <div class="bg-panel-sub border border-panel rounded-panel p-3 flex flex-row flex-wrap justify-between items-center gap-md">
-                <div class="flex flex-col gap-xs">
-                    <span class="font-bold text-p block">{{ $message->thread->title ?? lexicon('label_messenger_DirectMessage', 'Direct Message') }}</span>
-                    <span class="text-xs text-muted block">{{ Str::limit($message->body, 40) }}</span>
+    </x-slot:top>
+
+    @if($unreadThreads->isEmpty())
+        <div class="bg-panel-sub border-dashed-panel border-rounded p-panel-body text-center flex flex-col items-center justify-center gap-xs">
+            <i class="bi bi-envelope-check text-2xl text-muted" aria-hidden="true"></i>
+            <span class="text-sm text-muted font-italic">{{ lexicon('msg_UnreadMessages_None', 'You have no unread correspondence.') }}</span>
+        </div>
+    @else
+        <div class="flex flex-col gap-sm" x-data>
+            @foreach($unreadThreads as$thread)
+                @php
+                    $threadMode = strtoupper((string) ($thread->thread_mode ?? 'OOC'));
+                    $threadTitle =$thread->thread_title ?? lexicon('label_common_UntitledThread', 'Untitled Correspondence');
+                    $latestMsg =$thread->messages?->first();
+                    $timestamp =$latestMsg?->created_at
+                        ? $latestMsg->created_at->diffForHumans()
+                        : ($thread->updated_at ? $thread->updated_at->diffForHumans() : '');
+                @endphp
+
+                <div class="bg-panel-sub border-panel border-rounded p-3 flex flex-row flex-wrap items-center justify-between gap-sm hover-border-accent transition-colors">
+                    <div class="flex flex-col gap-xs">
+                        <div class="flex flex-row flex-wrap items-center gap-xs">
+                            <x-badge type="pill"
+                                     :variant="$threadMode === 'IC' ? 'primary' : 'info'"
+                                     :tooltip="lexicon('tooltip_Messenger_ThreadMode', 'Correspondence Mode')">
+                                {{ $threadMode }}
+                            </x-badge>
+                            <span class="text-sm font-bold text-h">{{ $threadTitle }}</span>
+                        </div>
+                        @if($timestamp)
+                            <span class="text-xs text-muted">{{ $timestamp }}</span>
+                        @endif
+                    </div>
+
+                    <x-button type="button"
+                              variant="secondary"
+                              size="sm"
+                              icon="bi-envelope-open"
+                              :tooltip="lexicon('tooltip_UnreadMessages_OpenThread', 'Open this conversation in Correspondence')"
+                              @click="$dispatch('open-messenger', { threadId: {{$thread->id }} })">
+                        {{ lexicon('btn_common_Read', 'Read') }}
+                    </x-button>
                 </div>
-                <x-button variant="primary" 
-                          href="/messenger/{{ $message->thread_id }}" 
-                          class="p-btn-sm text-sm"
-                          aria-label="{{ lexicon('tooltip_messenger_ViewThread', 'Open message conversation') }}"
-                          x-tooltip="'{{ addslashes(lexicon('tooltip_messenger_ViewThread', 'Open message conversation')) }}'">
-                    {{ lexicon('btn_common_View', 'View') }}
-                </x-button>
-            </div>
-        @empty
-            <div class="p-4 text-center text-muted italic text-sm">
-                <span class="block">{{ lexicon('msg_Dashboard_NoUnreadMessages', 'No unread messages.') }}</span>
-            </div>
-        @endforelse
-    </div>
-</div>
+            @endforeach
+        </div>
+    @endif
+</x-tab>
