@@ -181,6 +181,11 @@
 
     @case('ai-rating')
         @if($languageRatings !== null || $sexRatings !== null || $violenceRatings !== null)
+            @php
+                $resolvedLanguageRatings = $languageRatings ?? [];
+                $resolvedSexRatings = $sexRatings ?? [];
+                $resolvedViolenceRatings = $violenceRatings ?? [];
+            @endphp
             <x-tab type="accordion" :title="lexicon('label_WriteChapter_ToggleRatings', 'Toggle Content Ratings (L-S-V)')" :open="false">
                 <div class="grid grid-cols-1 lg-grid-cols-3 gap-lg">
                     <x-metadata type="select"
@@ -190,7 +195,7 @@
                                 :tooltip="lexicon('tooltip_WriteChapter_LanguageRating', 'Select the language maturity rating for this folio')"
                                 required>
                         <option value="">{{ lexicon('label_WriteChapter_OptSelectRating', '-- Select Rating --') }}</option>
-                        @foreach($languageRatings ?? [] as $tier)
+                        @foreach($resolvedLanguageRatings as $tier)
                             <option value="{{ $tier->tier_level }}">{{ $tier->tier_label }}</option>
                         @endforeach
                     </x-metadata>
@@ -202,7 +207,7 @@
                                 :tooltip="lexicon('tooltip_WriteChapter_SexRating', 'Select the sexual content maturity rating for this folio')"
                                 required>
                         <option value="">{{ lexicon('label_WriteChapter_OptSelectRating', '-- Select Rating --') }}</option>
-                        @foreach($sexRatings ?? [] as $tier)
+                        @foreach($resolvedSexRatings as $tier)
                             <option value="{{ $tier->tier_level }}">{{ $tier->tier_label }}</option>
                         @endforeach
                     </x-metadata>
@@ -214,7 +219,7 @@
                                 :tooltip="lexicon('tooltip_WriteChapter_ViolenceRating', 'Select the violence maturity rating for this folio')"
                                 required>
                         <option value="">{{ lexicon('label_WriteChapter_OptSelectRating', '-- Select Rating --') }}</option>
-                        @foreach($violenceRatings ?? [] as $tier)
+                        @foreach($resolvedViolenceRatings as $tier)
                             <option value="{{ $tier->tier_level }}">{{ $tier->tier_label }}</option>
                         @endforeach
                     </x-metadata>

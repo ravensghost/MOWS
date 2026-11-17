@@ -3,13 +3,14 @@
 /**
  * Global Universal Modal Utility
  * Standardises open/close, mode switching (create/edit), form action/method binding,
- * and supports both Single-Modal (root state) and Multi-Modal (this.modals.<key>) architectures.
+ * and supports the unified this.modals.<key> state contract across all Alpine managers.
  */
 window.Modal = {
+    defaultState: {},
+
     /**
      * Universal open method supporting both 'create' and 'edit' modes.
-     *
-     * @param {Object} state - Target state object (`this` for single-modal, or `this.modals[modalKey]` for multi-modal)
+     * @param {Object} state - Target modal state object (this.modals[modalKey])
      * @param {string} [mode='create'] - 'create' or 'edit'
      * @param {Object} [data={}] - Entity payload for 'edit' mode, or initial overrides for 'create' mode
      * @param {Object} [options={}] - Configuration: { baseUrl: '/admin/...', defaultState: {...}, editAction: (id) => '...' }
@@ -20,57 +21,59 @@ window.Modal = {
         const baseUrl = options.baseUrl || '';
         const isEdit = mode === 'edit';
 
-        // 1. Set mode and visibility flags (canonical is 'isOpen'; legacy 'open'/'modalOpen' bridged for transition)
+        // 1. Set mode and synchronise visibility flags ('isOpen' and 'open')
         state.mode = mode;
         state.isOpen = true;
-        if ('open' in state) state.open = true;
-        if ('modalOpen' in state) state.modalOpen = true;
+        state.open = true;
+        if ('modalOpen' in state) {
+            state.modalOpen = true;
+        }
 
         // 2. Set ID and HTTP method
         state.id = isEdit ? (data.id ?? '') : '';
-        const method = isEdit ? 'PUT' : 'POST';
-        state.method = method;
+        state.method = isEdit ? (options.method || 'PUT') : (options.method || 'POST');
 
-        // 3. Resolve Action URL (canonical is 'action'; legacy 'formAction' bridged for transition)
+        // 3. Resolve Action URL
         let actionUrl = baseUrl;
         if (isEdit) {
+            const recordId = data.id ?? data.code ?? '';
             if (typeof options.editAction === 'function') {
-                actionUrl = options.editAction(data.id, data);
+                actionUrl = options.editAction(recordId, data);
             } else if (options.editAction) {
-                actionUrl = `${options.editAction}/${data.id}`;
-            } else if (baseUrl) {
-                actionUrl = `${baseUrl}/${data.id}`;
+                actionUrl = `${options.editAction}/${recordId}`;
+            } else if (baseUrl && recordId !== '') {
+                actionUrl = `${baseUrl}/${recordId}`;
             }
         }
 
         state.action = actionUrl;
-        if ('formAction' in state) state.formAction = actionUrl;
+        if ('formAction' in state) {
+            state.formAction = actionUrl;
+        }
 
         // 4. Populate or reset properties
         const reservedKeys = [
-            'isOpen', 'open', 'modalOpen', 'mode', 'action', 'formAction', 'method', 'id',
+            'isOpen', 'open', 'modalOpen', 'mode', 'action', 'formAction', 'method',
             'modals', 'searchQuery', 'searchHelperInstance', 'filteredIds', 'isLoading'
         ];
 
         const defaults = options.defaultState || {};
 
         if (isEdit) {
-            // Reset to defaults first if provided, then overlay incoming edit data
             for (const [key, val] of Object.entries(defaults)) {
                 if (!reservedKeys.includes(key)) {
                     state[key] = typeof val === 'function' ? val() : val;
                 }
             }
-            for (const key of Object.keys(state)) {
-                if (!reservedKeys.includes(key) && data[key] !== undefined) {
-                    state[key] = data[key];
+            for (const [key, val] of Object.entries(data)) {
+                if (!reservedKeys.includes(key) && val !== undefined) {
+                    state[key] = val;
                 }
             }
         } else {
-            // Apply defaultState, then allow optional create-mode overrides passed via data (e.g. parent_id or shelf_id)
             const mergedCreateState = { ...defaults, ...data };
             for (const [key, val] of Object.entries(mergedCreateState)) {
-                if (key in state && !reservedKeys.includes(key)) {
+                if (!reservedKeys.includes(key)) {
                     state[key] = typeof val === 'function' ? val() : val;
                 }
             }
@@ -82,60 +85,66 @@ window.Modal = {
     },
 
     /**
-     * Shorthand for opening in 'create' mode.
+     * Shorthand for opening a modal in 'create' mode.
      */
     create(stateRef, defaultState = {}, createAction = '') {
-        this.open(stateRef, 'create', defaultState, { baseUrl: createAction, defaultState });
+        this.open(stateRef, 'create', defaultState, {
+            baseUrl: createAction,
+            defaultState
+        });
     },
 
     /**
-     * Shorthand for opening in 'edit' mode.
+     * Shorthand for opening a modal in 'edit' mode.
      */
     edit(stateRef, data = {}, editActionPattern = '', defaultState = {}) {
         const editAction = typeof editActionPattern === 'function' ? editActionPattern : null;
         const baseUrl = typeof editActionPattern === 'string' ? editActionPattern : '';
-        this.open(stateRef, 'edit', data, { baseUrl, editAction, defaultState });
+        this.open(stateRef, 'edit', data, {
+            baseUrl,
+            editAction,
+            defaultState
+        });
     },
 
     /**
-     * Closes a single modal state object, a specific modal inside `this.modals[key]`,
-     * or ALL modals if `this.modals` (or component `this` containing `modals`) is passed.
+     * Closes a single modal state object, a specific modal inside this.modals[key],
+     * or all modals if a parentmodals object/component is passed.
      */
     close(stateOrComponent, modalKey = null) {
         if (!stateOrComponent || typeof stateOrComponent !== 'object') return;
 
         const closeTarget = (target) => {
             if (!target || typeof target !== 'object') return;
-            if ('isOpen' in target) target.isOpen = false;
-            if ('open' in target) target.open = false;
-            if ('modalOpen' in target) target.modalOpen = false;
+            target.isOpen = false;
+            target.open = false;
+            if ('modalOpen' in target) {
+                target.modalOpen = false;
+            }
         };
 
-        // Case 1: Specific modalKey requested on a component or modals map
-        if (modalKey) {
-            if (stateOrComponent.modals && stateOrComponent.modals[modalKey]) {
-                closeTarget(stateOrComponent.modals[modalKey]);
-                return;
-            }
-            if (stateOrComponent[modalKey]) {
-                closeTarget(stateOrComponent[modalKey]);
-                return;
-            }
+        if (modalKey && stateOrComponent.modals && stateOrComponent.modals[modalKey]) {
+            closeTarget(stateOrComponent.modals[modalKey]);
+            return;
         }
 
-        // Case 2: Component root passed — close root flags AND any nested this.modals
-        closeTarget(stateOrComponent);
+        if (modalKey && stateOrComponent[modalKey]) {
+            closeTarget(stateOrComponent[modalKey]);
+            return;
+        }
 
         if (stateOrComponent.modals && typeof stateOrComponent.modals === 'object') {
-            Object.values(stateOrComponent.modals).forEach(subModal => closeTarget(subModal));
-        } else {
-            // Case 3: `this.modals` object passed directly
-            Object.values(stateOrComponent).forEach(val => {
-                if (val && typeof val === 'object' && ('isOpen' in val || 'open' in val || 'modalOpen' in val)) {
-                    closeTarget(val);
-                }
-            });
+            Object.values(stateOrComponent.modals).forEach(closeTarget);
+            closeTarget(stateOrComponent);
+            return;
         }
+
+        if ('isOpen' in stateOrComponent || 'open' in stateOrComponent || 'mode' in stateOrComponent) {
+            closeTarget(stateOrComponent);
+            return;
+        }
+
+        Object.values(stateOrComponent).forEach(closeTarget);
     }
 };
 

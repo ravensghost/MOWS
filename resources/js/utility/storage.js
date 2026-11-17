@@ -2,15 +2,15 @@
 
 /**
  * Global Local Storage Utility
- * Safe wrappers for persisting state with JSON parsing.
+ * Safe wrappers for persisting zero-DB client state (scroll percentages, read badges, soundtrack settings) with JSON parsing.
  */
-window.appStorage = {
+window.Storage = {
     get(key, fallback = null) {
         try {
             const item = localStorage.getItem(key);
-            return item ? JSON.parse(item) : fallback;
+            return item !== null ? JSON.parse(item) : fallback;
         } catch (e) {
-            console.error('Storage Read Error:', e);
+            console.error('[Storage] Read Error:', e);
             return fallback;
         }
     },
@@ -19,13 +19,19 @@ window.appStorage = {
         try {
             localStorage.setItem(key, JSON.stringify(value));
         } catch (e) {
-            console.error('Storage Write Error:', e);
+            console.error('[Storage] Write Error:', e);
         }
     },
 
     remove(key) {
-        localStorage.removeItem(key);
+        try {
+            localStorage.removeItem(key);
+        } catch (e) {
+            console.error('[Storage] Remove Error:', e);
+        }
     }
 };
 
-export default window.appStorage;
+window.appStorage = window.Storage;
+
+export default window.Storage;
