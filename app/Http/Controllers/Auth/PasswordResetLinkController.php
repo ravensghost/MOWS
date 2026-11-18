@@ -8,7 +8,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
-use Illuminate\View\View;
 
 class PasswordResetLinkController extends Controller
 {
@@ -30,9 +29,11 @@ class PasswordResetLinkController extends Controller
         if ($status == Password::RESET_LINK_SENT) {
             if ($request->expectsJson()) {
                 return response()->json([
-                    'status' => 'success',
-                    'message' => __($status),
-                ]);
+                    'status'   => 'success',
+                    'message'  => __($status),
+                    'data'     => null,
+                    'redirect' => null,
+                ], 200);
             }
 
             return back()->with('status', __($status));
@@ -40,9 +41,11 @@ class PasswordResetLinkController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'status' => 'error',
-                'message' => __($status),
-                'errors' => ['email' => [__($status)]],
+                'status'   => 'error',
+                'message'  => __($status),
+                'data'     => null,
+                'redirect' => null,
+                'errors'   => ['email' => [__($status)]],
             ], 422);
         }
 

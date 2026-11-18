@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
-use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
 {
@@ -24,16 +23,20 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
+            'name'     => ['required', 'string', 'max:255'],
+            'email'    => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
+            'name'     => $request->name,
+            'email'    => $request->email,
             'password' => Hash::make($request->password),
         ]);
+
+        if (method_exists($user, 'setAttr')) {
+            $user->setAttr('last_login_at', now()->toDateTimeString());
+        }
 
         event(new Registered($user));
 
@@ -43,10 +46,11 @@ class RegisteredUserController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'status' => 'success',
-                'message' => lexicon('msg_auth_AccountCreated', 'Account created successfully.'),
+                'status'   => 'success',
+                'message'  => lexicon('msg_auth_AccountCreated', 'Account created successfully.'),
+                'data'     => $user,
                 'redirect' => $redirectUrl,
-            ]);
+            ], 200);
         }
 
         return redirect($redirectUrl);

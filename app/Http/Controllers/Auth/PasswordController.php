@@ -18,7 +18,7 @@ class PasswordController extends Controller
     {
         $validated = $request->validateWithBag('updatePassword', [
             'current_password' => ['required', 'current_password'],
-            'password' => ['required', Password::defaults(), 'confirmed'],
+            'password'         => ['required', Password::defaults(), 'confirmed'],
         ]);
 
         $request->user()->update([
@@ -27,9 +27,11 @@ class PasswordController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'status' => 'success',
-                'message' => lexicon('msg_auth_PasswordUpdated', 'Your password has been updated successfully.'),
-            ]);
+                'status'   => 'success',
+                'message'  => lexicon('msg_auth_PasswordUpdated', 'Your password has been updated successfully.'),
+                'data'     => null,
+                'redirect' => null,
+            ], 200);
         }
 
         return back()->with('status', 'password-updated');

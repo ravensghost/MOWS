@@ -19,10 +19,11 @@ class EmailVerificationNotificationController extends Controller
 
             if ($request->expectsJson()) {
                 return response()->json([
-                    'status' => 'success',
-                    'message' => lexicon('msg_auth_EmailAlreadyVerified', 'Your email address is already verified.'),
+                    'status'   => 'success',
+                    'message'  => lexicon('msg_auth_EmailAlreadyVerified', 'Your email address is already verified.'),
+                    'data'     => null,
                     'redirect' => $redirectUrl,
-                ]);
+                ], 200);
             }
 
             return redirect()->intended($redirectUrl);
@@ -32,9 +33,11 @@ class EmailVerificationNotificationController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json([
-                'status' => 'success',
-                'message' => lexicon('msg_auth_VerificationLinkSent', 'A new verification link has been sent to your email address.'),
-            ]);
+                'status'   => 'success',
+                'message'  => lexicon('msg_auth_VerificationLinkSent', 'A new verification link has been sent to your email address.'),
+                'data'     => null,
+                'redirect' => null,
+            ], 200);
         }
 
         return back()->with('status', 'verification-link-sent');
