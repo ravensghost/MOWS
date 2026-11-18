@@ -8,6 +8,7 @@ use App\Models\Configuration;
 use App\Models\Folio;
 use App\Models\Persona;
 use App\Models\PersonaMetadata;
+use App\Services\AiPortraitService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 use Illuminate\View\View as ViewContract;
+use Throwable;
 
 class PortalController extends Controller
 {
@@ -24,8 +26,7 @@ class PortalController extends Controller
      */
     public function showBook(string $bookUrl = '/'): ViewContract
     {
-        $normalizedUrl = $bookUrl === '/' ? '/' : ltrim($bookUrl, '/');
-
+        $normalizedUrl = '/' . ltrim($bookUrl, '/');
         $payload = $this->resolvePublishedBook($normalizedUrl);
 
         return view('book', $payload);
@@ -40,9 +41,10 @@ class PortalController extends Controller
 
         $persona->load([
             'user',
+            'lineageCatalogue',
             'insignia' => function ($query) {
                 $query->where('is_visible', true)->with([
-                    'insigniaGroup' => function ($q) {
+                    'insigniaCatalogue' => function ($q) {
                         $q->where('is_visible', true);
                     },
                 ]);
@@ -54,14 +56,13 @@ class PortalController extends Controller
                     },
                 ]);
             },
-            'candidatePetition.answers.formField',
+            'candidatePetition.entries.metadata',
             'chronologicalRegisters.citation',
             'chronologicalRegisters.issuer',
             'attributes',
         ]);
 
         View::share('persona', $persona);
-
         $payload['persona'] = $persona;
 
         return view('book', $payload);
@@ -100,16 +101,14 @@ class PortalController extends Controller
 
         $book->setRelation('modules', $filteredModules);
 
-        $lookupUrl = $book->book_url === '/' ? '/' : '/' . ltrim($book->book_url, '/');
-
-        $navKey = Cache::remember('nav_lexicon_' . md5($lookupUrl), 3600, function () use ($lookupUrl) {
+        $lookupUrl = '/' . ltrim($book->book_url, '/');
+        $navKey = Cache::remember('nav_key_' . md5($lookupUrl), 3600, function () use ($lookupUrl) {
             return DB::table('table_of_contents')
                 ->where('destination_url', $lookupUrl)
-                ->pluck('translation_code_key')
-                ->first();
+                ->value('translation_code_key');
         });
 
-        $defaultKey = $fallbackBookKey ?? ('public_label_' . ($book->book_url === '/' ? 'Landing' : Str::studly(basename($book->book_url))));
+        $defaultKey = $fallbackBookKey ?: ('public_label_' . ($book->book_url === '/' ? 'Landing' : Str::studly(basename($book->book_url))));
         $bookKey = $navKey ?: $defaultKey;
 
         $moduleTokens = $filteredModules->pluck('module_token')->toArray();
@@ -123,7 +122,7 @@ class PortalController extends Controller
         }
 
         $folios = null;
-        if (! empty(array_intersect(['folios', 'module_folios'], $moduleTokens))) {
+        if (! empty(array_intersect(['folios', 'module_folios', 'folio'], $moduleTokens))) {
             $folios = Folio::with('activePersona')
                 ->where('folio_status', 'published')
                 ->orderBy('created_at', 'desc')
@@ -149,7 +148,7 @@ class PortalController extends Controller
 
         $isAuthorized = $user && (
             (int) $user->id === (int) $persona->user_id ||
-            $user->hasRole('webmaster') ||
+            (method_exists($user, 'hasRole') && $user->hasRole('webmaster')) ||
             $user->can('manage_roster_assignments') ||
             $user->can('manage_users')
         );
@@ -228,6 +227,19 @@ class PortalController extends Controller
                 'attribute_key'   => 'gallery_image',
                 'attribute_value' => $filename,
             ]);
+        }
+
+        // Sync & verify 3-layer portrait attribution manifest (Phase 7 Section 1.7)
+        if (class_exists(AiPortraitService::class)) {
+            try {
+                app(AiPortraitService::class)->resolveMissingAttribution(
+                    'images/personas/' . $filename,
+                    $request->only(['base_credit', 'uniform_credit', 'background_credit', 'artist', 'licence_url']),
+                    $persona
+                );
+            } catch (Throwable) {
+                // Do not block portrait upload if attribution service encounters an I/O issue
+            }
         }
 
         $portraits = $this->getPortraitPayload($persona);
@@ -352,8 +364,7 @@ class PortalController extends Controller
         $user = auth()->user();
 
         $bypassMode = Configuration::where('configuration_token', 'content_shield_bypass')
-            ->pluck('configuration_payload')
-            ->first() ?? 'locked';
+            ->value('configuration_payload') ?? 'locked';
 
         $userBypassed = false;
         if ($isMature && $user && $bypassMode === 'user_bypass') {

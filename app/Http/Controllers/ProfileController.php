@@ -10,26 +10,35 @@ class ProfileController extends Controller
 {
     public function update(Request $request)
     {
-        $user =$request->user();
+        $user = $request->user();
 
-        $validated =$request->validate([
+        $validated = $request->validate([
             'name'                  => ['required', 'string', 'max:255'],
             'email'                 => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'twitter_handle'        => ['nullable', 'string', 'max:255'],
             'facebook_handle'       => ['nullable', 'string', 'max:255'],
+            'discord_id'            => ['nullable', 'string', 'max:64'],
             'content_shield_bypass' => ['nullable', 'boolean'],
         ]);
 
         if (array_key_exists('content_shield_bypass', $validated)) {
-            $validated['content_shield_bypass'] = (bool)$validated['content_shield_bypass'];
+            $validated['content_shield_bypass'] = (bool) $validated['content_shield_bypass'];
         }
+
+        $discordId = $validated['discord_id'] ?? null;
+        unset($validated['discord_id']);
 
         $user->fill($validated);
 
-        if ($user->isDirty('email')) {$user->email_verified_at = null;
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
 
         $user->save();
+
+        if ($discordId !== null && method_exists($user, 'setAttr')) {
+            $user->setAttr('discord_id', trim((string) $discordId));
+        }
 
         $message = lexicon('msg_Dashboard_ProfileUpdated', 'Profile information updated successfully.');
 
@@ -51,13 +60,14 @@ class ProfileController extends Controller
             'password' => ['required', 'current_password'],
         ]);
 
-        $user =$request->user();
+        $user = $request->user();
 
         Auth::logout();
 
         $user->delete();
 
-        $request->session()->invalidate();$request->session()->regenerateToken();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         if ($request->wantsJson()) {
             return response()->json([

@@ -41,9 +41,9 @@ class DashboardController extends Controller
     public function updateLoa(Request $request)
     {
         $validated = $request->validate([
-            'is_on_loa' => 'required|boolean',
+            'is_on_loa'       => 'required|boolean',
             'loa_return_date' => 'nullable|required_if:is_on_loa,1,true|date|after_or_equal:today',
-            'reason' => 'nullable|string|max:255',
+            'reason'          => 'nullable|string|max:255',
         ]);
 
         $user = auth()->user();
@@ -62,9 +62,15 @@ class DashboardController extends Controller
 
         if ($request->wantsJson()) {
             return response()->json([
-                'status' => 'success',
-                'message' => $message,
-            ]);
+                'status'   => 'success',
+                'message'  => $message,
+                'data'     => [
+                    'is_on_loa'       => $isOnLoa,
+                    'status_label'    => $statusLabel,
+                    'loa_return_date' => $validated['loa_return_date'] ?? null,
+                ],
+                'redirect' => null,
+            ], 200);
         }
 
         return back()->with('status', $message);

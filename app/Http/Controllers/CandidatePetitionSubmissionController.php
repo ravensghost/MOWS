@@ -7,8 +7,8 @@ use App\Models\CandidatePetition;
 use App\Models\Configuration;
 use App\Models\Metadata;
 use App\Models\Persona;
+use App\Services\MultiChannelNotificationService;
 use Illuminate\Http\Request;
-use Stevebauman\Purify\Facades\Purify;
 
 class CandidatePetitionSubmissionController extends Controller
 {
@@ -26,14 +26,15 @@ class CandidatePetitionSubmissionController extends Controller
         }
 
         $slug = $metaMode === 'application' ? 'apply' : $metaMode;
+
         $systemBook = Book::with(['grid.gridModules', 'modules'])
             ->where('book_url', $slug)
-            ->where('is_published', 1)
+            ->where('is_published', true)
             ->first();
 
         return view('petition_metadata', [
-            'fields' => $fields,
-            'metaMode' => $metaMode,
+            'fields'     => $fields,
+            'metaMode'   => $metaMode,
             'systemBook' => $systemBook,
         ]);
     }
@@ -54,11 +55,12 @@ class CandidatePetitionSubmissionController extends Controller
         if ($identifier === 'application' || (int) $identifier === 25) {
             if (! auth()->check()) {
                 $authMessage = lexicon('msg_auth_RequiredForApp', 'Please log in or register an account before submitting a petition.');
+
                 if ($request->wantsJson()) {
                     return response()->json([
-                        'status' => 'error',
-                        'message' => $authMessage,
-                        'data' => null,
+                        'status'   => 'error',
+                        'message'  => $authMessage,
+                        'data'     => null,
                         'redirect' => null,
                     ], 401);
                 }
@@ -71,7 +73,7 @@ class CandidatePetitionSubmissionController extends Controller
                 ->value('configuration_payload');
 
             $isLimitEnforced = filter_var($limitEnforcedRaw ?? false, FILTER_VALIDATE_BOOLEAN)
-                || in_array((string) $limitEnforcedRaw, ['1', 'true', 'yes', 'enabled'], true);
+                || in_array(strtolower((string) $limitEnforcedRaw), ['1', 'true', 'yes', 'enabled'], true);
 
             if ($isLimitEnforced) {
                 $maxCharacters = max(1, (int) (Configuration::where('configuration_token', 'max_active_characters')
@@ -93,9 +95,9 @@ class CandidatePetitionSubmissionController extends Controller
 
                     if ($request->wantsJson()) {
                         return response()->json([
-                            'status' => 'error',
-                            'message' => $limitMsg,
-                            'data' => null,
+                            'status'   => 'error',
+                            'message'  => $limitMsg,
+                            'data'     => null,
                             'redirect' => null,
                         ], 422);
                     }
@@ -105,13 +107,13 @@ class CandidatePetitionSubmissionController extends Controller
             }
 
             $formData = $request->except(['_token']);
-            $proposedPersonaName = trim($request->input('field_1') ?? '') ?: 'Unknown Persona';
+            $proposedPersonaName = trim(strip_tags((string) ($request->input('field_1') ?? ''))) ?: 'Unknown Persona';
 
             $petition = CandidatePetition::create([
-                'user_id' => auth()->id(),
+                'user_id'               => auth()->id(),
                 'proposed_persona_name' => $proposedPersonaName,
-                'petition_status' => 'Pending',
-                'lodged_at' => now(),
+                'petition_status'       => 'Pending',
+                'lodged_at'             => now(),
             ]);
 
             $fieldsById = Metadata::where('linked_metadata', '25')
@@ -122,59 +124,70 @@ class CandidatePetitionSubmissionController extends Controller
             $allowedEvents = ['background', 'academy', 'assignment', 'commendation', 'milestone', 'incident'];
 
             foreach ($formData as $key => $value) {
-                if (! str_starts_with($key, 'field_')) {
+                if (! str_starts_with((string) $key, 'field_')) {
                     continue;
                 }
 
-                $fieldId = (int) str_replace('field_', '', $key);
-                $fieldModel = $fieldsById->get($fieldId);
-
-                if (! $fieldModel) {
+                $fieldId = (int) str_replace('field_', '', (string) $key);
+                if ($fieldId <= 0) {
                     continue;
                 }
 
-                $fieldMode = $fieldModel->metadata_mode ?: 'text';
-                $formattedAnswer = '';
+                $fieldMeta = $fieldsById->get($fieldId);
+                $fieldMode = $fieldMeta?->metadata_mode ?? 'text';
 
                 if ($fieldMode === 'service_record' && is_array($value)) {
                     $cleanRecords = [];
-                    foreach ($value as $entry) {
-                        $desc = trim(strip_tags($entry['chronicle_text'] ?? ''));
+                    foreach ($value as $record) {
+                        if (! is_array($record)) {
+                            continue;
+                        }
+                        $date = trim(strip_tags((string) ($record['in_universe_date'] ?? $record['date'] ?? '')));
+                        $type = strtolower(trim(strip_tags((string) ($record['register_event_mode'] ?? $record['type'] ?? 'background'))));
+                        $desc = trim(strip_tags((string) ($record['chronicle_text'] ?? $record['description'] ?? '')));
+
                         if ($desc === '') {
                             continue;
-                        }$era = trim(strip_tags($entry['era'] ?? ''));
-                        $eventCategory = in_array($entry['register_event_mode'] ?? '', $allowedEvents, true)
-                            ? $entry['register_event_mode']
-                            : 'background';
+                        }
+                        if (! in_array($type, $allowedEvents, true)) {
+                            $type = 'background';
+                        }
 
                         $cleanRecords[] = [
-                            'era' => $era,
-                            'register_event_mode' => $eventCategory,
-                            'chronicle_text' => $desc,
+                            'in_universe_date'    => $date,
+                            'register_event_mode' => $type,
+                            'chronicle_text'      => $desc,
                         ];
                     }
-                    $formattedAnswer = json_encode($cleanRecords);
+                    $formattedAnswer = json_encode($cleanRecords, JSON_UNESCAPED_UNICODE);
                 } elseif ($fieldMode === 'richtext') {
-                    $formattedAnswer = Purify::clean((string) $value);
+                    $formattedAnswer = function_exists('purify_html')
+                        ? purify_html((string) $value)
+                        : strip_tags((string) $value);
                 } else {
                     $formattedAnswer = is_array($value)
-                        ? implode(', ', array_map('strip_tags', $value))
+                        ? implode(', ', array_map(fn ($item) => trim(strip_tags((string) $item)), $value))
                         : trim(strip_tags((string) $value));
                 }
 
                 $petition->entries()->create([
-                    'metadata_id' => $fieldId,
+                    'metadata_id'     => $fieldId,
                     'petition_answer' => $formattedAnswer,
                 ]);
             }
 
             $petition->load('entries');
 
+            MultiChannelNotificationService::sendDiscord(
+                'applications',
+                "📋 **New Candidate Petition Lodged:** **{$proposedPersonaName}** submitted by **" . (auth()->user()?->name ?? 'Applicant') . "**."
+            );
+
             if ($request->wantsJson()) {
                 return response()->json([
-                    'status' => 'success',
-                    'message' => lexicon('msg_FormsHub_ApplicationSuccess', 'Your candidate petition has been lodged for review!'),
-                    'data' => $petition,
+                    'status'   => 'success',
+                    'message'  => lexicon('msg_FormsHub_ApplicationSuccess', 'Your candidate petition has been lodged for review!'),
+                    'data'     => $petition,
                     'redirect' => null,
                 ], 200);
             }
