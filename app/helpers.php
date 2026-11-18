@@ -26,17 +26,22 @@ if (! function_exists('lexicon')) {
 
         // 1. Fetch lexicon dictionary from Cache via LexiconCodex model
         if ($memoryCache === null) {
-            $memoryCache = Cache::rememberForever('lexicon_codex', function () {
-                return LexiconCodex::query()
-                    ->select(['semantic_token', 'default_lexicon_string', 'translation_payloads'])
-                    ->get()
-                    ->keyBy('semantic_token')
-                    ->map(fn(LexiconCodex $entry) => [
-                        'default'  => $entry->default_lexicon_string,
-                        'payloads' => is_array($entry->translation_payloads) ? $entry->translation_payloads : [],
-                    ])
-                    ->toArray();
-            });
+            try {
+                $memoryCache = Cache::rememberForever('lexicon_codex', function () {
+                    return LexiconCodex::all()->mapWithKeys(function ($item) {
+                        return [
+                            $item->semantic_token => [
+                                'default'  => $item->default_lexicon_string,
+                                'payloads' => is_array($item->translation_payloads)
+                                    ? $item->translation_payloads
+                                    : (json_decode((string) $item->translation_payloads, true) ?: []),
+                            ],
+                        ];
+                    })->toArray();
+                });
+            } catch (\Throwable) {
+                return $default !== '' ? $default : $semanticToken;
+            }
 
             $lowerTokenMap = [];
             foreach (array_keys($memoryCache) as $tokenKey) {
@@ -44,36 +49,32 @@ if (! function_exists('lexicon')) {
             }
         }
 
-        // 2. Case-insensitive token resolution
-        $actualToken = $semanticToken;
-        if (! array_key_exists($actualToken, $memoryCache)) {
-            $lowerLookup = strtolower($semanticToken);
-            if (isset($lowerTokenMap[$lowerLookup])) {
-                $actualToken = $lowerTokenMap[$lowerLookup];
-            }
-        }
+        // 2. Match token case-insensitively
+        $lowerKey = strtolower($semanticToken);
+        $actualToken = $lowerTokenMap[$lowerKey] ?? null;
 
-        // 3. Auto-discovery for missing tokens
-        if (! array_key_exists($actualToken, $memoryCache)) {
-            if (str_starts_with($semanticToken, 'public_label_')) {
-                $prefixGroup = 'public_label';
-                $remainder = substr($semanticToken, 13);
+        // 3. Auto-seed missing token into lexicon_codex if not found
+        if ($actualToken === null) {
+            $prefixGroup = 'general';
+            $groupTitle = 'common';
+
+            if (str_starts_with($semanticToken, 'admin_label_')) {
+                $prefixGroup = 'admin_label';
+                $remainder = substr($semanticToken, strlen('admin_label_'));
                 $parts = $remainder !== '' ? explode('_', $remainder) : [];
                 $groupTitle = (! empty($parts[0])) ? $parts[0] : 'NotDefinedRight';
-            } elseif (str_starts_with($semanticToken, 'admin_label_')) {
-                $prefixGroup = 'admin_label';
-                $remainder = substr($semanticToken, 12);
+            } elseif (str_starts_with($semanticToken, 'public_label_')) {
+                $prefixGroup = 'public_label';
+                $remainder = substr($semanticToken, strlen('public_label_'));
                 $parts = $remainder !== '' ? explode('_', $remainder) : [];
                 $groupTitle = (! empty($parts[0])) ? $parts[0] : 'NotDefinedRight';
             } else {
                 $parts = explode('_', $semanticToken);
-                // Standard tokens MUST have at least 3 segments: prefix_group_action
                 if (count($parts) >= 3 && ! empty($parts[0]) && ! empty($parts[1])) {
                     $prefixGroup = $parts[0];
                     $groupTitle = $parts[1];
                 } else {
                     $prefixGroup = ! empty($parts[0]) ? $parts[0] : 'NotDefinedRight';
-                    $groupTitle = 'NotDefinedRight';
                 }
             }
 
@@ -89,7 +90,7 @@ if (! function_exists('lexicon')) {
                         'translation_payloads'   => $defaultPayloads,
                     ]
                 );
-            } catch (\Throwable $e) {
+            } catch (\Throwable) {
                 // Silently avoid breaking the view render if DB write fails
             }
 
@@ -123,9 +124,55 @@ if (! function_exists('lexicon')) {
     }
 }
 
+if (! function_exists('purify_html')) {
+    /**
+     * Execute the unified backend HTML sanitisation pass while preserving safe MOWS authoring spans and attributes.
+     */
+    function purify_html(?string $dirtyHtml): string
+    {
+        if ($dirtyHtml === null || trim($dirtyHtml) === '') {
+            return '';
+        }
+
+        // Temporarily stash custom MOWS authoring attributes that HTMLPurifier might strip if unconfigured
+        $stashedTokens = [];
+        $protectedHtml = (string) preg_replace_callback(
+            '/<(span|blockquote|div)\b([^>]*?(?:data-lexicon-|data-roll-|folio-transmission-|folio-parchment|font-family:)[^>]*)>/is',
+            function (array $matches) use (&$stashedTokens) {
+                $tag = strtolower($matches[1]);
+                $rawAttrs = $matches[2];
+
+                // Block any inline event handlers or javascript: URIs inside preserved attributes
+                if (preg_match('/\bon[a-z]+\s*=|javascript\s*:/i', $rawAttrs)) {
+                    return '<' . $tag . '>';
+                }
+
+                $token = 'data-mows-stash-' . count($stashedTokens);
+                $stashedTokens[$token] = $rawAttrs;
+
+                return '<' . $tag . ' ' . $token . '="1">';
+            },
+            $dirtyHtml
+        );
+
+        try {
+            $cleanHtml = (string) Purify::clean($protectedHtml);
+        } catch (\Throwable) {
+            $cleanHtml = strip_tags($protectedHtml, '<p><br><strong><b><em><i><u><s><span><blockquote><div><ul><ol><li><h1><h2><h3><h4><a><hr><code><pre>');
+        }
+
+        foreach ($stashedTokens as $token => $rawAttrs) {
+            $cleanHtml = str_replace(' ' . $token . '="1"', $rawAttrs, $cleanHtml);
+            $cleanHtml = str_replace($token . '="1"', ltrim($rawAttrs), $cleanHtml);
+        }
+
+        return $cleanHtml;
+    }
+}
+
 if (! function_exists('markdown')) {
     /**
-     * Convert raw markdown into safe, sanitised HTML using CommonMark and Purify.
+     * Convert raw markdown into safe, sanitised HTML using CommonMark and purify_html().
      */
     function markdown(?string $content): string
     {
@@ -140,7 +187,7 @@ if (! function_exists('markdown')) {
 
         $html = (string) $converter->convert($content);
 
-        return Purify::clean($html);
+        return purify_html($html);
     }
 }
 
@@ -151,7 +198,7 @@ if (! function_exists('resolve_lexicon_locale')) {
     function resolve_lexicon_locale(): string
     {
         if (auth()->check() && ! empty(auth()->user()->user_lexicon_setting)) {
-            return auth()->user()->user_lexicon_setting;
+            return (string) auth()->user()->user_lexicon_setting;
         }
 
         $globalConfiguration = Cache::rememberForever('global_lexicon_setting', function () {
@@ -168,7 +215,7 @@ if (! function_exists('resolve_lexicon_locale')) {
                 $payloads = $entry['payloads'] ?? [];
                 if (is_array($payloads)) {
                     foreach (array_keys($payloads) as $lang) {
-                        $availableLocales[strtolower($lang)] = true;
+                        $availableLocales[strtolower((string) $lang)] = true;
                     }
                 }
             }
@@ -178,7 +225,7 @@ if (! function_exists('resolve_lexicon_locale')) {
             return request()->getPreferredLanguage($availableLocales) ?? config('app.fallback_locale', 'gb');
         }
 
-        return $globalConfiguration;
+        return (string) $globalConfiguration;
     }
 }
 
@@ -201,10 +248,10 @@ if (! function_exists('get_module_manifest')) {
             foreach ($moduleFiles as $file) {
                 $content = File::get($file);
 
-                if (preg_match('/@ModuleManifest\((.*?)\)\s*--\}\}/s', $content, $matches)) {
+                if (preg_match('/@(?:ModuleManifest|WidgetManifest)\s*\(\s*(\{.*?\})\s*\)\s*--\}\}/s', $content, $matches)) {
                     $manifest = json_decode(trim($matches[1]), true);
 
-                    if (json_last_error() === JSON_ERROR_NONE) {
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($manifest)) {
                         $moduleToken = str_replace('.blade.php', '', $file->getFilename());
                         $discoveredModules[$moduleToken] = $manifest;
 
@@ -217,13 +264,17 @@ if (! function_exists('get_module_manifest')) {
                             }
                         }
 
-                        Module::updateOrCreate(
-                            ['module_token' => $moduleToken],
-                            [
-                                'module_title'            => $manifest['module_title'] ?? Str::title(str_replace('_', ' ', $moduleToken)),
-                                'module_default_settings' => $defaultConfigurations,
-                            ]
-                        );
+                        try {
+                            Module::updateOrCreate(
+                                ['module_token' => $moduleToken],
+                                [
+                                    'module_title'            => $manifest['module_title'] ?? $manifest['name'] ?? Str::title(str_replace('_', ' ', $moduleToken)),
+                                    'module_default_settings' => $defaultConfigurations,
+                                ]
+                            );
+                        } catch (\Throwable) {
+                            // Ignore DB write errors before migration
+                        }
                     }
                 }
             }
@@ -240,17 +291,21 @@ if (! function_exists('active_time_system')) {
     function active_time_system(): ?array
     {
         return Cache::remember('active_time_system', 3600, function () {
-            $activeId = Configuration::where('configuration_token', 'universe_time_system')
-                ->pluck('configuration_payload')
-                ->first();
+            try {
+                $activeId = Configuration::where('configuration_token', 'universe_time_system')
+                    ->pluck('configuration_payload')
+                    ->first();
 
-            if (! $activeId) {
+                if (! $activeId) {
+                    return null;
+                }
+
+                $engine = ChronologicalEngine::find($activeId);
+
+                return $engine ? $engine->toArray() : null;
+            } catch (\Throwable) {
                 return null;
             }
-
-            $engine = ChronologicalEngine::find($activeId);
-
-            return $engine ? $engine->toArray() : null;
         });
     }
 }
@@ -259,7 +314,7 @@ if (! function_exists('world_date')) {
     /**
      * Convert a real-world date into the active universe's primary chronological format.
      */
-    function world_date(mixed $date, string $fallbackFormat = 'M d, Y H:i'): string
+    function world_date(mixed $date = null, string $fallbackFormat = 'M d, Y H:i'): string
     {
         if (! $date) {
             return '';
@@ -279,14 +334,13 @@ if (! function_exists('world_date')) {
         $multiplier = $system['temporal_multiplier'] ?? 1;
         $engineType = $system['calculation_algorithm'] ?? 'real_world';
 
-        if ($engineType === 'fractional') {
+        if ($engineType === 'fractional' || $engineType === 'stardate') {
             $yearDiff = ($carbonDate->year - $baseEarthYear) * $multiplier;
-            $dayFraction = ($carbonDate->dayOfYear / $carbonDate->daysInYear) * $multiplier;
+            $dayFraction = ($carbonDate->dayOfYear / max(1, $carbonDate->daysInYear)) * $multiplier;
             $calculatedNum = $baseSystemNum + $yearDiff + $dayFraction;
+            $formattedPrefix = (str_ends_with((string) $prefix, ' ') || $prefix === '') ? $prefix : $prefix . ' ';
 
-            $safePrefix = (str_ends_with($prefix, ' ') || $prefix === '') ? $prefix : $prefix . ' ';
-
-            return $safePrefix . number_format($calculatedNum, 1, '.', '') . $suffix;
+            return $formattedPrefix . number_format((float) $calculatedNum, 1, '.', '') . $suffix;
         }
 
         if ($engineType === 'offset') {
@@ -322,14 +376,12 @@ if (! function_exists('real_date')) {
         $multiplier = (float) ($system['temporal_multiplier'] ?? 1);
         $engineType = $system['calculation_algorithm'] ?? 'real_world';
 
-        if ($engineType === 'fractional') {
+        if ($engineType === 'fractional' || $engineType === 'stardate') {
             $netFigure = $numericFigure - $baseSystemNum;
             $safeMultiplier = ($multiplier != 0.0) ? $multiplier : 1.0;
             $totalYears = $netFigure / $safeMultiplier;
-
             $yearOffset = floor($totalYears);
             $fraction = $totalYears - $yearOffset;
-
             $targetYear = $baseEarthYear + (int) $yearOffset;
 
             $dummyDate = Carbon::createFromDate($targetYear, 1, 1);
@@ -346,5 +398,37 @@ if (! function_exists('real_date')) {
         }
 
         return Carbon::parse($worldDate)->format($fallbackFormat);
+    }
+}
+
+if (! function_exists('ai_rating')) {
+    /**
+     * Return the active site-wide Language-Sex-Violence (L-S-V) content rating string (e.g. '2-1-2').
+     */
+    function ai_rating(): string
+    {
+        try {
+            $l = Configuration::where('configuration_token', 'rating_language_max')->value('configuration_payload') ?? '2';
+            $s = Configuration::where('configuration_token', 'rating_sex_max')->value('configuration_payload') ?? '1';
+            $v = Configuration::where('configuration_token', 'rating_violence_max')->value('configuration_payload') ?? '2';
+
+            return sprintf('%d-%d-%d', (int) $l, (int) $s, (int) $v);
+        } catch (\Throwable) {
+            return '2-1-2';
+        }
+    }
+}
+
+if (! function_exists('calculate_spm')) {
+    /**
+     * Compute Standardised Publication Months (SPM) based on total word count (500 words = 1.00 SPM).
+     */
+    function calculate_spm(int $wordCount, int $wordsPerUnit = 500): float
+    {
+        if ($wordCount <= 0 || $wordsPerUnit <= 0) {
+            return 0.0;
+        }
+
+        return round($wordCount / $wordsPerUnit, 2);
     }
 }
