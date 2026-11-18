@@ -1,36 +1,34 @@
 <?php
+// === app/Models/CouncilEvaluation.php ===
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CouncilEvaluation extends Model
 {
     protected $table = 'council_evaluations';
 
-    // Allows mass assignment for all columns
     protected $guarded = [];
 
-    /**
-     * The user who is the subject of the candidate petition.
-     */
-    public function subjectUser()
+    protected $casts = [
+        'candidate_petition_id' => 'integer',
+        'subject_user_id'       => 'integer',
+        'evaluating_user_id'    => 'integer',
+    ];
+
+    public function subjectUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'subject_user_id');
     }
 
-    /**
-     * The evaluating council member who cast the evaluation.
-     */
-    public function evaluatingUser()
+    public function evaluatingUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'evaluating_user_id');
     }
 
-    /**
-     * The candidate petition being evaluated.
-     */
-    public function candidatePetition()
+    public function candidatePetition(): BelongsTo
     {
         return $this->belongsTo(CandidatePetition::class, 'candidate_petition_id');
     }

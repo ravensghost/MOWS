@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
 
 class Division extends Model
 {
@@ -13,8 +14,17 @@ class Division extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'is_visible' => 'boolean',
+        'division_catalogue_id' => 'integer',
+        'insignia_catalogue_id' => 'integer',
+        'division_sort_order'   => 'integer',
+        'is_visible'            => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::saved(fn () => Cache::forget('widget_roster_sections'));
+        static::deleted(fn () => Cache::forget('widget_roster_sections'));
+    }
 
     public function assignments(): HasMany
     {
@@ -23,7 +33,7 @@ class Division extends Model
 
     public function positions(): HasMany
     {
-        return $this->hasMany(Assignment::class, 'division_id');
+        return $this->assignments();
     }
 
     public function insigniaCatalogue(): BelongsTo
@@ -33,7 +43,7 @@ class Division extends Model
 
     public function rankSet(): BelongsTo
     {
-        return $this->belongsTo(InsigniaCatalogue::class, 'insignia_catalogue_id');
+        return $this->insigniaCatalogue();
     }
 
     public function divisionCatalogue(): BelongsTo

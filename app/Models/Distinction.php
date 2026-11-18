@@ -1,4 +1,5 @@
 <?php
+// === app/Models/Distinction.php ===
 
 namespace App\Models;
 
@@ -20,24 +21,20 @@ class Distinction extends Model
         'mid_layer_mode',
         'mid_layer_asset',
         'mid_layer_modifier',
+        'mid_layer_hue',
         'top_layer_mode',
         'top_layer_asset',
         'top_layer_modifier',
+        'top_layer_hue',
         'scope_target',
         'distinction_catalogue_id',
     ];
 
-    /**
-     * The chronological register entries where this distinction was issued.
-     */
     public function chronologicalRegisters(): HasMany
     {
         return $this->hasMany(ChronologicalRegister::class, 'distinction_id');
     }
 
-    /**
-     * The catalogue category this distinction belongs to.
-     */
     public function catalogue(): BelongsTo
     {
         return $this->belongsTo(DistinctionCatalogue::class, 'distinction_catalogue_id');

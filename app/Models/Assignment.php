@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
 
 class Assignment extends Model
 {
@@ -18,18 +21,35 @@ class Assignment extends Model
     ];
 
     protected $casts = [
+        'division_id'         => 'integer',
         'maximum_occupants'   => 'integer',
         'is_recruitment_open' => 'boolean',
         'is_visible'          => 'boolean',
     ];
 
-    public function division()
+    protected static function booted(): void
+    {
+        static::saved(fn () => Cache::forget('widget_roster_sections'));
+        static::deleted(fn () => Cache::forget('widget_roster_sections'));
+    }
+
+    public function division(): BelongsTo
     {
         return $this->belongsTo(Division::class, 'division_id');
     }
 
-    public function personae()
+    public function section(): BelongsTo
+    {
+        return $this->division();
+    }
+
+    public function personae(): HasMany
     {
         return $this->hasMany(Persona::class, 'assignment_id');
+    }
+
+    public function characters(): HasMany
+    {
+        return $this->personae();
     }
 }

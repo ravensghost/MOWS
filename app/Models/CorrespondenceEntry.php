@@ -1,4 +1,5 @@
 <?php
+// === app/Models/CorrespondenceEntry.php ===
 
 namespace App\Models;
 
@@ -14,6 +15,12 @@ class CorrespondenceEntry extends Model
         'user_id',
         'persona_id',
         'correspondence_text',
+    ];
+
+    protected $casts = [
+        'correspondence_thread_id' => 'integer',
+        'user_id'                  => 'integer',
+        'persona_id'               => 'integer',
     ];
 
     public function thread(): BelongsTo
@@ -33,6 +40,6 @@ class CorrespondenceEntry extends Model
 
     public function character(): BelongsTo
     {
-        return $this->belongsTo(Persona::class, 'persona_id');
+        return $this->persona();
     }
 }

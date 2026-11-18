@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -11,87 +12,74 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Persona extends Model
 {
     protected $table = 'personae';
+
     protected $guarded = [];
 
     protected $casts = [];
 
     /**
-     * The user account that owns this persona.
+     * Bridge primary_portrait_uri <-> primary_portrait_url seamlessly.
      */
-    public function user(): BelongsTo
+    protected function primaryPortraitUri(): Attribute
     {
-        return $this->belongsTo(User::class);
+        return Attribute::make(
+            get: fn ($value, array $attributes) => $value ?? ($attributes['primary_portrait_url'] ?? null),
+            set: fn ($value) => ['primary_portrait_url' => $value]
+        );
     }
 
-    /**
-     * The duty assignment held by this persona.
-     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     public function assignment(): BelongsTo
     {
         return $this->belongsTo(Assignment::class, 'assignment_id');
     }
 
-    /**
-     * The rank insignia assigned to this persona.
-     */
     public function insignia(): BelongsTo
     {
         return $this->belongsTo(Insignia::class, 'insignia_id');
     }
 
-    /**
-     * The chronological service register entries for this persona.
-     */
+    public function lineageCatalogue(): BelongsTo
+    {
+        return $this->belongsTo(LineageCatalogue::class, 'lineage_catalogue_id');
+    }
+
     public function chronologicalRegisters(): HasMany
     {
         return $this->hasMany(ChronologicalRegister::class, 'persona_id');
     }
 
-    /**
-     * The chronological service register entries for this persona.
-     */
     public function serviceRecords(): HasMany
     {
-        return $this->hasMany(ChronologicalRegister::class, 'persona_id');
+        return $this->chronologicalRegisters();
     }
 
-    /**
-     * The folios authored/posted by this persona as active persona.
-     */
     public function folios(): HasMany
     {
         return $this->hasMany(Folio::class, 'active_persona_id');
     }
 
-    /**
-     * The folios featuring this persona in the scene via pivot table.
-     */
     public function featuredFolios(): BelongsToMany
     {
         return $this->belongsToMany(Folio::class, 'folio_personae', 'persona_id', 'folio_id');
     }
 
-    /**
-     * The metadata attributes associated with this persona.
-     */
     public function attributes(): HasMany
     {
         return $this->hasMany(PersonaMetadata::class, 'persona_id');
     }
 
-    /**
-     * The candidate petition submitted to create this persona.
-     */
     public function candidatePetition(): HasOne
     {
         return $this->hasOne(CandidatePetition::class, 'persona_id');
     }
 
-    /**
-     * The candidate petition submitted to create this persona.
-     */
     public function application(): HasOne
     {
-        return $this->hasOne(CandidatePetition::class, 'persona_id');
+        return $this->candidatePetition();
     }
 }

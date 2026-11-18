@@ -1,4 +1,5 @@
 <?php
+// === app/Models/Insignia.php ===
 
 namespace App\Models;
 
@@ -27,11 +28,23 @@ class Insignia extends Model
     ];
 
     protected $casts = [
-        'is_visible' => 'boolean',
+        'insignia_catalogue_id' => 'integer',
+        'insignia_sort_order'   => 'integer',
+        'is_visible'            => 'boolean',
     ];
 
     public function insigniaCatalogue(): BelongsTo
     {
         return $this->belongsTo(InsigniaCatalogue::class, 'insignia_catalogue_id');
+    }
+
+    public function catalogue(): BelongsTo
+    {
+        return $this->insigniaCatalogue();
+    }
+
+    public function rankSet(): BelongsTo
+    {
+        return $this->insigniaCatalogue();
     }
 }

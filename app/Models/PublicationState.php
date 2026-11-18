@@ -1,4 +1,5 @@
 <?php
+// === app/Models/PublicationState.php ===
 
 namespace App\Models;
 
@@ -13,6 +14,10 @@ class PublicationState extends Model
         'state_title',
         'book_url',
         'state_sort_order',
+    ];
+
+    protected $casts = [
+        'state_sort_order' => 'integer',
     ];
 
     public function volumes(): HasMany

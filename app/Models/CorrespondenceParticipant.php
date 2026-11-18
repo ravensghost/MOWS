@@ -1,8 +1,10 @@
 <?php
+// === app/Models/CorrespondenceParticipant.php ===
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CorrespondenceParticipant extends Model
@@ -19,26 +21,29 @@ class CorrespondenceParticipant extends Model
     ];
 
     protected $casts = [
-        'last_read_at' => 'datetime',
+        'correspondence_thread_id' => 'integer',
+        'user_id'                  => 'integer',
+        'persona_id'               => 'integer',
+        'last_read_at'             => 'datetime',
     ];
 
-    public function thread()
+    public function thread(): BelongsTo
     {
         return $this->belongsTo(CorrespondenceThread::class, 'correspondence_thread_id');
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function persona()
+    public function persona(): BelongsTo
     {
         return $this->belongsTo(Persona::class, 'persona_id');
     }
 
-    public function character()
+    public function character(): BelongsTo
     {
-        return $this->belongsTo(Persona::class, 'persona_id');
+        return $this->persona();
     }
 }

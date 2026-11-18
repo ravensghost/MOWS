@@ -1,7 +1,9 @@
 <?php
+// === app/Models/Folio.php ===
 
 namespace App\Models;
 
+use App\Models\Traits\HasChronologicalTime;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -9,18 +11,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Folio extends Model
 {
+    use HasChronologicalTime;
+
     protected $table = 'folios';
+
     protected $guarded = [];
 
     protected $casts = [
         'locked_at' => 'datetime',
     ];
-
-    /*
-    |--------------------------------------------------------------------------
-    | Canonical MOWS Relationships
-    |--------------------------------------------------------------------------
-    */
 
     public function volume(): BelongsTo
     {
@@ -68,15 +67,12 @@ class Folio extends Model
             ->withPivot('contribution_word_count');
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Access Control Helpers
-    |--------------------------------------------------------------------------
-    */
-
     public function isAccessibleBy(?User $user): bool
     {
         if ($this->folio_status === 'published') {
+            if ($this->volume && ($this->volume->is_confidential || $this->volume->shelf?->is_confidential)) {
+                return $user !== null && $user->can('manage_stories');
+            }
             return true;
         }
 
@@ -84,20 +80,20 @@ class Folio extends Model
             return false;
         }
 
-        if ($user->hasRole('webmaster') ||$user->can('edit_chapter')) {
+        if ($user->can('edit_chapter') || $user->can('manage_stories')) {
             return true;
         }
 
-        if ((int) $this->user_id === (int)$user->id) {
+        if ((int) $this->user_id === (int) $user->id || (int) $this->turn_user_id === (int) $user->id) {
             return true;
         }
 
-        $coAuthorUserIds =$this->personae()
+        $coAuthorUserIds = $this->personae()
             ->whereNotNull('user_id')
             ->pluck('user_id')
-            ->map(fn ($id) => (int)$id)
+            ->map(fn ($id) => (int) $id)
             ->toArray();
 
-        return in_array((int) $user->id,$coAuthorUserIds, true);
+        return in_array((int) $user->id, $coAuthorUserIds, true);
     }
 }

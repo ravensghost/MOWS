@@ -1,4 +1,5 @@
 <?php
+// === app/Models/CorrespondenceThread.php ===
 
 namespace App\Models;
 
@@ -19,9 +20,14 @@ class CorrespondenceThread extends Model
         return $this->hasMany(CorrespondenceParticipant::class, 'correspondence_thread_id');
     }
 
-    public function messages(): HasMany
+    public function entries(): HasMany
     {
         return $this->hasMany(CorrespondenceEntry::class, 'correspondence_thread_id');
+    }
+
+    public function messages(): HasMany
+    {
+        return $this->entries();
     }
 
     /**
@@ -29,20 +35,17 @@ class CorrespondenceThread extends Model
      */
     public static function createSystemMessage(?User $sender, iterable $recipients, string $body, string $subject = 'System Notification'): ?self
     {
-        $senderId = $sender?->id ?? User::orderBy('id')->value('id');
-        if (!$senderId) {
-            return null;
-        }
-
         $recipientIds = collect($recipients)
-            ->map(fn($r) => $r instanceof User ? $r->id : (int) $r)
-            ->filter(fn($id) => $id > 0 && $id !== $senderId)
+            ->map(fn ($r) => $r instanceof User ? $r->id : (int) $r)
+            ->filter()
             ->unique()
             ->values();
 
         if ($recipientIds->isEmpty()) {
             return null;
         }
+
+        $senderId = $sender?->id ?? $recipientIds->first();
 
         $thread = self::create([
             'thread_mode'  => 'OOC',
@@ -51,25 +54,29 @@ class CorrespondenceThread extends Model
 
         CorrespondenceParticipant::create([
             'correspondence_thread_id' => $thread->id,
-            'user_id' => $senderId,
-            'persona_id' => null,
-            'last_read_at' => now(),
+            'user_id'                  => $senderId,
+            'persona_id'               => null,
+            'last_read_at'             => now(),
         ]);
 
         foreach ($recipientIds as $recipientId) {
+            if ((int) $recipientId === (int) $senderId) {
+                continue;
+            }
+
             CorrespondenceParticipant::create([
                 'correspondence_thread_id' => $thread->id,
-                'user_id' => $recipientId,
-                'persona_id' => null,
-                'last_read_at' => null,
+                'user_id'                  => $recipientId,
+                'persona_id'               => null,
+                'last_read_at'             => null,
             ]);
         }
 
         CorrespondenceEntry::create([
             'correspondence_thread_id' => $thread->id,
-            'user_id' => $senderId,
-            'persona_id' => null,
-            'correspondence_text' => $body,
+            'user_id'                  => $senderId,
+            'persona_id'               => null,
+            'correspondence_text'      => $body,
         ]);
 
         return $thread;

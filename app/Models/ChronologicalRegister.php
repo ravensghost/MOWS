@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasChronologicalTime;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ChronologicalRegister extends Model
 {
+    use HasChronologicalTime;
+
     protected $table = 'chronological_registers';
 
     protected $fillable = [
@@ -17,6 +20,11 @@ class ChronologicalRegister extends Model
         'chronicle_text',
         'authorising_user_id',
         'scope_target',
+        'is_approved',
+    ];
+
+    protected $casts = [
+        'is_approved' => 'boolean',
     ];
 
     /**
