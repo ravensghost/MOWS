@@ -14,17 +14,19 @@ class Assignment extends Model
     protected $fillable = [
         'division_id',
         'assignment_title',
-        'assignment_description',
+        'assignment_synopsis',
         'maximum_occupants',
         'is_recruitment_open',
+        'assignment_sort_order',
         'is_visible',
     ];
 
     protected $casts = [
-        'division_id'         => 'integer',
-        'maximum_occupants'   => 'integer',
-        'is_recruitment_open' => 'boolean',
-        'is_visible'          => 'boolean',
+        'division_id'           => 'integer',
+        'maximum_occupants'     => 'integer',
+        'is_recruitment_open'   => 'boolean',
+        'assignment_sort_order' => 'integer',
+        'is_visible'            => 'boolean',
     ];
 
     protected static function booted(): void

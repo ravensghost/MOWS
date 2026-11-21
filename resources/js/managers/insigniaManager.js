@@ -10,7 +10,7 @@ export default function insigniaManager(defaultDeptColour = '#991b1bFF', baseLay
         insignia_title: '',
         abbreviated_title: '',
         insignia_sort_order: 0,
-        insignia_description: '',
+        insignia_synopsis: '',
         mid_layer_mode: 'css',
         mid_layer_asset: '',
         mid_layer_modifier: '',

@@ -28,7 +28,8 @@ class Division extends Model
 
     public function assignments(): HasMany
     {
-        return $this->hasMany(Assignment::class, 'division_id');
+        return $this->hasMany(Assignment::class, 'division_id')
+            ->orderBy('assignment_sort_order');
     }
 
     public function positions(): HasMany

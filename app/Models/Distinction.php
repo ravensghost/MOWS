@@ -1,5 +1,4 @@
 <?php
-// === app/Models/Distinction.php ===
 
 namespace App\Models;
 
@@ -16,7 +15,7 @@ class Distinction extends Model
 
     protected $fillable = [
         'distinction_title',
-        'distinction_description',
+        'distinction_synopsis',
         'distinction_base_colour',
         'mid_layer_mode',
         'mid_layer_asset',

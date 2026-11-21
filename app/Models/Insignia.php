@@ -1,5 +1,4 @@
 <?php
-// === app/Models/Insignia.php ===
 
 namespace App\Models;
 
@@ -22,7 +21,7 @@ class Insignia extends Model
         'top_layer_asset',
         'top_layer_modifier',
         'top_layer_hue',
-        'insignia_description',
+        'insignia_synopsis',
         'insignia_sort_order',
         'is_visible',
     ];

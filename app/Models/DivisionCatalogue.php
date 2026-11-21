@@ -11,7 +11,7 @@ class DivisionCatalogue extends Model
 
     protected $fillable = [
         'catalogue_title',
-        'catalogue_description',
+        'catalogue_synopsis',
         'is_visible',
     ];
 

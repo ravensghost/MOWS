@@ -8,7 +8,7 @@ export default function divisionManager(config = {}) {
         id: '',
         division_title: '',
         division_base_colour: '#374151FF',
-        division_description: '',
+        division_synopsis: '',
         division_sort_order: 0,
         is_visible: true,
         division_catalogue_id: '',
@@ -24,7 +24,7 @@ export default function divisionManager(config = {}) {
         id: '',
         division_id: '',
         assignment_title: '',
-        assignment_description: '',
+        assignment_synopsis: '',
         maximum_occupants: 1,
         max_assignees: 1,
         is_recruitment_open: true,
@@ -49,7 +49,7 @@ export default function divisionManager(config = {}) {
                 mode: 'create',
                 id: '',
                 catalogue_title: '',
-                catalogue_description: '',
+                catalogue_synopsis: '',
                 is_visible: true,
                 action: '/admin/divisions/catalogues',
                 method: 'POST'
@@ -85,7 +85,7 @@ export default function divisionManager(config = {}) {
                 try {
                     this.searchHelperInstance = window.Search.create(
                         '[data-search-item], [data-division-item]',
-                        ['division_title', 'division_description', 'assignment_title'],
+                        ['division_title', 'division_synopsis', 'assignment_title'],
                         { threshold: 0.35 }
                     );
                 } catch (e) {
@@ -136,7 +136,7 @@ export default function divisionManager(config = {}) {
         refreshAutosize() {
             this.$nextTick(() => {
                 if (window.Autosize) {
-                    document.querySelectorAll('textarea[name="division_description"], textarea[name="assignment_description"]').forEach(el => {
+                    document.querySelectorAll('textarea[name="division_synopsis"], textarea[name="assignment_synopsis"]').forEach(el => {
                         window.Autosize.update(el);
                     });
                 }
@@ -153,7 +153,7 @@ export default function divisionManager(config = {}) {
                     window.Modal.create(this.modals.division, {
                         division_title: '',
                         division_base_colour: '#374151FF',
-                        division_description: '',
+                        division_synopsis: '',
                         division_sort_order: 0,
                         is_visible: true,
                         division_catalogue_id: data.division_catalogue_id ?? '',
@@ -164,7 +164,7 @@ export default function divisionManager(config = {}) {
                         id: data.id,
                         division_title: data.division_title ?? data.name ?? '',
                         division_base_colour: data.division_base_colour ?? data.color ?? '#374151FF',
-                        division_description: data.division_description ?? data.description ?? '',
+                        division_synopsis: data.division_synopsis ?? data.synopsis ?? '',
                         division_sort_order: data.division_sort_order ?? data.order ?? 0,
                         is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true,
                         division_catalogue_id: data.division_catalogue_id ?? '',
@@ -182,7 +182,7 @@ export default function divisionManager(config = {}) {
                         division_title: data.division_title ?? data.section_name ?? '',
                         division_base_colour: data.division_base_colour ?? data.section_color ?? '#374151FF',
                         assignment_title: '',
-                        assignment_description: '',
+                        assignment_synopsis: '',
                         maximum_occupants: 1,
                         max_assignees: 1,
                         is_recruitment_open: true,
@@ -200,7 +200,7 @@ export default function divisionManager(config = {}) {
                         id: data.id,
                         division_id: String(data.division_id ?? ''),
                         assignment_title: data.assignment_title ?? data.name ?? '',
-                        assignment_description: data.assignment_description ?? data.description ?? '',
+                        assignment_synopsis: data.assignment_synopsis ?? data.description ?? '',
                         maximum_occupants: maxOcc,
                         max_assignees: maxOcc,
                         is_recruitment_open: isOpen,
@@ -226,7 +226,7 @@ export default function divisionManager(config = {}) {
                 } else {
                     window.Modal.create(this.modals.catalogue, {
                         catalogue_title: '',
-                        catalogue_description: '',
+                        catalogue_synopsis: '',
                         is_visible: true
                     }, catalogueBaseUrl);
                 }
@@ -265,8 +265,8 @@ export default function divisionManager(config = {}) {
                     showError: false
                 });
 
-                if (ok && data && (data.division_description || data.description)) {
-                    this.modals.division.division_description = data.division_description || data.description;
+                if (ok && data && (data.division_synopsis || data.description)) {
+                    this.modals.division.division_synopsis = data.division_synopsis || data.description;
                     this.refreshAutosize();
                 }
             } catch (error) {

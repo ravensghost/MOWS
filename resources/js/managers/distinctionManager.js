@@ -7,7 +7,7 @@ export default function distinctionManager() {
         mode: 'create',
         id: null,
         distinction_title: '',
-        distinction_description: '',
+        distinction_synopsis: '',
         scope_target: 'BOTH',
         distinction_catalogue_id: '',
         distinction_base_colour: '#1a1a1aFF',
@@ -58,7 +58,7 @@ export default function distinctionManager() {
                 try {
                     this.searchHelperInstance = window.Search.create(
                         '[data-search-item], [data-distinction-item]',
-                        ['distinction_title', 'distinction_description'],
+                        ['distinction_title', 'distinction_synopsis'],
                         { threshold: 0.35 }
                     );
                 } catch (e) {
