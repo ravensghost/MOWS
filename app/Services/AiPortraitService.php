@@ -343,7 +343,7 @@ class AiPortraitService
     protected function dispatchWebmasterUncreditedAlert(string $imageUri, array $missingLayers, ?Persona $persona): void
     {
         try {
-            $webmasters = User::where('role', 'webmaster')->get();
+            $webmasters = User::role('webmaster')->get();
             if ($webmasters->isEmpty()) {
                 return;
             }

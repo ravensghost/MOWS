@@ -60,15 +60,16 @@ class NovaLegacyImportService
                 $user = User::firstOrCreate(
                     ['email' => $email],
                     [
-                        'name'     => trim((string) ($legacyUser['name'] ?? strtok($email, '@'))),
+                        'name'     => trim((string) ($legacyUser['name'] ?? Str::before($email, '@'))),
                         'password' => Hash::make(Str::random(24)),
                         'role'     => ! empty($legacyUser['is_sysadmin']) ? 'webmaster' : 'user',
                     ]
                 );
 
                 if ($legacyId !== null) {
-                    $userMap[$legacyId] = $user->id;
+                    $userMap[(string) $legacyId] = $user->id;
                 }
+
                 $counters['users']++;
             }
 
@@ -78,22 +79,24 @@ class NovaLegacyImportService
                 $division = Division::firstOrCreate(
                     ['division_title' => trim((string) ($dept['dept_name'] ?? 'Legacy Division'))],
                     [
-                        'division_synopsis'   => trim((string) ($dept['dept_desc'] ?? '')),
-                        'division_base_colour'=> '#3b82f6FF',
-                        'division_sort_order' => (int) ($dept['dept_order'] ?? ($idx + 1)),
+                        'division_synopsis'    => trim((string) ($dept['dept_desc'] ?? '')),
+                        'division_base_colour' => '#3b82f6FF',
+                        'division_sort_order'  => (int) ($dept['dept_order'] ?? ($idx + 1)),
                     ]
                 );
 
                 if ($legacyDeptId !== null) {
-                    $divisionMap[$legacyDeptId] = $division->id;
+                    $divisionMap[(string) $legacyDeptId] = $division->id;
                 }
+
                 $counters['divisions']++;
             }
 
             foreach ($novaPayload['nova_positions'] ?? [] as $idx => $pos) {
                 $legacyPosId = $pos['pos_id'] ?? $pos['id'] ?? null;
                 $legacyDeptId = $pos['pos_dept'] ?? null;
-                $divisionId = $divisionMap[$legacyDeptId] ?? Division::first()?->id;
+                $divisionId = ($legacyDeptId !== null ? ($divisionMap[(string) $legacyDeptId] ?? null) : null)
+                    ?? Division::first()?->id;
 
                 if (! $divisionId) {
                     continue;
@@ -113,8 +116,9 @@ class NovaLegacyImportService
                 );
 
                 if ($legacyPosId !== null) {
-                    $assignmentMap[$legacyPosId] = $assignment->id;
+                    $assignmentMap[(string) $legacyPosId] = $assignment->id;
                 }
+
                 $counters['assignments']++;
             }
 
@@ -122,16 +126,17 @@ class NovaLegacyImportService
             foreach ($novaPayload['nova_characters'] ?? [] as $char) {
                 $legacyCharId = $char['charid'] ?? $char['id'] ?? null;
                 $fullName = trim(
-                    ((string) ($char['first_name'] ?? '')) . ' ' . ((string) ($char['last_name'] ?? ''))
+                    trim((string) ($char['first_name'] ?? '')) . ' ' . trim((string) ($char['last_name'] ?? ''))
                 );
+
                 if ($fullName === '') {
                     $fullName = trim((string) ($char['name'] ?? 'Unnamed Persona'));
                 }
 
                 $legacyUserId = $char['user'] ?? $char['userid'] ?? null;
-                $mappedUserId = $userMap[$legacyUserId] ?? null;
-                $rawType = strtolower((string) ($char['crew_type'] ?? 'active'));
+                $mappedUserId = $legacyUserId !== null ? ($userMap[(string) $legacyUserId] ?? null) : null;
 
+                $rawType = strtolower(trim((string) ($char['crew_type'] ?? 'active')));
                 $personaStatus = match ($rawType) {
                     'npc'      => 'npc',
                     'inactive' => 'inactive',
@@ -141,21 +146,23 @@ class NovaLegacyImportService
                 $persona = Persona::create([
                     'user_id'        => $mappedUserId,
                     'persona_name'   => $fullName,
-                    'assignment_id'  => $assignmentMap[$char['position_1'] ?? ''] ?? null,
+                    'assignment_id'  => $assignmentMap[(string) ($char['position_1'] ?? '')] ?? null,
                     'persona_status' => $personaStatus,
                 ]);
 
                 if ($legacyCharId !== null) {
-                    $personaMap[$legacyCharId] = $persona->id;
+                    $personaMap[(string) $legacyCharId] = $persona->id;
                 }
+
                 $counters['personae']++;
             }
 
             // 4. Migrate nova_missions -> volumes (under a Legacy Nova Shelf)
             $legacyShelf = Shelf::firstOrCreate(
                 ['shelf_title' => 'Imported Nova Archives'],
-                ['shelf_synopsis' => 'Migrated mission volumes and personal logs from Nova 2.', 'shelf_sort_order' => 99]
+                ['shelf_sort_order' => 99]
             );
+
             $activeStateId = PublicationState::where('book_url', 'active')->value('id')
                 ?? PublicationState::first()?->id;
 
@@ -170,8 +177,9 @@ class NovaLegacyImportService
                 ]);
 
                 if ($legacyMissionId !== null) {
-                    $volumeMap[$legacyMissionId] = $volume->id;
+                    $volumeMap[(string) $legacyMissionId] = $volume->id;
                 }
+
                 $counters['volumes']++;
             }
 
@@ -197,34 +205,49 @@ class NovaLegacyImportService
                 $isPersonalLog = ! empty($post['_is_personal_log']);
                 $rawTitle = trim((string) ($post['post_title'] ?? $post['log_title'] ?? 'Imported Entry'));
                 $rawBody = (string) ($post['post_content'] ?? $post['log_content'] ?? '');
-                $cleanBody = function_exists('purify_html') ? purify_html(nl2br($rawBody)) : nl2br($rawBody);
+                $cleanBody = function_exists('purify_html')
+                    ? purify_html(nl2br($rawBody))
+                    : nl2br($rawBody);
 
-                $volumeId = $volumeMap[$post['post_mission'] ?? ''] ?? $defaultVolumeId;
-                $firstAuthorCharId = explode(',', (string) ($post['post_authors'] ?? $post['log_author_character'] ?? ''))[0] ?? null;
-                $activePersonaId = $personaMap[trim((string) $firstAuthorCharId)] ?? null;
-                $userId = $userMap[$post['post_author_user'] ?? $post['log_author_user'] ?? ''] ?? auth()->id();
+                $volumeId = $volumeMap[(string) ($post['post_mission'] ?? '')] ?? $defaultVolumeId;
+                $authorList = array_filter(array_map(
+                    'trim',
+                    explode(',', (string) ($post['post_authors'] ?? $post['log_author_character'] ?? ''))
+                ));
+
+                $firstAuthorCharId = $authorList[0] ?? null;
+                $activePersonaId = $firstAuthorCharId !== null ? ($personaMap[$firstAuthorCharId] ?? null) : null;
+                $userId = $userMap[(string) ($post['post_author_user'] ?? $post['log_author_user'] ?? '')]
+                    ?? auth()->id();
+
+                $legacyTimeline = trim((string) ($post['post_timeline'] ?? $post['log_timeline'] ?? ''));
+                $icParts = function_exists('world_date_to_ic_parts')
+                    ? world_date_to_ic_parts($legacyTimeline)
+                    : ['ic_day' => 1, 'ic_time' => '0800'];
 
                 $folio = Folio::create([
-                    'volume_id'               => $volumeId,
-                    'user_id'                 => $userId,
-                    'active_persona_id'       => $activePersonaId,
-                    'folio_title'             => $isPersonalLog ? "[Personal Log] {$rawTitle}" : $rawTitle,
-                    'folio_text'              => $cleanBody,
-                    'folio_status'            => (($post['post_status'] ?? $post['log_status'] ?? 'activated') === 'activated')
+                    'volume_id'         => $volumeId,
+                    'user_id'           => $userId,
+                    'active_persona_id' => $activePersonaId,
+                    'folio_mode'        => $isPersonalLog ? 'personal_log' : 'mission',
+                    'folio_title'       => $isPersonalLog ? "[Personal Log] {$rawTitle}" : $rawTitle,
+                    'folio_text'        => $cleanBody,
+                    'folio_status'      => (($post['post_status'] ?? $post['log_status'] ?? 'activated') === 'activated')
                         ? 'published'
                         : 'draft',
-                    'scene_location'          => trim((string) ($post['post_location'] ?? 'Archived Sector')),
-                    'in_universe_date_string' => trim((string) ($post['post_timeline'] ?? '')),
+                    'scene_location'    => trim((string) ($post['post_location'] ?? 'Archived Sector')),
+                    'ic_day'            => $icParts['ic_day'],
+                    'ic_time'           => $icParts['ic_time'],
                 ]);
 
                 // Attach co-author personae to folio_personae pivot
-                $authorIds = array_filter(array_map('trim', explode(',', (string) ($post['post_authors'] ?? ''))));
                 $mappedPersonaIds = [];
-                foreach ($authorIds as $legacyAuthorCharId) {
+                foreach ($authorList as $legacyAuthorCharId) {
                     if (isset($personaMap[$legacyAuthorCharId])) {
                         $mappedPersonaIds[] = $personaMap[$legacyAuthorCharId];
                     }
                 }
+
                 if (! empty($mappedPersonaIds)) {
                     $folio->personae()->syncWithoutDetaching($mappedPersonaIds);
                 }
@@ -249,6 +272,7 @@ class NovaLegacyImportService
                         'created_by_user_id' => auth()->id(),
                     ]
                 );
+
                 $counters['codex']++;
             }
 

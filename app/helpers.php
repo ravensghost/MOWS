@@ -193,12 +193,21 @@ if (! function_exists('markdown')) {
 
 if (! function_exists('resolve_lexicon_locale')) {
     /**
-     * Resolve the active lexicon locale based on user preference or global configurations.
+     * Resolve the active lexicon locale based on user_attributes preference or global configurations.
      */
     function resolve_lexicon_locale(): string
     {
-        if (auth()->check() && ! empty(auth()->user()->user_lexicon_setting)) {
-            return (string) auth()->user()->user_lexicon_setting;
+        if (auth()->check()) {
+            $user = auth()->user();
+            $userLocale = method_exists($user, 'getAttr')
+                ? $user->getAttr('lexicon_version')
+                : \App\Models\UserAttribute::where('user_id', $user->id)
+                    ->where('attribute_key', 'lexicon_version')
+                    ->value('attribute_value');
+
+            if (! empty($userLocale)) {
+                return (string) $userLocale;
+            }
         }
 
         $globalConfiguration = Cache::rememberForever('global_lexicon_setting', function () {
@@ -222,7 +231,8 @@ if (! function_exists('resolve_lexicon_locale')) {
 
             $availableLocales = array_keys($availableLocales);
 
-            return request()->getPreferredLanguage($availableLocales) ?? config('app.fallback_locale', 'gb');
+            return request()->getPreferredLanguage($availableLocales)
+                ?? config('app.fallback_locale', 'gb');
         }
 
         return (string) $globalConfiguration;
@@ -430,89 +440,5 @@ if (! function_exists('calculate_spm')) {
         }
 
         return round($wordCount / $wordsPerUnit, 2);
-    }
-}
-if (! function_exists('world_date_to_ic_parts')) {
-    /**
-     * Convert an in-universe date string into Folio ic_day (int) and ic_time (4-digit HHMM string)
-     * using the active ChronologicalEngine configuration.
-     *
-     * @return array{ic_day: int, ic_time: string}
-     */
-    function world_date_to_ic_parts(?string $worldDate = null, int $fallbackDay = 1, string $fallbackTime = '0800'): array
-    {
-        $icDay = max(1, $fallbackDay);
-        $icTime = preg_match('/^\d{4}$/', $fallbackTime) ? $fallbackTime : '0800';
-
-        $trimmed = trim((string) $worldDate);
-        if ($trimmed === '') {
-            return ['ic_day' => $icDay, 'ic_time' => $icTime];
-        }
-
-        // Check if the incoming string contains an explicit HH:MM time (e.g. "2026-11-21 14:30")
-        $explicitTime = null;
-        if (preg_match('/\b([01]?\d|2[0-3]):([0-5]\d)\b/', $trimmed, $timeMatch)) {
-            $explicitTime = str_pad($timeMatch[1], 2, '0', STR_PAD_LEFT) . $timeMatch[2];
-        }
-
-        try {
-            $system = function_exists('active_time_system') ? active_time_system() : null;
-            $engineType = $system['calculation_algorithm'] ?? 'real_world';
-
-            // 1. Fractional / Stardate engines (reverse-calculate day of year and fractional time)
-            if ($engineType === 'fractional' || $engineType === 'stardate') {
-                $numericFigure = (float) preg_replace('/[^0-9.]/', '', $trimmed);
-                $baseEarthYear = (int) ($system['base_earth_year'] ?? 1983) + (int) ($system['base_earth_modifier'] ?? 0);
-                $baseSystemNum = (float) ($system['base_system_value'] ?? 0);
-                $multiplier = (float) ($system['temporal_multiplier'] ?? 1);
-                $safeMultiplier = ($multiplier != 0.0) ? $multiplier : 1.0;
-
-                $totalYears = ($numericFigure - $baseSystemNum) / $safeMultiplier;
-                $yearOffset = (int) floor($totalYears);
-                $fraction = max(0.0, $totalYears - $yearOffset);
-
-                $targetYear = $baseEarthYear + $yearOffset;
-                $daysInYear = Carbon::createFromDate($targetYear, 1, 1)->daysInYear;
-
-                $exactDay = $fraction * $daysInYear;
-                $icDay = max(1, min($daysInYear, (int) floor($exactDay) + 1));
-
-                if ($explicitTime !== null) {
-                    $icTime = $explicitTime;
-                } else {
-                    $dayRemainder = $exactDay - floor($exactDay);
-                    $totalMinutes = (int) round($dayRemainder * 1440);
-                    $hours = intdiv($totalMinutes, 60) % 24;
-                    $minutes = $totalMinutes % 60;
-
-                    if ($hours !== 0 || $minutes !== 0) {
-                        $icTime = sprintf('%02d%02d', $hours, $minutes);
-                    }
-                }
-
-                return ['ic_day' => $icDay, 'ic_time' => $icTime];
-            }
-
-            // 2. Offset & Real-World engines (map back to Gregorian date via real_date() or Carbon)
-            $mappedDate = ($engineType === 'offset' && function_exists('real_date'))
-                ? real_date($trimmed, 'Y-m-d')
-                : $trimmed;
-
-            $parsed = Carbon::parse($mappedDate);
-            $icDay = max(1, (int) $parsed->dayOfYear);
-
-            if ($explicitTime !== null) {
-                $icTime = $explicitTime;
-            } elseif ($parsed->format('Hi') !== '0000') {
-                $icTime = $parsed->format('Hi');
-            }
-        } catch (\Throwable) {
-            // Fall back safely if the input string is a custom freeform era label
-            if ($explicitTime !== null) {
-                $icTime = $explicitTime;
-            }
-        }
-
-        return ['ic_day' => $icDay, 'ic_time' => $icTime];
     }
 }
