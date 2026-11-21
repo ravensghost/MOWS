@@ -132,40 +132,59 @@ class AiTaskingService
     }
 
     /**
-     * One-Click Transition: Seed a new collaborative Folio draft pre-configured with scene_location
-     * and optionally log a scheduled entry in mission_calendar.
+     * One-Click Transition: Seed a new collaborative Folio draft pre-configured with scene_location,
+     * folio_title, and converted ic_day / ic_time, and optionally log a scheduled entry in mission_calendar.
      */
     public function seedCollaborativeFolio(array $payload): Folio
     {
         return DB::transaction(function () use ($payload) {
-            $location = $this->normaliseCompartmentFormat((string) ($payload['scene_location'] ?? 'Deck 01 — Main Bridge'));
-            $worldDate = function_exists('world_date') ? world_date(now()) : now()->format('M d, Y');
+            $location = $this->normaliseCompartmentFormat(
+                (string) ($payload['scene_location'] ?? 'Deck 01 — Main Bridge')
+            );
+
+            $startDate = $payload['gregorian_start_date'] ?? $payload['starts_at'] ?? now();
+            $endDate = $payload['gregorian_end_date'] ?? $payload['ends_at'] ?? now()->addDays(7);
+            $worldDate = $payload['in_universe_date_string']
+                ?? (function_exists('world_date') ? world_date($startDate) : now()->format('M d, Y'));
+
+            $icParts = function_exists('world_date_to_ic_parts')
+                ? world_date_to_ic_parts(
+                    (string) $worldDate,
+                    (int) ($payload['ic_day'] ?? 1),
+                    (string) ($payload['ic_time'] ?? '0800')
+                )
+                : ['ic_day' => (int) ($payload['ic_day'] ?? 1), 'ic_time' => (string) ($payload['ic_time'] ?? '0800')];
 
             $folio = Folio::create([
-                'volume_id'               => $payload['volume_id'],
-                'user_id'                 => $payload['user_id'] ?? auth()->id(),
-                'active_persona_id'       => $payload['active_persona_id'] ?? null,
-                'folio_title'             => $payload['folio_title'] ?? 'Tasking Order: Operational Deployment',
-                'folio_text'              => function_exists('purify_html')
+                'volume_id'         => $payload['volume_id'],
+                'user_id'           => $payload['user_id'] ?? auth()->id(),
+                'active_persona_id' => $payload['active_persona_id'] ?? null,
+                'folio_mode'        => $payload['folio_mode'] ?? 'mission',
+                'folio_title'       => $payload['folio_title'] ?? 'Tasking Order: Operational Deployment',
+                'folio_text'        => function_exists('purify_html')
                     ? purify_html((string) ($payload['folio_text'] ?? ''))
                     : ($payload['folio_text'] ?? ''),
-                'folio_status'            => $payload['folio_status'] ?? 'draft',
-                'scene_location'          => $location,
-                'in_universe_date_string' => $payload['in_universe_date_string'] ?? $worldDate,
-                'content_tier_l'          => (int) ($payload['content_tier_l'] ?? 1),
-                'content_tier_s'          => (int) ($payload['content_tier_s'] ?? 0),
-                'content_tier_v'          => (int) ($payload['content_tier_v'] ?? 1),
+                'folio_status'      => $payload['folio_status'] ?? 'draft',
+                'scene_location'    => $location,
+                'ic_day'            => $payload['ic_day'] ?? $icParts['ic_day'],
+                'ic_time'           => $payload['ic_time'] ?? $icParts['ic_time'],
+                'content_tier_l'    => (int) ($payload['content_tier_l'] ?? 1),
+                'content_tier_s'    => (int) ($payload['content_tier_s'] ?? 0),
+                'content_tier_v'    => (int) ($payload['content_tier_v'] ?? 1),
             ]);
 
             if (! empty($payload['log_mission_calendar'])) {
+                $activeEngineId = function_exists('active_time_system')
+                    ? (active_time_system()['id'] ?? null)
+                    : null;
+
                 MissionCalendar::create([
-                    'event_title'             => $folio->folio_title,
+                    'chronological_engine_id' => $payload['chronological_engine_id'] ?? $activeEngineId,
+                    'event_title'             => $payload['event_title'] ?? $folio->folio_title,
                     'event_synopsis'          => $payload['event_synopsis'] ?? "Active tasking deployment at {$location}.",
-                    'event_category'          => $payload['event_category'] ?? 'mission',
-                    'scene_location'          => $location,
-                    'in_universe_date_string' => $folio->in_universe_date_string,
-                    'starts_at'               => $payload['starts_at'] ?? now(),
-                    'ends_at'                 => $payload['ends_at'] ?? now()->addDays(7),
+                    'gregorian_start_date'    => $startDate,
+                    'gregorian_end_date'      => $endDate,
+                    'in_universe_date_string' => $worldDate,
                     'volume_id'               => $folio->volume_id,
                     'folio_id'                => $folio->id,
                     'created_by_user_id'      => $folio->user_id,
