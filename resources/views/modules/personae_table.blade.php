@@ -47,7 +47,7 @@
 <div class="flex flex-col gap-md w-full"
      x-data
      x-init="if (window.Lightbox && typeof window.Lightbox.init === 'function') { $nextTick(() => window.Lightbox.init()); }">
-    @forelse($divisions as$division)
+    @forelse($divisions as $division)
         @php
             $deptColour =$division->division_base_colour ?? '#374151FF';
             $baseLayerColour =$skinSettings['theme_base_colour'] ?? '#1a1a1aFF';
@@ -71,7 +71,7 @@
                         $activePersonae = collect($assignment->personae ?? []);
                     @endphp
 
-                    @forelse($activePersonae as$persona)
+                    @forelse($activePersonae as $persona)
                         @php
                             $personaName =$persona->persona_name ?? lexicon('label_common_UnknownPersona', 'Unknown Persona');
                             $rawPortrait = $persona->primary_portrait_url ?? $persona->primary_portrait_uri ?? null;

@@ -17,7 +17,7 @@
 
 @php
     if ($type === null) {
-        if ($form !== null \vert{}\vert{}$fields !== null || $activeMode !== null) {$type = 'dynamic';
+        if ($form !== null ||$fields !== null || $activeMode !== null) {$type = 'dynamic';
         } else {
             $type = 'default';
         }
@@ -292,7 +292,7 @@
               {{ $attributes->merge(['class' => 'flex flex-col gap-md w-full']) }}>
             @csrf
 
-            @forelse($resolvedFields as$field)
+            @forelse($resolvedFields as $field)
                 <x-metadata type="dynamic" :field="$field" />
             @empty
                 <span class="font-italic text-muted p-4 text-center block">

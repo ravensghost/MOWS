@@ -197,7 +197,7 @@
                                         </tr>
 
                                         {{-- Translation Entries --}}
-                                        @foreach($groupEntries as$entry)
+                                        @foreach($groupEntries as $entry)
                                             <tr x-show="(subExpanded || searchQuery.trim() !== '') && termVisible({{ $entry->id }})"
                                                 x-cloak
                                                 data-search-item

@@ -55,7 +55,7 @@
     @if($relationships->isNotEmpty())
         <div class="flex flex-col gap-md w-full">
             <div class="grid grid-cols-1 md-grid-cols-2 gap-md w-full">
-                @foreach($relationships as$rel)
+                @foreach($relationships as $rel)
                     @php
                         $relatedPersona =$rel->relatedPersona ?? null;
                         $relatedName =$relatedPersona?->persona_name

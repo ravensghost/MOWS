@@ -44,10 +44,15 @@
                         ? $module->module_default_settings
                         : (json_decode($module->module_default_settings ?? '{}', true) ?: []);
                     $moduleSettings = array_merge($defaultSettings, $bookConfig);
+                    $moduleAliases = [
+                        'news' => 'bulletins',
+                        'posts' => 'folio',
+                    ];
+                    $moduleView = $moduleAliases[$module->module_token] ?? $module->module_token;
                 @endphp
 
-                @if($canView && view()->exists('modules.' . $module->module_token))
-                    @include('modules.' . $module->module_token, [
+                @if($canView && view()->exists('modules.' . $moduleView))
+                    @include('modules.' . $moduleView, [
                         'book'           => $activeBook,
                         'module'         => $module,
                         'moduleSettings' => $moduleSettings,
@@ -76,10 +81,15 @@
                         ? $module->module_default_settings
                         : (json_decode($module->module_default_settings ?? '{}', true) ?: []);
                     $moduleSettings = array_merge($defaultSettings, $bookConfig);
+                    $moduleAliases = [
+                        'news' => 'bulletins',
+                        'posts' => 'folio',
+                    ];
+                    $moduleView = $moduleAliases[$module->module_token] ?? $module->module_token;
                 @endphp
 
-                @if($canView && view()->exists('modules.' . $module->module_token))
-                    @include('modules.' . $module->module_token, [
+                @if($canView && view()->exists('modules.' . $moduleView))
+                    @include('modules.' . $moduleView, [
                         'book'           => $activeBook,
                         'module'         => $module,
                         'moduleSettings' => $moduleSettings,

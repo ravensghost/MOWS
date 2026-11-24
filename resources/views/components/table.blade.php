@@ -63,7 +63,7 @@
                 @if(is_array($headers) && !empty($headers))
                     <thead class="bg-table-head text-h border-b-table-head text-xs uppercase text-wider font-bold">
                         <tr>
-                            @foreach($headers as$headerLabel)
+                            @foreach($headers as $headerLabel)
                                 <th class="p-4">{{ $headerLabel }}</th>
                             @endforeach
                         </tr>
@@ -81,7 +81,7 @@
                 @else
                     <tbody class="text-sm text-p" {!! $tbodyAttributes ?? '' !!}>
                         @if(!empty($rows))
-                            @foreach($rows as$row)
+                            @foreach($rows as $row)
                                 <tr class="border-b-table-row hover-bg-panel-hover transition-colors">
                                     <td class="p-4 font-bold text-p">
                                         <span>{{ $row['label'] ?? '' }}</span>
@@ -135,7 +135,7 @@
                 @else
                     <tbody class="text-sm text-p" {!! $tbodyAttributes ?? '' !!}>
                         @if(!empty($rows))
-                            @foreach($rows as$row)
+                            @foreach($rows as $row)
                                 <tr class="border-b-table-row hover-bg-panel-hover transition-colors">
                                     <td class="p-4 font-bold text-p">
                                         <span>{{ $row['label'] ?? '' }}</span>

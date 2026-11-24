@@ -24,7 +24,7 @@
 @switch($type)
     @case('sub')
         <div {{ $attributes->except('headerClass')->merge(['class' => 'bg-panel-sub border-panel border-rounded p-3 flex flex-col gap-sm w-full']) }}>
-            @if($title \vert{}\vert{} isset($top))
+            @if($title || isset($top))
                 <div class="flex flex-row flex-wrap justify-between items-center gap-sm">
                     @if($title)
                         <span class="text-xs font-bold text-h uppercase text-wider flex flex-row items-center gap-xs">
@@ -49,7 +49,7 @@
 
     @case('panel')
         <div {{ $attributes->except('headerClass')->merge(['class' => 'bg-panel-body border-panel border-rounded shadow-panel overflow-hidden flex flex-col w-full']) }}>
-            @if($title \vert{}\vert{} isset($top))
+            @if($title || isset($top))
                 <div class="bg-panel-header text-h border-b-panel p-panel-header flex flex-row flex-wrap justify-between items-center gap-md {{ $headerClass }}">
                     <div class="flex flex-row flex-wrap items-center gap-sm">
                         @if($icon)
@@ -180,7 +180,7 @@
                      id="sortable-folios-{{ $volumeItem->id }}"
                      data-volume-id="{{ $volumeItem->id }}"
                      x-data="sortableHelper('/admin/folios/reorder', 'folio_sort_order')">
-                    @forelse($volumeItem->folios as$folio)
+                    @forelse($volumeItem->folios as $folio)
                         <div class="bg-panel-sub border-panel border-rounded p-2 flex flex-row flex-wrap items-center justify-between gap-sm"
                              data-id="{{ $folio->id }}">
                             <div class="flex flex-row flex-wrap items-center gap-sm text-sm">

@@ -13,7 +13,6 @@ use App\Models\TableOfContent;
 use App\Models\User;
 use App\Models\Volume;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -32,7 +31,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // 1. Register native PHP mail() custom transport driver
-        Mail::extend('phpmail', fn () => new PhpMailTransport());
+        Mail::extend('phpmail', fn () => new PhpMailTransport);
 
         // 2. Register Global Chronological Eloquent Macros (Gold Standard Section 6.3)
         Builder::macro('worldDateFor', function (string $column = 'created_at', string $format = 'M d, Y H:i'): string {
@@ -107,9 +106,9 @@ class AppServiceProvider extends ServiceProvider
                 $allLinks = collect(array_map(fn ($item) => (object) $item, $linksArray));
 
                 // In-memory session-aware filtering (Spatie permission + access_clearance)
-                $user         = auth()->user();
-                $isAuthed     = auth()->check();
-                $isAdmin      = $isAuthed && $user && $user->can('access-admin');
+                $user = auth()->user();
+                $isAuthed = auth()->check();
+                $isAdmin = $isAuthed && $user && $user->can('access-admin');
                 $isSuperAdmin = $isAuthed && $user && ($user->role === 'webmaster' || $user->hasRole('webmaster'));
 
                 $visibleLinks = $allLinks->filter(function ($link) use ($user, $isAuthed, $isAdmin, $isSuperAdmin) {
@@ -120,12 +119,12 @@ class AppServiceProvider extends ServiceProvider
                     $clearance = strtolower(trim((string) ($link->access_clearance ?? 'public')));
 
                     return match ($clearance) {
-                        'public'      => true,
-                        'guest'       => ! $isAuthed,
-                        'auth'        => $isAuthed,
-                        'admin'       => $isAdmin,
+                        'public' => true,
+                        'guest' => ! $isAuthed,
+                        'auth' => $isAuthed,
+                        'admin' => $isAdmin,
                         'super_admin' => $isSuperAdmin,
-                        default       => false,
+                        default => false,
                     };
                 });
 
@@ -138,22 +137,22 @@ class AppServiceProvider extends ServiceProvider
                 });
 
                 // Messenger & Folio Modal Globals (Isolated so secondary table changes never break Navigation)
-                $myCharacters    = collect();
-                $users           = collect();
-                $characters      = collect();
-                $threads         = collect();
-                $activeBooks     = collect();
-                $allCharacters   = collect();
+                $myCharacters = collect();
+                $users = collect();
+                $characters = collect();
+                $threads = collect();
+                $activeBooks = collect();
+                $allCharacters = collect();
                 $languageRatings = collect();
-                $sexRatings      = collect();
+                $sexRatings = collect();
                 $violenceRatings = collect();
 
                 try {
                     if ($isAuthed && $user) {
                         $myCharacters = Persona::where('user_id', $user->id)->get();
-                        $users        = User::all();
-                        $characters   = Persona::select('id', 'persona_name')->orderBy('persona_name')->get();
-                        $threads      = CorrespondenceThread::with(['participants.user', 'participants.persona', 'entries.user', 'entries.persona'])
+                        $users = User::all();
+                        $characters = Persona::select('id', 'persona_name')->orderBy('persona_name')->get();
+                        $threads = CorrespondenceThread::with(['participants.user', 'participants.persona', 'entries.user', 'entries.persona'])
                             ->whereHas('participants', fn ($q) => $q->where('user_id', $user->id))
                             ->orderByDesc('updated_at')
                             ->limit(25)
@@ -172,51 +171,51 @@ class AppServiceProvider extends ServiceProvider
                         ->get();
 
                     $languageRatings = ContentTier::where('tier_category', 'Language')->orderBy('tier_sort_order')->get();
-                    $sexRatings      = ContentTier::where('tier_category', 'Sex')->orderBy('tier_sort_order')->get();
+                    $sexRatings = ContentTier::where('tier_category', 'Sex')->orderBy('tier_sort_order')->get();
                     $violenceRatings = ContentTier::where('tier_category', 'Violence')->orderBy('tier_sort_order')->get();
                 } catch (\Throwable $modalErr) {
-                    logger()->warning('AppServiceProvider Modal Globals Warning: ' . $modalErr->getMessage());
+                    logger()->warning('AppServiceProvider Modal Globals Warning: '.$modalErr->getMessage());
                 }
 
                 $view->with([
-                    'globalSettings'  => $globalSettings,
-                    'skinSettings'    => $skinSettings,
-                    'activeSkin'      => $activeSkin,
-                    'primaryNav'      => $primaryNav,
-                    'drawerNav'       => $drawerNav,
-                    'myCharacters'    => $myCharacters,
-                    'users'           => $users,
-                    'characters'      => $characters,
-                    'threads'         => $threads,
-                    'activeBooks'     => $activeBooks,
-                    'allCharacters'   => $allCharacters,
+                    'globalSettings' => $globalSettings,
+                    'skinSettings' => $skinSettings,
+                    'activeSkin' => $activeSkin,
+                    'primaryNav' => $primaryNav,
+                    'drawerNav' => $drawerNav,
+                    'myCharacters' => $myCharacters,
+                    'users' => $users,
+                    'characters' => $characters,
+                    'threads' => $threads,
+                    'activeBooks' => $activeBooks,
+                    'allCharacters' => $allCharacters,
                     'languageRatings' => $languageRatings,
-                    'sexRatings'      => $sexRatings,
+                    'sexRatings' => $sexRatings,
                     'violenceRatings' => $violenceRatings,
                 ]);
             } catch (\Throwable $e) {
-                logger()->error('AppServiceProvider ViewComposer Error: ' . $e->getMessage());
+                logger()->error('AppServiceProvider ViewComposer Error: '.$e->getMessage());
                 $view->with([
-                    'globalSettings'  => [],
-                    'skinSettings'    => [],
-                    'activeSkin'      => null,
-                    'primaryNav'      => collect(),
-                    'drawerNav'       => collect(),
-                    'myCharacters'    => collect(),
-                    'users'           => collect(),
-                    'characters'      => collect(),
-                    'threads'         => collect(),
-                    'activeBooks'     => collect(),
-                    'allCharacters'   => collect(),
+                    'globalSettings' => [],
+                    'skinSettings' => [],
+                    'activeSkin' => null,
+                    'primaryNav' => collect(),
+                    'drawerNav' => collect(),
+                    'myCharacters' => collect(),
+                    'users' => collect(),
+                    'characters' => collect(),
+                    'threads' => collect(),
+                    'activeBooks' => collect(),
+                    'allCharacters' => collect(),
                     'languageRatings' => collect(),
-                    'sexRatings'      => collect(),
+                    'sexRatings' => collect(),
                     'violenceRatings' => collect(),
                 ]);
             }
         });
 
         // 5. Self-hydrating fallback composers for Bulletins, Story Folios, and User Drafts modules
-        View::composer(['modules.bulletins', 'widgets.news'], function ($view) {
+        View::composer(['modules.bulletins', 'modules.news', 'widgets.bulletins', 'widgets.news'], function ($view) {
             $data = $view->getData();
             if (empty($data['newsItems']) || ($data['newsItems'] instanceof Collection && $data['newsItems']->isEmpty())) {
                 $bulletins = Bulletin::with('author')->orderBy('published_at', 'desc')->take(5)->get();
@@ -227,7 +226,7 @@ class AppServiceProvider extends ServiceProvider
             }
         });
 
-        View::composer(['modules.folio', 'widgets.posts'], function ($view) {
+        View::composer(['modules.folio', 'modules.posts', 'widgets.folio', 'widgets.posts'], function ($view) {
             $data = $view->getData();
             if (empty($data['storyPosts']) || ($data['storyPosts'] instanceof Collection && $data['storyPosts']->isEmpty())) {
                 $folios = Folio::with('activePersona')
@@ -237,7 +236,7 @@ class AppServiceProvider extends ServiceProvider
                     ->get();
                 $view->with([
                     'storyPosts' => $folios,
-                    'folios'     => $folios,
+                    'folios' => $folios,
                 ]);
             }
         });
@@ -251,7 +250,7 @@ class AppServiceProvider extends ServiceProvider
                     : collect();
                 $view->with([
                     'draftChapters' => $drafts,
-                    'draftFolios'   => $drafts,
+                    'draftFolios' => $drafts,
                 ]);
             }
         });

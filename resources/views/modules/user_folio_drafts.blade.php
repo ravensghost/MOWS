@@ -43,7 +43,7 @@
         </div>
     @else
         <div class="flex flex-col gap-sm" x-data>
-            @foreach($draftFolios as$draft)
+            @foreach($draftFolios as $draft)
                 @php
                     $volumeTitle =$draft->volume->volume_title ?? lexicon('label_common_UnknownVolume', 'Unassigned Volume');
                     $personaName =$draft->activePersona->persona_name ?? lexicon('label_common_Narrator', 'Narrator');

@@ -91,8 +91,8 @@
                          data-division-item
                          data-id="{{ $division->id }}"
                          data-division_title="{{ $division->division_title }}"
-                         data-division_description="{{ $division->division_description }}"
-                         x-show="matchesSearch('{{ addslashes($division->division_title) }}', '{{ addslashes($division->division_description ?? '') }}', {{ Js::from($assignTitles) }})">
+                         data-division_synopsis="{{ $division->division_synopsis }}"
+                         x-show="matchesSearch('{{ addslashes($division->division_title) }}', '{{ addslashes($division->division_synopsis ?? '') }}', {{ Js::from($assignTitles) }})">
 
                         <x-tab type="accordion"
                                :title="$division->division_title"
@@ -132,7 +132,7 @@
                                                   @click="openModal('edit', {{ Js::from([
                                                       'id' => $division->id,
                                                       'division_title' => $division->division_title,
-                                                      'division_description' => $division->division_description ?? '',
+                                                      'division_synopsis' => $division->division_synopsis ?? '',
                                                       'division_base_colour' => $division->division_base_colour ?? '#374151FF',
                                                       'division_sort_order' => $division->division_sort_order ?? 0,
                                                       'division_catalogue_id' => $division->division_catalogue_id ?? '',
@@ -155,8 +155,8 @@
                                 </div>
                             </x-slot:top>
 
-                            @if($division->division_description)
-                                <p class="text-sm text-muted m-0">{{ $division->division_description }}</p>
+                            @if($division->division_synopsis)
+                                <p class="text-sm text-muted m-0">{{ $division->division_synopsis }}</p>
                             @endif
 
                             <x-table type="admin"
@@ -170,9 +170,9 @@
                                      :emptyText="lexicon('msg_assignments_NoneInDivision', 'No duty assignments configured for this division.')">
                                 @foreach($division->assignments ?? [] as $assignment)
                                     <tr class="border-b-table-row hover-bg-panel-hover transition-colors"
-                                        x-show="isItemVisible('{{ addslashes($assignment->assignment_title) }}', '{{ addslashes($assignment->assignment_description ?? '') }}', '{{ addslashes($division->division_title) }}')">
+                                        x-show="isItemVisible('{{ addslashes($assignment->assignment_title) }}', '{{ addslashes($assignment->assignment_synopsis ?? '') }}', '{{ addslashes($division->division_title) }}')">
                                         <td class="p-4 font-bold text-h">{{ $assignment->assignment_title }}</td>
-                                        <td class="p-4 text-sm text-muted">{{ $assignment->assignment_description ?: '—' }}</td>
+                                        <td class="p-4 text-sm text-muted">{{ $assignment->assignment_synopsis ?: '—' }}</td>
                                         <td class="p-4 font-mono text-xs text-p">
                                             {{ $assignment->personae?->count() ?? 0 }} / {{ $assignment->maximum_occupants }}
                                         </td>
@@ -195,7 +195,7 @@
                                                                   'id' => $assignment->id,
                                                                   'division_id' => $assignment->division_id,
                                                                   'assignment_title' => $assignment->assignment_title,
-                                                                  'assignment_description' => $assignment->assignment_description ?? '',
+                                                                  'assignment_synopsis' => $assignment->assignment_synopsis ?? '',
                                                                   'maximum_occupants' => $assignment->maximum_occupants ?? 1,
                                                                   'is_recruitment_open' => (bool) $assignment->is_recruitment_open,
                                                                   'is_visible' => (bool) $assignment->is_visible,
@@ -269,8 +269,8 @@
                         </div>
 
                         <x-metadata type="textarea"
-                                    name="division_description"
-                                    xModel="modals.division.division_description"
+                                    name="division_synopsis"
+                                    xModel="modals.division.division_synopsis"
                                     :tooltip="lexicon('tooltip_divisions_Description', 'Describe the responsibilities of this division')" />
                     </div>
 
@@ -349,8 +349,8 @@
                                 :required="true" />
 
                     <x-metadata type="textarea"
-                                name="assignment_description"
-                                xModel="modals.assignment.assignment_description"
+                                name="assignment_synopsis"
+                                xModel="modals.assignment.assignment_synopsis"
                                 :label="lexicon('label_common_Description', 'Assignment Description')"
                                 :tooltip="lexicon('tooltip_assignments_Description', 'Brief summary of duties and billet expectations')" />
 

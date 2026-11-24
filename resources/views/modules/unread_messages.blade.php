@@ -53,7 +53,7 @@
         </div>
     @else
         <div class="flex flex-col gap-sm" x-data>
-            @foreach($unreadThreads as$thread)
+            @foreach($unreadThreads as $thread)
                 @php
                     $threadMode = strtoupper((string) ($thread->thread_mode ?? 'OOC'));
                     $threadTitle =$thread->thread_title ?? lexicon('label_common_UntitledThread', 'Untitled Correspondence');

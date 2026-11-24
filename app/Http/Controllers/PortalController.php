@@ -26,7 +26,7 @@ class PortalController extends Controller
      */
     public function showBook(string $bookUrl = '/'): ViewContract
     {
-        $normalizedUrl = '/' . ltrim($bookUrl, '/');
+        $normalizedUrl = '/'.ltrim($bookUrl, '/');
         $payload = $this->resolvePublishedBook($normalizedUrl);
 
         return view('book', $payload);
@@ -101,20 +101,20 @@ class PortalController extends Controller
 
         $book->setRelation('modules', $filteredModules);
 
-        $lookupUrl = '/' . ltrim($book->book_url, '/');
-        $navKey = Cache::remember('nav_key_' . md5($lookupUrl), 3600, function () use ($lookupUrl) {
+        $lookupUrl = '/'.ltrim($book->book_url, '/');
+        $navKey = Cache::remember('nav_key_'.md5($lookupUrl), 3600, function () use ($lookupUrl) {
             return DB::table('table_of_contents')
                 ->where('destination_url', $lookupUrl)
                 ->value('translation_code_key');
         });
 
-        $defaultKey = $fallbackBookKey ?: ('public_label_' . ($book->book_url === '/' ? 'Landing' : Str::studly(basename($book->book_url))));
+        $defaultKey = $fallbackBookKey ?: ('public_label_'.($book->book_url === '/' ? 'Landing' : Str::studly(basename($book->book_url))));
         $bookKey = $navKey ?: $defaultKey;
 
         $moduleTokens = $filteredModules->pluck('module_token')->toArray();
 
         $bulletins = null;
-        if (! empty(array_intersect(['bulletins', 'module_bulletins'], $moduleTokens))) {
+        if (! empty(array_intersect(['bulletins', 'module_bulletins', 'news'], $moduleTokens))) {
             $bulletins = Bulletin::with('author')
                 ->orderBy('published_at', 'desc')
                 ->take(5)
@@ -122,7 +122,7 @@ class PortalController extends Controller
         }
 
         $folios = null;
-        if (! empty(array_intersect(['folios', 'module_folios', 'folio'], $moduleTokens))) {
+        if (! empty(array_intersect(['folios', 'module_folios', 'folio', 'posts'], $moduleTokens))) {
             $folios = Folio::with('activePersona')
                 ->where('folio_status', 'published')
                 ->orderBy('created_at', 'desc')
@@ -131,11 +131,11 @@ class PortalController extends Controller
         }
 
         return [
-            'book'      => $book,
-            'navKey'    => $navKey,
-            'bookKey'   => $bookKey,
+            'book' => $book,
+            'navKey' => $navKey,
+            'bookKey' => $bookKey,
             'bulletins' => $bulletins,
-            'folios'    => $folios,
+            'folios' => $folios,
         ];
     }
 
@@ -171,7 +171,7 @@ class PortalController extends Controller
         $primaryUrl = $persona->primary_portrait_url
             ? (Str::startsWith($persona->primary_portrait_url, ['http://', 'https://', '/'])
                 ? $persona->primary_portrait_url
-                : asset('images/personas/' . $persona->primary_portrait_url))
+                : asset('images/personas/'.$persona->primary_portrait_url))
             : null;
 
         $gallery = $persona->attributes
@@ -181,19 +181,19 @@ class PortalController extends Controller
                 $val = $attr->attribute_value;
 
                 return [
-                    'id'       => $attr->id,
+                    'id' => $attr->id,
                     'filename' => $val,
-                    'url'      => Str::startsWith($val, ['http://', 'https://', '/'])
+                    'url' => Str::startsWith($val, ['http://', 'https://', '/'])
                         ? $val
-                        : asset('images/personas/' . $val),
+                        : asset('images/personas/'.$val),
                 ];
             })
             ->all();
 
         return [
             'primary_filename' => $persona->primary_portrait_url,
-            'primary_url'      => $primaryUrl,
-            'gallery'          => $gallery,
+            'primary_url' => $primaryUrl,
+            'gallery' => $gallery,
         ];
     }
 
@@ -215,7 +215,7 @@ class PortalController extends Controller
 
         $file = $request->file('file');
         $extension = strtolower($file->getClientOriginalExtension() ?: 'webp');
-        $filename = 'persona_' . $persona->id . '_' . time() . '_' . Str::lower(Str::random(5)) . '.' . $extension;
+        $filename = 'persona_'.$persona->id.'_'.time().'_'.Str::lower(Str::random(5)).'.'.$extension;
 
         $file->move($destinationPath, $filename);
 
@@ -223,8 +223,8 @@ class PortalController extends Controller
             $persona->update(['primary_portrait_url' => $filename]);
         } else {
             PersonaMetadata::create([
-                'persona_id'      => $persona->id,
-                'attribute_key'   => 'gallery_image',
+                'persona_id' => $persona->id,
+                'attribute_key' => 'gallery_image',
                 'attribute_value' => $filename,
             ]);
         }
@@ -233,7 +233,7 @@ class PortalController extends Controller
         if (class_exists(AiPortraitService::class)) {
             try {
                 app(AiPortraitService::class)->resolveMissingAttribution(
-                    'images/personas/' . $filename,
+                    'images/personas/'.$filename,
                     $request->only(['base_credit', 'uniform_credit', 'background_credit', 'artist', 'licence_url']),
                     $persona
                 );
@@ -245,9 +245,9 @@ class PortalController extends Controller
         $portraits = $this->getPortraitPayload($persona);
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_PersonaPortrait_UploadSuccess', 'Persona portrait uploaded successfully.'),
-            'data'     => $portraits,
+            'status' => 'success',
+            'message' => lexicon('msg_PersonaPortrait_UploadSuccess', 'Persona portrait uploaded successfully.'),
+            'data' => $portraits,
             'redirect' => null,
         ], 200);
     }
@@ -282,9 +282,9 @@ class PortalController extends Controller
         $portraits = $this->getPortraitPayload($persona);
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_PersonaPortrait_PrimaryUpdated', 'Primary persona portrait updated.'),
-            'data'     => $portraits,
+            'status' => 'success',
+            'message' => lexicon('msg_PersonaPortrait_PrimaryUpdated', 'Primary persona portrait updated.'),
+            'data' => $portraits,
             'redirect' => null,
         ], 200);
     }
@@ -297,7 +297,7 @@ class PortalController extends Controller
         $this->authorizePortraitAction($persona);
 
         $validated = $request->validate([
-            'type'         => ['required', 'in:primary,gallery'],
+            'type' => ['required', 'in:primary,gallery'],
             'attribute_id' => ['required_if:type,gallery', 'nullable', 'integer'],
         ]);
 
@@ -305,7 +305,7 @@ class PortalController extends Controller
             $filename = $persona->primary_portrait_url;
 
             if ($filename && ! Str::startsWith($filename, ['http://', 'https://'])) {
-                $filePath = public_path('images/personas/' . ltrim($filename, '/'));
+                $filePath = public_path('images/personas/'.ltrim($filename, '/'));
                 if (File::exists($filePath)) {
                     File::delete($filePath);
                 }
@@ -331,7 +331,7 @@ class PortalController extends Controller
             $filename = $attribute->attribute_value;
 
             if ($filename && ! Str::startsWith($filename, ['http://', 'https://'])) {
-                $filePath = public_path('images/personas/' . ltrim($filename, '/'));
+                $filePath = public_path('images/personas/'.ltrim($filename, '/'));
                 if (File::exists($filePath)) {
                     File::delete($filePath);
                 }
@@ -343,9 +343,9 @@ class PortalController extends Controller
         $portraits = $this->getPortraitPayload($persona);
 
         return response()->json([
-            'status'   => 'success',
-            'message'  => lexicon('msg_PersonaPortrait_Deleted', 'Persona portrait removed.'),
-            'data'     => $portraits,
+            'status' => 'success',
+            'message' => lexicon('msg_PersonaPortrait_Deleted', 'Persona portrait removed.'),
+            'data' => $portraits,
             'redirect' => null,
         ], 200);
     }
@@ -372,7 +372,7 @@ class PortalController extends Controller
         }
 
         return [
-            'is_mature'     => $isMature,
+            'is_mature' => $isMature,
             'requires_gate' => $isMature && ! $userBypassed,
         ];
     }

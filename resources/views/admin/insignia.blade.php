@@ -140,7 +140,7 @@
                                 <div class="bg-panel-sub border border-panel rounded-panel p-4 flex flex-row flex-wrap items-center justify-between gap-md cursor-grab active:cursor-grabbing"
                                      data-id="{{ $rank->id }}">
                                     <div class="flex flex-row flex-wrap items-center gap-md">
-                                        <x-insignia-badge 
+                                        <x-badge type="insignia"
                                             :rankSet="$set->catalogue_title" 
                                             :baseLayer="$defaultBaseLayer" 
                                             :departmentColour="$badgeColour" 

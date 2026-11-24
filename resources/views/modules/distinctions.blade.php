@@ -49,7 +49,7 @@
         </div>
     @else
         <div class="flex flex-row flex-wrap items-center justify-center gap-md p-2">
-            @foreach($earnedDistinctions as$record)
+            @foreach($earnedDistinctions as $record)
                 @if($record->distinction)
                     @php
                         $citation = $record->chronicle_text ?: $record->distinction->distinction_description;

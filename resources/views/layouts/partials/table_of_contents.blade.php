@@ -20,7 +20,7 @@
 
             <!-- Primary Navigation Links -->
             <div data-global-nav="primary" class="flex flex-row flex-wrap items-center gap-md">
-                @foreach($topLevelNav as$entry)
+                @foreach($topLevelNav as $entry)
                     @php
                         $children =$childNav->get($entry->id, collect());$entryLabel = lexicon(
                             $entry->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '',$entry->translation_code_key))
@@ -49,7 +49,7 @@
                                  x-transition.opacity.duration.200ms
                                  x-cloak
                                  class="bg-panel-body border-panel border-rounded shadow-panel flex flex-col absolute top-4 z-100 mt-4 w-48 overflow-hidden">
-                                @foreach($children as$child)
+                                @foreach($children as $child)
                                     <a href="{{ $child->destination_url }}"
                                        target="{{ $child->window_target }}"
                                        class="inline-block p-2 text-sm text-p border-b-table-row hover-bg-panel-hover hover-text-h transition-colors no-underline">
@@ -89,7 +89,7 @@
                               :tooltip="lexicon('tooltip_nav_WriteFolio', 'Write a new story folio')"
                               @click="$dispatch('open-folio-modal')" />
 
-                    @if($hasTwitter \vert{}\vert{}$hasFacebook)
+                    @if($hasTwitter ||$hasFacebook)
                         <div class="hidden-mobile flex flex-row items-center gap-xs">
                             @if($hasTwitter)
                                 @php $cleanTwitter = ltrim($user->twitter_handle, '@'); @endphp
@@ -186,7 +186,7 @@
                             </button>
 
                             <div class="flex flex-col gap-xs" x-show="expanded" x-collapse x-cloak>
-                                @foreach($entries as$entry)
+                                @foreach($entries as $entry)
                                     @php
                                         $drawerEntryLabel = lexicon(
                                             $entry->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '',$entry->translation_code_key))
@@ -216,7 +216,7 @@
                         </div>
                     @else
                         <div class="flex flex-col gap-xs mb-4">
-                            @foreach($entries as$entry)
+                            @foreach($entries as $entry)
                                 @php
                                     $drawerEntryLabel = lexicon(
                                         $entry->translation_code_key, \Illuminate\Support\Str::headline(str_replace('nav_link_', '',$entry->translation_code_key))
