@@ -30,7 +30,7 @@
                                 :bare="true"
                                 xModel="searchQuery"
                                 :placeholder="lexicon('placeholder_divisions_Search', 'Search divisions or assignments...')"
-                                :tooltip="lexicon('tooltip_divisions_Search', 'Filter divisions and assignments by title or description')" />
+                                :tooltip="lexicon('tooltip_divisions_Search', 'Filter divisions and assignments by title or synopsis')" />
 
                     @can('manage_sections')
                         <x-button tag="a"
@@ -86,13 +86,14 @@
                 @forelse($divisionsList as $division)
                     @php
                         $assignTitles = $division->assignments?->pluck('assignment_title')->values()->all() ?? [];
+                        $divisionSynopsis = $division->division_synopsis ?? $division->division_description ?? '';
                     @endphp
                     <div data-search-item
                          data-division-item
                          data-id="{{ $division->id }}"
                          data-division_title="{{ $division->division_title }}"
-                         data-division_synopsis="{{ $division->division_synopsis }}"
-                         x-show="matchesSearch('{{ addslashes($division->division_title) }}', '{{ addslashes($division->division_synopsis ?? '') }}', {{ Js::from($assignTitles) }})">
+                         data-division_synopsis="{{ $divisionSynopsis }}"
+                         x-show="matchesSearch('{{ addslashes($division->division_title) }}', '{{ addslashes($divisionSynopsis) }}', {{ Js::from($assignTitles) }})">
 
                         <x-tab type="accordion"
                                :title="$division->division_title"
@@ -132,7 +133,7 @@
                                                   @click="openModal('edit', {{ Js::from([
                                                       'id' => $division->id,
                                                       'division_title' => $division->division_title,
-                                                      'division_synopsis' => $division->division_synopsis ?? '',
+                                                      'division_synopsis' => $divisionSynopsis,
                                                       'division_base_colour' => $division->division_base_colour ?? '#374151FF',
                                                       'division_sort_order' => $division->division_sort_order ?? 0,
                                                       'division_catalogue_id' => $division->division_catalogue_id ?? '',
@@ -155,24 +156,27 @@
                                 </div>
                             </x-slot:top>
 
-                            @if($division->division_synopsis)
-                                <p class="text-sm text-muted m-0">{{ $division->division_synopsis }}</p>
+                            @if($divisionSynopsis !== '')
+                                <p class="text-sm text-muted m-0">{{ $divisionSynopsis }}</p>
                             @endif
 
                             <x-table type="admin"
                                      :headers="[
                                          lexicon('col_assignments_Title', 'Assignment Title'),
-                                         lexicon('col_assignments_Description', 'Description'),
+                                         lexicon('col_assignments_Synopsis', 'Synopsis'),
                                          lexicon('col_assignments_Capacity', 'Max Occupants'),
                                          lexicon('col_assignments_Recruitment', 'Recruitment'),
                                          lexicon('col_common_Actions', 'Actions')
                                      ]"
                                      :emptyText="lexicon('msg_assignments_NoneInDivision', 'No duty assignments configured for this division.')">
                                 @foreach($division->assignments ?? [] as $assignment)
+                                    @php
+                                        $assignmentSynopsis = $assignment->assignment_synopsis ?? $assignment->assignment_description ?? '';
+                                    @endphp
                                     <tr class="border-b-table-row hover-bg-panel-hover transition-colors"
-                                        x-show="isItemVisible('{{ addslashes($assignment->assignment_title) }}', '{{ addslashes($assignment->assignment_synopsis ?? '') }}', '{{ addslashes($division->division_title) }}')">
+                                        x-show="isItemVisible('{{ addslashes($assignment->assignment_title) }}', '{{ addslashes($assignmentSynopsis) }}', '{{ addslashes($division->division_title) }}')">
                                         <td class="p-4 font-bold text-h">{{ $assignment->assignment_title }}</td>
-                                        <td class="p-4 text-sm text-muted">{{ $assignment->assignment_synopsis ?: '—' }}</td>
+                                        <td class="p-4 text-sm text-muted">{{ $assignmentSynopsis ?: '—' }}</td>
                                         <td class="p-4 font-mono text-xs text-p">
                                             {{ $assignment->personae?->count() ?? 0 }} / {{ $assignment->maximum_occupants }}
                                         </td>
@@ -195,7 +199,8 @@
                                                                   'id' => $assignment->id,
                                                                   'division_id' => $assignment->division_id,
                                                                   'assignment_title' => $assignment->assignment_title,
-                                                                  'assignment_synopsis' => $assignment->assignment_synopsis ?? '',
+                                                                  'assignment_synopsis' => $assignmentSynopsis,
+                                                                  'assignment_sort_order' => $assignment->assignment_sort_order ?? 0,
                                                                   'maximum_occupants' => $assignment->maximum_occupants ?? 1,
                                                                   'is_recruitment_open' => (bool) $assignment->is_recruitment_open,
                                                                   'is_visible' => (bool) $assignment->is_visible,
@@ -254,13 +259,13 @@
                     <div class="flex flex-col gap-xs">
                         <div class="flex flex-row justify-between items-center">
                             <span class="text-xs font-bold text-input-muted uppercase text-wider">
-                                {{ lexicon('label_common_Description', 'Division Description') }}
+                                {{ lexicon('label_common_Synopsis', 'Division Synopsis') }}
                             </span>
                             <x-button type="button"
                                       variant="ghost"
                                       size="sm"
                                       icon="bi-stars"
-                                      :tooltip="lexicon('tooltip_divisions_AiGenerate', 'Generate lore-aware division description using AI')"
+                                      :tooltip="lexicon('tooltip_divisions_AiGenerate', 'Generate lore-aware division synopsis using AI')"
                                       @click="generateAiDescription()">
                                 <span x-text="isGeneratingAi
                                     ? '{{ addslashes(lexicon('msg_common_Generating', 'Generating...')) }}'
@@ -351,15 +356,23 @@
                     <x-metadata type="textarea"
                                 name="assignment_synopsis"
                                 xModel="modals.assignment.assignment_synopsis"
-                                :label="lexicon('label_common_Description', 'Assignment Description')"
+                                :label="lexicon('label_common_Synopsis', 'Assignment Synopsis')"
                                 :tooltip="lexicon('tooltip_assignments_Description', 'Brief summary of duties and billet expectations')" />
 
-                    <x-metadata type="number"
-                                name="maximum_occupants"
-                                xModel="modals.assignment.maximum_occupants"
-                                :label="lexicon('label_assignments_MaxOccupants', 'Maximum Occupants')"
-                                :tooltip="lexicon('tooltip_assignments_MaxOccupants', 'Maximum number of personae who can hold this billet simultaneously')"
-                                :required="true" />
+                    <div class="grid grid-cols-1 md-grid-cols-2 gap-md">
+                        <x-metadata type="number"
+                                    name="maximum_occupants"
+                                    xModel="modals.assignment.maximum_occupants"
+                                    :label="lexicon('label_assignments_MaxOccupants', 'Maximum Occupants')"
+                                    :tooltip="lexicon('tooltip_assignments_MaxOccupants', 'Maximum number of personae who can hold this billet simultaneously')"
+                                    :required="true" />
+
+                        <x-metadata type="number"
+                                    name="assignment_sort_order"
+                                    xModel="modals.assignment.assignment_sort_order"
+                                    :label="lexicon('label_common_SortOrder', 'Sort Order')"
+                                    :tooltip="lexicon('tooltip_common_SortOrder', 'Numeric display order within this division')" />
+                    </div>
 
                     <div class="flex flex-col gap-sm pt-2">
                         <x-metadata type="checkbox"

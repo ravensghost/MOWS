@@ -1,5 +1,4 @@
 // resources/js/managers/insigniaManager.js
-
 export default function insigniaManager(defaultDeptColour = '#991b1bFF', baseLayer = '#1a1a1aFF') {
     const defaultInsigniaState = {
         isOpen: false,
@@ -25,7 +24,7 @@ export default function insigniaManager(defaultDeptColour = '#991b1bFF', baseLay
         available_images: [],
         loading_images: false,
         action: '/admin/insignia',
-        method: 'POST'
+        method: 'POST',
     };
 
     return {
@@ -41,7 +40,7 @@ export default function insigniaManager(defaultDeptColour = '#991b1bFF', baseLay
                 assignedIds: [],
                 is_visible: true,
                 action: '/admin/insignia/catalogues',
-                method: 'POST'
+                method: 'POST',
             },
             import: {
                 isOpen: false,
@@ -49,8 +48,8 @@ export default function insigniaManager(defaultDeptColour = '#991b1bFF', baseLay
                 mode: 'create',
                 importMode: 'merge',
                 action: '/admin/insignia/import',
-                method: 'POST'
-            }
+                method: 'POST',
+            },
         },
         defaultDeptColor: defaultDeptColour,
         baseLayer: baseLayer,
@@ -72,7 +71,7 @@ export default function insigniaManager(defaultDeptColour = '#991b1bFF', baseLay
                 try {
                     this.searchHelperInstance = window.Search.create(
                         '[data-search-item], [data-insignia-item]',
-                        ['insignia_title', 'abbreviated_title', 'catalogue_title'],
+                        ['insignia_title', 'abbreviated_title', 'catalogue_title', 'insignia_synopsis'],
                         { threshold: 0.35 }
                     );
                 } catch (e) {
@@ -85,7 +84,7 @@ export default function insigniaManager(defaultDeptColour = '#991b1bFF', baseLay
                     return;
                 }
                 const results = this.searchHelperInstance.search(val.trim());
-                this.filteredIds = results ? results.map(id => Number(id)) : [];
+                this.filteredIds = results ? results.map((id) => Number(id)) : [];
             });
         },
 
@@ -144,13 +143,13 @@ export default function insigniaManager(defaultDeptColour = '#991b1bFF', baseLay
                     window.Modal.edit(this.modals.catalogue, {
                         ...data,
                         assignedIds: Array.isArray(data.assignedIds) ? data.assignedIds : [],
-                        is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true
+                        is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true,
                     }, (id) => `${catalogueBaseUrl}/${id}`);
                 } else {
                     window.Modal.create(this.modals.catalogue, {
                         catalogue_title: '',
                         assignedIds: [],
-                        is_visible: true
+                        is_visible: true,
                     }, catalogueBaseUrl);
                 }
                 return;
@@ -172,7 +171,7 @@ export default function insigniaManager(defaultDeptColour = '#991b1bFF', baseLay
                     set_color: this.defaultDeptColor,
                     available_images: [],
                     loading_images: false,
-                    ...data
+                    ...data,
                 }, baseUrl);
                 return;
             }
@@ -184,6 +183,7 @@ export default function insigniaManager(defaultDeptColour = '#991b1bFF', baseLay
                 window.Modal.edit(this.modals.insignia, {
                     ...defaultInsigniaState,
                     ...data,
+                    insignia_synopsis: data.insignia_synopsis ?? data.insignia_description ?? '',
                     set_color: data.set_color || this.defaultDeptColor,
                     mid_layer_asset: savedMidImage,
                     top_layer_asset: savedTopImage,
@@ -191,7 +191,7 @@ export default function insigniaManager(defaultDeptColour = '#991b1bFF', baseLay
                     top_layer_hue: data.top_layer_hue || '#ffffffFF',
                     is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true,
                     available_images: [],
-                    loading_images: false
+                    loading_images: false,
                 }, (id) => `${baseUrl}/${id}`);
 
                 this.loadImages(savedMidImage, savedTopImage);
@@ -247,6 +247,6 @@ export default function insigniaManager(defaultDeptColour = '#991b1bFF', baseLay
             } else {
                 this.closeModal();
             }
-        }
+        },
     };
 }

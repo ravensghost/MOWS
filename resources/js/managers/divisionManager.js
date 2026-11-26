@@ -1,5 +1,4 @@
 // resources/js/managers/divisionManager.js
-
 export default function divisionManager(config = {}) {
     const divisionState = {
         isOpen: false,
@@ -14,7 +13,7 @@ export default function divisionManager(config = {}) {
         division_catalogue_id: '',
         insignia_catalogue_id: '',
         action: '/admin/divisions',
-        method: 'POST'
+        method: 'POST',
     };
 
     const assignmentState = {
@@ -25,6 +24,7 @@ export default function divisionManager(config = {}) {
         division_id: '',
         assignment_title: '',
         assignment_synopsis: '',
+        assignment_sort_order: 0,
         maximum_occupants: 1,
         max_assignees: 1,
         is_recruitment_open: true,
@@ -33,7 +33,7 @@ export default function divisionManager(config = {}) {
         division_title: '',
         division_base_colour: '#374151FF',
         action: '/admin/assignments',
-        method: 'POST'
+        method: 'POST',
     };
 
     return {
@@ -52,15 +52,15 @@ export default function divisionManager(config = {}) {
                 catalogue_synopsis: '',
                 is_visible: true,
                 action: '/admin/divisions/catalogues',
-                method: 'POST'
+                method: 'POST',
             },
             import: {
                 isOpen: false,
                 open: false,
                 mode: 'create',
                 action: '/admin/divisions/import',
-                method: 'POST'
-            }
+                method: 'POST',
+            },
         },
         searchQuery: '',
         searchHelperInstance: null,
@@ -98,25 +98,25 @@ export default function divisionManager(config = {}) {
                     return;
                 }
                 const results = this.searchHelperInstance.search(val.trim());
-                this.filteredIds = results ? results.map(id => Number(id)) : [];
+                this.filteredIds = results ? results.map((id) => Number(id)) : [];
             });
         },
 
-        matchesSearch(divTitle, divDesc, assignTitles = []) {
+        matchesSearch(divTitle, divSynopsis, assignTitles = []) {
             const q = this.searchQuery.trim().toLowerCase();
             if (!q) return true;
-            const haystack = [divTitle || '', divDesc || '', ...(Array.isArray(assignTitles) ? assignTitles : [])];
-            return haystack.some(text => String(text).toLowerCase().includes(q));
+            const haystack = [divTitle || '', divSynopsis || '', ...(Array.isArray(assignTitles) ? assignTitles : [])];
+            return haystack.some((text) => String(text).toLowerCase().includes(q));
         },
 
-        isItemVisible(assignTitleOrId, assignDesc = '', divTitle = '') {
+        isItemVisible(assignTitleOrId, assignSynopsis = '', divTitle = '') {
             const q = this.searchQuery.trim().toLowerCase();
             if (!q) return true;
             if (typeof assignTitleOrId === 'number' && this.filteredIds !== null) {
                 return this.filteredIds.includes(Number(assignTitleOrId));
             }
             if (String(divTitle || '').toLowerCase().includes(q)) return true;
-            return [assignTitleOrId || '', assignDesc || ''].some(text =>
+            return [assignTitleOrId || '', assignSynopsis || ''].some((text) =>
                 String(text).toLowerCase().includes(q)
             );
         },
@@ -128,7 +128,7 @@ export default function divisionManager(config = {}) {
                     create: false,
                     onChange: (val) => {
                         this.modals.assignment.division_id = val;
-                    }
+                    },
                 });
             }
         },
@@ -136,7 +136,7 @@ export default function divisionManager(config = {}) {
         refreshAutosize() {
             this.$nextTick(() => {
                 if (window.Autosize) {
-                    document.querySelectorAll('textarea[name="division_synopsis"], textarea[name="assignment_synopsis"]').forEach(el => {
+                    document.querySelectorAll('textarea[name="division_synopsis"], textarea[name="assignment_synopsis"]').forEach((el) => {
                         window.Autosize.update(el);
                     });
                 }
@@ -157,18 +157,18 @@ export default function divisionManager(config = {}) {
                         division_sort_order: 0,
                         is_visible: true,
                         division_catalogue_id: data.division_catalogue_id ?? '',
-                        insignia_catalogue_id: data.insignia_catalogue_id ?? ''
+                        insignia_catalogue_id: data.insignia_catalogue_id ?? '',
                     }, divisionBaseUrl);
                 } else {
                     window.Modal.edit(this.modals.division, {
                         id: data.id,
                         division_title: data.division_title ?? data.name ?? '',
                         division_base_colour: data.division_base_colour ?? data.color ?? '#374151FF',
-                        division_synopsis: data.division_synopsis ?? data.synopsis ?? '',
+                        division_synopsis: data.division_synopsis ?? data.division_description ?? data.description ?? '',
                         division_sort_order: data.division_sort_order ?? data.order ?? 0,
                         is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true,
                         division_catalogue_id: data.division_catalogue_id ?? '',
-                        insignia_catalogue_id: data.insignia_catalogue_id ?? ''
+                        insignia_catalogue_id: data.insignia_catalogue_id ?? '',
                     }, (id) => `${divisionBaseUrl}/${id}`);
                 }
                 this.refreshAutosize();
@@ -183,11 +183,12 @@ export default function divisionManager(config = {}) {
                         division_base_colour: data.division_base_colour ?? data.section_color ?? '#374151FF',
                         assignment_title: '',
                         assignment_synopsis: '',
+                        assignment_sort_order: data.assignment_sort_order ?? 0,
                         maximum_occupants: 1,
                         max_assignees: 1,
                         is_recruitment_open: true,
                         is_open: true,
-                        is_visible: true
+                        is_visible: true,
                     }, assignmentBaseUrl);
                     this.refreshAutosize();
                 } else {
@@ -200,12 +201,13 @@ export default function divisionManager(config = {}) {
                         id: data.id,
                         division_id: String(data.division_id ?? ''),
                         assignment_title: data.assignment_title ?? data.name ?? '',
-                        assignment_synopsis: data.assignment_synopsis ?? data.description ?? '',
+                        assignment_synopsis: data.assignment_synopsis ?? data.assignment_description ?? data.description ?? '',
+                        assignment_sort_order: data.assignment_sort_order ?? data.sort_order ?? 0,
                         maximum_occupants: maxOcc,
                         max_assignees: maxOcc,
                         is_recruitment_open: isOpen,
                         is_open: isOpen,
-                        is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true
+                        is_visible: data.is_visible !== undefined ? Boolean(data.is_visible) : true,
                     }, (id) => `${assignmentBaseUrl}/${id}`);
 
                     this.$nextTick(() => {
@@ -227,7 +229,7 @@ export default function divisionManager(config = {}) {
                     window.Modal.create(this.modals.catalogue, {
                         catalogue_title: '',
                         catalogue_synopsis: '',
-                        is_visible: true
+                        is_visible: true,
                     }, catalogueBaseUrl);
                 }
                 return;
@@ -249,7 +251,7 @@ export default function divisionManager(config = {}) {
                     window.Swal.fire({
                         icon: 'warning',
                         title: this.emptyNameMsg,
-                        ...window.Swal.themeConfig()
+                        ...window.Swal.themeConfig(),
                     });
                 }
                 return;
@@ -259,18 +261,19 @@ export default function divisionManager(config = {}) {
             try {
                 const { ok, data } = await window.Fetch.post(this.aiEndpoint, {
                     name: title,
-                    division_title: title
+                    division_title: title,
                 }, {
                     loading: false,
-                    showError: false
+                    showError: false,
                 });
 
-                if (ok && data && (data.division_synopsis || data.description)) {
-                    this.modals.division.division_synopsis = data.division_synopsis || data.description;
+                const generated = data?.division_synopsis ?? data?.division_description ?? data?.synopsis ?? data?.description;
+                if (ok && generated) {
+                    this.modals.division.division_synopsis = generated;
                     this.refreshAutosize();
                 }
             } catch (error) {
-                console.error('[DivisionManager] AI description generation failed:', error);
+                console.error('[DivisionManager] AI synopsis generation failed:', error);
             } finally {
                 this.isGeneratingAi = false;
             }
@@ -297,6 +300,6 @@ export default function divisionManager(config = {}) {
             } else {
                 this.closeModal();
             }
-        }
+        },
     };
 }

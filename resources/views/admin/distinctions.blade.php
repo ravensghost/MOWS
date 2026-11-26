@@ -21,7 +21,7 @@
                                 :bare="true"
                                 xModel="searchQuery"
                                 :placeholder="lexicon('placeholder_awards_Search', 'Search distinctions...')"
-                                :tooltip="lexicon('tooltip_awards_Search', 'Filter distinctions by title or description')" />
+                                :tooltip="lexicon('tooltip_awards_Search', 'Filter distinctions by title or synopsis')" />
 
                     @can('manage_awards')
                         <x-button type="button"
@@ -66,18 +66,19 @@
                                 'OOC'   => 'warning',
                                 default => 'success',
                             };
+                            $distinctionSynopsis = $distinction->distinction_synopsis ?? $distinction->distinction_description ?? '';
                         @endphp
                         <tr class="border-b-table-row hover-bg-panel-hover transition-colors"
                             data-search-item
                             data-distinction-item
                             data-id="{{ $distinction->id }}"
                             data-distinction_title="{{ $distinction->distinction_title }}"
-                            data-distinction_description="{{ $distinction->distinction_description }}"
+                            data-distinction_synopsis="{{ $distinctionSynopsis }}"
                             x-show="isItemVisible({{ $distinction->id }})">
                             <td class="p-4">
                                 <span class="font-bold text-h block">{{ $distinction->distinction_title }}</span>
-                                @if($distinction->distinction_description)
-                                    <span class="text-xs text-muted block">{{ Str::limit($distinction->distinction_description, 80) }}</span>
+                                @if($distinctionSynopsis !== '')
+                                    <span class="text-xs text-muted block">{{ Str::limit($distinctionSynopsis, 80) }}</span>
                                 @endif
                             </td>
                             <td class="p-4">
@@ -110,7 +111,22 @@
                                               size="sm"
                                               icon="bi-pencil"
                                               :tooltip="lexicon('tooltip_common_EditAward', 'Edit this distinction configuration')"
-                                              @click="openModal('edit', {{ Js::from($distinction) }}, 'distinction')">
+                                              @click="openModal('edit', {{ Js::from([
+                                                  'id' => $distinction->id,
+                                                  'distinction_title' => $distinction->distinction_title,
+                                                  'distinction_synopsis' => $distinctionSynopsis,
+                                                  'scope_target' => $distinction->scope_target,
+                                                  'distinction_catalogue_id' => $distinction->distinction_catalogue_id ?? '',
+                                                  'distinction_base_colour' => $distinction->distinction_base_colour ?? '#1a1a1aFF',
+                                                  'mid_layer_mode' => $distinction->mid_layer_mode ?? 'css',
+                                                  'mid_layer_asset' => $distinction->mid_layer_asset ?? '',
+                                                  'mid_layer_modifier' => $distinction->mid_layer_modifier ?? 'original',
+                                                  'mid_layer_hue' => $distinction->mid_layer_hue ?? '#1a1a1aFF',
+                                                  'top_layer_mode' => $distinction->top_layer_mode ?? 'image',
+                                                  'top_layer_asset' => $distinction->top_layer_asset ?? '',
+                                                  'top_layer_modifier' => $distinction->top_layer_modifier ?? '',
+                                                  'top_layer_hue' => $distinction->top_layer_hue ?? '#ffffffFF',
+                                              ]) }}, 'distinction')">
                                         {{ lexicon('btn_common_Edit', 'Edit') }}
                                     </x-button>
 
@@ -149,9 +165,9 @@
                                         :required="true" />
 
                             <x-metadata type="textarea"
-                                        name="distinction_description"
-                                        xModel="modals.distinction.distinction_description"
-                                        :label="lexicon('label_common_Description', 'Citation / Description')"
+                                        name="distinction_synopsis"
+                                        xModel="modals.distinction.distinction_synopsis"
+                                        :label="lexicon('label_common_Synopsis', 'Citation / Synopsis')"
                                         :tooltip="lexicon('tooltip_awards_DescriptionInput', 'Provide a brief explanation or citation for this distinction')" />
 
                             <div class="grid grid-cols-1 md-grid-cols-2 gap-md">
