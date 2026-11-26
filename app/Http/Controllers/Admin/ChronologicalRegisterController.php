@@ -10,13 +10,28 @@ use App\Models\Distinction;
 use App\Models\Insignia;
 use App\Models\Persona;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\View\View;
 
 class ChronologicalRegisterController extends Controller
 {
-    public function index()
+    private function authoriseRegisterAccess(): void
     {
+        $user = auth()->user();
+
+        abort_unless(
+            $user && ($user->can('manage_awards') || $user->can('issue_awards') || $user->can('manage_service_records') || $user->can('access-admin')),
+            403,
+            lexicon('msg_Register_Unauthorised', 'Unauthorised access to the Chronological Register.')
+        );
+    }
+
+    public function index(): View
+    {
+        $this->authoriseRegisterAccess();
+
         $systemBook = Book::with(['grid.gridModules', 'modules'])
             ->where('book_url', 'admin/service-records')
             ->where('is_published', true)
@@ -48,29 +63,46 @@ class ChronologicalRegisterController extends Controller
         ));
     }
 
-    public function issueAward(Request $request)
+    public function issueAward(Request $request): JsonResponse
     {
+        $this->authoriseRegisterAccess();
+
         $validated = $request->validate([
             'distinction_id' => 'required|exists:distinctions,id',
             'chronicle_text' => 'required|string',
-            'user_id' => 'nullable|exists:users,id',
-            'persona_id' => 'nullable|exists:personae,id',
+            'user_id'        => 'nullable|exists:users,id',
+            'persona_id'     => 'nullable|exists:personae,id',
         ]);
 
         if (empty($validated['user_id']) && empty($validated['persona_id'])) {
-            return response()->json(['message' => 'You must select a user or persona to receive this distinction.'], 422);
+            return response()->json([
+                'status'   => 'error',
+                'message'  => lexicon('msg_distinction_recipient_required', 'You must select a user or persona to receive this distinction.'),
+                'data'     => null,
+                'redirect' => null,
+            ], 422);
         }
 
-        if (! empty($validated['user_id']) && $validated['user_id'] == auth()->id()) {
-            return response()->json(['message' => 'You cannot issue a distinction to your own user account.'], 422);
+        if (! empty($validated['user_id']) && (int) $validated['user_id'] === (int) auth()->id()) {
+            return response()->json([
+                'status'   => 'error',
+                'message'  => lexicon('msg_distinction_self_user', 'You cannot issue a distinction to your own user account.'),
+                'data'     => null,
+                'redirect' => null,
+            ], 422);
         }
 
         $targetUserId = $validated['user_id'] ?? null;
 
         if (! empty($validated['persona_id'])) {
             $persona = Persona::findOrFail($validated['persona_id']);
-            if ($persona->user_id == auth()->id()) {
-                return response()->json(['message' => 'You cannot issue a distinction to your own persona.'], 422);
+            if ((int) $persona->user_id === (int) auth()->id()) {
+                return response()->json([
+                    'status'   => 'error',
+                    'message'  => lexicon('msg_distinction_self_persona', 'You cannot issue a distinction to your own persona.'),
+                    'data'     => null,
+                    'redirect' => null,
+                ], 422);
             }
             $targetUserId = $persona->user_id;
         }
@@ -78,55 +110,80 @@ class ChronologicalRegisterController extends Controller
         $distinction = Distinction::findOrFail($validated['distinction_id']);
 
         if ($distinction->scope_target === 'IC' && ! empty($validated['user_id']) && empty($validated['persona_id'])) {
-            return response()->json(['message' => 'This is an In-Character distinction and cannot be given directly to a User.'], 422);
+            return response()->json([
+                'status'   => 'error',
+                'message'  => lexicon('msg_distinction_ic_only', 'This is an In-Character distinction and cannot be given directly to a User.'),
+                'data'     => null,
+                'redirect' => null,
+            ], 422);
         }
+
         if ($distinction->scope_target === 'OOC' && ! empty($validated['persona_id'])) {
-            return response()->json(['message' => 'This is an Out-Of-Character distinction and cannot be given to a Persona.'], 422);
+            return response()->json([
+                'status'   => 'error',
+                'message'  => lexicon('msg_distinction_ooc_only', 'This is an Out-Of-Character distinction and cannot be given to a Persona.'),
+                'data'     => null,
+                'redirect' => null,
+            ], 422);
         }
 
         $record = ChronologicalRegister::create([
-            'user_id' => $targetUserId,
-            'persona_id' => $validated['persona_id'] ?? null,
-            'distinction_id' => $distinction->id,
+            'user_id'             => $targetUserId,
+            'persona_id'          => $validated['persona_id'] ?? null,
+            'distinction_id'      => $distinction->id,
             'register_event_mode' => 'award',
-            'chronicle_text' => $validated['chronicle_text'],
+            'chronicle_text'      => $validated['chronicle_text'],
             'authorising_user_id' => auth()->id(),
-            'scope_target' => $distinction->scope_target,
+            'scope_target'        => $distinction->scope_target,
         ]);
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_distinction_issued', 'Distinction issued and added to chronological register!'), 'data' => $record, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_distinction_issued', 'Distinction issued and added to chronological register!'),
+            'data'     => $record,
+            'redirect' => null,
+        ], 200);
     }
 
-    public function removeAward(Request $request, ChronologicalRegister $chronologicalRegister)
+    public function removeAward(Request $request, ChronologicalRegister $chronologicalRegister): JsonResponse
     {
+        $this->authoriseRegisterAccess();
+
         $validated = $request->validate([
             'chronicle_text' => 'required|string',
         ]);
 
         $record = ChronologicalRegister::create([
-            'user_id' => $chronologicalRegister->user_id,
-            'persona_id' => $chronologicalRegister->persona_id,
-            'distinction_id' => $chronologicalRegister->distinction_id,
+            'user_id'             => $chronologicalRegister->user_id,
+            'persona_id'          => $chronologicalRegister->persona_id,
+            'distinction_id'      => $chronologicalRegister->distinction_id,
             'register_event_mode' => $chronologicalRegister->register_event_mode,
-            'chronicle_text' => 'REVOKED: '.$validated['chronicle_text'],
+            'chronicle_text'      => 'REVOKED: ' . $validated['chronicle_text'],
             'authorising_user_id' => auth()->id(),
-            'scope_target' => $chronologicalRegister->scope_target ?? 'BOTH',
+            'scope_target'        => $chronologicalRegister->scope_target ?? 'BOTH',
         ]);
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_register_revoked', 'Action revoked and logged in chronological register.'), 'data' => $record, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_register_revoked', 'Action revoked and logged in chronological register.'),
+            'data'     => $record,
+            'redirect' => null,
+        ], 200);
     }
 
-    public function updateRecord(Request $request, ChronologicalRegister $chronologicalRegister)
+    public function updateRecord(Request $request, ChronologicalRegister $chronologicalRegister): JsonResponse
     {
+        $this->authoriseRegisterAccess();
+
         $validated = $request->validate([
-            'chronicle_text' => 'required|string',
-            'scope_target' => 'required|in:IC,OOC,BOTH',
+            'chronicle_text'      => 'required|string',
+            'scope_target'        => 'required|in:IC,OOC,BOTH',
             'register_event_mode' => ['nullable', 'string', Rule::in(ChronologicalRegister::allEventTypes())],
         ]);
 
         $updateData = [
             'chronicle_text' => $validated['chronicle_text'],
-            'scope_target' => $validated['scope_target'],
+            'scope_target'   => $validated['scope_target'],
         ];
 
         if (! empty($validated['register_event_mode']) && ! $chronologicalRegister->distinction_id) {
@@ -135,29 +192,41 @@ class ChronologicalRegisterController extends Controller
 
         $chronologicalRegister->update($updateData);
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_register_updated', 'Chronological register updated successfully.'), 'data' => $chronologicalRegister, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_register_updated', 'Chronological register updated successfully.'),
+            'data'     => $chronologicalRegister,
+            'redirect' => null,
+        ], 200);
     }
 
-    public function issueManualEntry(Request $request)
+    public function issueManualEntry(Request $request): JsonResponse
     {
+        $this->authoriseRegisterAccess();
+
         $validated = $request->validate([
-            'persona_id' => 'required|exists:personae,id',
+            'persona_id'          => 'required|exists:personae,id',
             'register_event_mode' => ['nullable', 'string', Rule::in(ChronologicalRegister::allEventTypes())],
-            'scope_target' => 'nullable|in:IC,OOC,BOTH',
-            'chronicle_text' => 'required|string',
+            'scope_target'        => 'nullable|in:IC,OOC,BOTH',
+            'chronicle_text'      => 'required|string',
         ]);
 
         $persona = Persona::findOrFail($validated['persona_id']);
 
         $record = ChronologicalRegister::create([
-            'user_id' => $persona->user_id,
-            'persona_id' => $persona->id,
+            'user_id'             => $persona->user_id,
+            'persona_id'          => $persona->id,
             'register_event_mode' => $validated['register_event_mode'] ?? 'manual_entry',
-            'chronicle_text' => $validated['chronicle_text'],
+            'chronicle_text'      => $validated['chronicle_text'],
             'authorising_user_id' => auth()->id(),
-            'scope_target' => $validated['scope_target'] ?? 'BOTH',
+            'scope_target'        => $validated['scope_target'] ?? 'BOTH',
         ]);
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_register_entry_added', 'Chronological register entry added.'), 'data' => $record, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_register_entry_added', 'Chronological register entry added.'),
+            'data'     => $record,
+            'redirect' => null,
+        ], 200);
     }
 }

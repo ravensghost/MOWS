@@ -10,12 +10,14 @@ use App\Models\Configuration;
 use App\Models\Persona;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
 
 class CommandCentreController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): View|JsonResponse
     {
         abort_unless(
             auth()->user()?->can('access-admin'),
@@ -31,14 +33,18 @@ class CommandCentreController extends Controller
         $assignments = Assignment::where('is_recruitment_open', true)
             ->withCount(['personae' => function ($query) {
                 $query->where('persona_status', 'active');
-            }])->get();
+            }])
+            ->get();
 
         $trueOpenSlots = $assignments->sum(function ($assignment) {
-            return max(0, $assignment->maximum_occupants - $assignment->personae_count);
+            return max(0, (int) $assignment->maximum_occupants - (int) $assignment->personae_count);
         });
 
         // Configurable inactivity threshold in days (defaults to 30 days)
-        $inactivityThresholdDays = max(1, (int) (Configuration::where('configuration_token', 'inactivity_threshold_days')->value('configuration_payload') ?? 30));
+        $inactivityThresholdDays = max(
+            1,
+            (int) (Configuration::where('configuration_token', 'inactivity_threshold_days')->value('configuration_payload') ?? 30)
+        );
 
         // Eager-load users with their personae, attributes, and latest folio timestamp
         $allUsers = User::with(['personae', 'attributes', 'roles'])
@@ -52,8 +58,8 @@ class CommandCentreController extends Controller
         $flaggedInactiveCount = 0;
 
         foreach ($allUsers as $user) {
-            $isOnLoa = $user->is_on_loa || $user->personae->whereIn('persona_status', ['loa', 'eloa'])->isNotEmpty();
-            $returnDate = $user->loa_return_date ? $user->loa_return_date->copy()->startOfDay() : null;
+            $isOnLoa = (bool) $user->is_on_loa || $user->personae->whereIn('persona_status', ['loa', 'eloa'])->isNotEmpty();
+            $returnDate = $user->loa_return_date ? Carbon::parse($user->loa_return_date)->copy()->startOfDay() : null;
 
             $daysRemaining = $returnDate ? (int) $today->diffInDays($returnDate, false) : null;
             $isExpired = $daysRemaining !== null && $daysRemaining < 0;
@@ -64,15 +70,15 @@ class CommandCentreController extends Controller
 
             if ($isOnLoa) {
                 $loaPlayers->push((object) [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'leave_type' => $leaveType,
-                    'return_date' => $returnDate ? $returnDate->format('Y-m-d') : null,
-                    'return_display' => $returnDate ? $returnDate->format('d M Y') : lexicon('label_common_NotSpecified', 'Not Specified'),
-                    'days_remaining' => $daysRemaining,
-                    'is_expired' => $isExpired,
-                    'persona_names' => $user->personae->pluck('persona_name')->implode(', ') ?: lexicon('label_common_None', 'None'),
+                    'id'              => $user->id,
+                    'name'            => $user->name,
+                    'email'           => $user->email,
+                    'leave_type'      => $leaveType,
+                    'return_date'     => $returnDate ? $returnDate->format('Y-m-d') : null,
+                    'return_display'  => $returnDate ? $returnDate->format('d M Y') : lexicon('label_common_NotSpecified', 'Not Specified'),
+                    'days_remaining'  => $daysRemaining,
+                    'is_expired'      => $isExpired,
+                    'persona_names'   => $user->personae->pluck('persona_name')->implode(', ') ?: lexicon('label_common_None', 'None'),
                 ]);
             }
 
@@ -90,30 +96,30 @@ class CommandCentreController extends Controller
             }
 
             $playerActivity->push((object) [
-                'id' => $user->id,
-                'name' => $user->name,
-                'role' => $user->role,
-                'persona_names' => $user->personae->pluck('persona_name')->implode(', ') ?: 'Unassigned',
-                'is_on_loa' => $isOnLoa,
-                'leave_type' => $isOnLoa ? $leaveType : 'ACTIVE',
-                'return_date' => $returnDate ? $returnDate->format('Y-m-d') : '',
-                'is_expired_loa' => $isExpired,
+                'id'               => $user->id,
+                'name'             => $user->name,
+                'role'             => $user->role,
+                'persona_names'    => $user->personae->pluck('persona_name')->implode(', ') ?: 'Unassigned',
+                'is_on_loa'        => $isOnLoa,
+                'leave_type'       => $isOnLoa ? $leaveType : 'ACTIVE',
+                'return_date'      => $returnDate ? $returnDate->format('Y-m-d') : '',
+                'is_expired_loa'   => $isExpired,
                 'last_login_human' => $lastLoginCarbon ? $lastLoginCarbon->diffForHumans() : 'Never',
-                'last_login_date' => $lastLoginCarbon ? $lastLoginCarbon->format('d M Y') : '—',
+                'last_login_date'  => $lastLoginCarbon ? $lastLoginCarbon->format('d M Y') : '—',
                 'days_since_login' => $daysSinceLogin,
-                'last_post_human' => $lastPostCarbon ? $lastPostCarbon->diffForHumans() : 'No posts yet',
-                'is_inactive' => $isInactive,
+                'last_post_human'  => $lastPostCarbon ? $lastPostCarbon->diffForHumans() : 'No posts yet',
+                'is_inactive'      => $isInactive,
             ]);
         }
 
         // Sort LOA players so expired returns appear first, then soonest return date
-        $loaPlayers = $loaPlayers->sortBy(function ($p) {
-            return $p->days_remaining ?? 9999;
+        $loaPlayers = $loaPlayers->sortBy(function ($player) {
+            return $player->days_remaining ?? 9999;
         })->values();
 
         // Sort activity list so flagged inactive players appear at the top
-        $playerActivity = $playerActivity->sortByDesc(function ($p) {
-            return ($p->is_inactive ? 100000 : 0) + $p->days_since_login;
+        $playerActivity = $playerActivity->sortByDesc(function ($player) {
+            return ($player->is_inactive ? 100000 : 0) + $player->days_since_login;
         })->values();
 
         // Aggregated monthly writing metrics scoreboard query (author_ledgers & folios)
@@ -133,24 +139,24 @@ class CommandCentreController extends Controller
             ->get();
 
         $payload = [
-            'systemBook' => $systemBook,
-            'pendingApps' => CandidatePetition::where('petition_status', 'Pending')->count(),
-            'activeUsers' => $allUsers->count(),
-            'totalCharacters' => Persona::where('persona_status', 'active')->count(),
-            'openPositions' => $trueOpenSlots,
-            'loaPlayers' => $loaPlayers,
-            'loaCount' => $loaPlayers->count(),
-            'playerActivity' => $playerActivity,
-            'flaggedInactiveCount' => $flaggedInactiveCount,
+            'systemBook'              => $systemBook,
+            'pendingApps'             => CandidatePetition::where('petition_status', 'Pending')->count(),
+            'activeUsers'             => $allUsers->count(),
+            'totalCharacters'         => Persona::where('persona_status', 'active')->count(),
+            'openPositions'           => $trueOpenSlots,
+            'loaPlayers'              => $loaPlayers,
+            'loaCount'                => $loaPlayers->count(),
+            'playerActivity'          => $playerActivity,
+            'flaggedInactiveCount'    => $flaggedInactiveCount,
             'inactivityThresholdDays' => $inactivityThresholdDays,
-            'currentMonthMetrics' => $currentMonthMetrics,
+            'currentMonthMetrics'     => $currentMonthMetrics,
         ];
 
         if ($request->wantsJson()) {
             return response()->json([
-                'status' => 'success',
-                'message' => lexicon('msg_CommandCentre_Loaded', 'Command Centre data retrieved successfully.'),
-                'data' => $payload,
+                'status'   => 'success',
+                'message'  => lexicon('msg_CommandCentre_Loaded', 'Command Centre data retrieved successfully.'),
+                'data'     => $payload,
                 'redirect' => null,
             ], 200);
         }
