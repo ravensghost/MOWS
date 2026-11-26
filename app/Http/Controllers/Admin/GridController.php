@@ -9,18 +9,31 @@ use Illuminate\Http\Request;
 
 class GridController extends Controller
 {
+    private function authoriseGridAccess(): void
+    {
+        $user = auth()->user();
+
+        abort_unless(
+            $user && ($user->can('manage_pages') || $user->can('manage_themes') || $user->can('access-admin')),
+            403,
+            lexicon('msg_Grid_Unauthorised', 'Unauthorised access to Grid Builder.')
+        );
+    }
+
     /**
      * Store a newly created grid and synchronise its grid modules.
      */
     public function store(Request $request): JsonResponse
     {
+        $this->authoriseGridAccess();
+
         $request->validate([
             'grid_title'    => 'required|string|max:255',
             'grid_synopsis' => 'nullable|string|max:255',
         ]);
 
         $grid = Grid::create($request->only(['grid_title', 'grid_synopsis']));
-        $this->syncGridModules($grid, $request->input('grid_modules', []));
+        $this->syncGridModules($grid, (array) $request->input('grid_modules', []));
 
         return response()->json([
             'status'   => 'success',
@@ -35,13 +48,15 @@ class GridController extends Controller
      */
     public function update(Request $request, Grid $grid): JsonResponse
     {
+        $this->authoriseGridAccess();
+
         $request->validate([
             'grid_title'    => 'required|string|max:255',
             'grid_synopsis' => 'nullable|string|max:255',
         ]);
 
         $grid->update($request->only(['grid_title', 'grid_synopsis']));
-        $this->syncGridModules($grid, $request->input('grid_modules', []));
+        $this->syncGridModules($grid, (array) $request->input('grid_modules', []));
 
         return response()->json([
             'status'   => 'success',
@@ -56,6 +71,8 @@ class GridController extends Controller
      */
     public function destroy(Grid $grid): JsonResponse
     {
+        $this->authoriseGridAccess();
+
         $grid->delete();
 
         return response()->json([
@@ -74,7 +91,7 @@ class GridController extends Controller
         $keptIds = [];
 
         foreach ($gridModules as $index => $moduleData) {
-            if (!empty($moduleData['grid_module_title'])) {
+            if (! empty($moduleData['grid_module_title'])) {
                 $gridModule = $grid->gridModules()->updateOrCreate(
                     ['id' => $moduleData['id'] ?? null],
                     [

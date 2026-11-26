@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Division;
 use App\Models\InsigniaCatalogue;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
@@ -18,9 +19,13 @@ class InsigniaCatalogueController extends Controller
         Cache::forget('widget_roster_sections');
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
+        abort_unless(
+            auth()->user()?->can('manage_ranks'),
+            403,
+            lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.')
+        );
 
         $request->validate([
             'catalogue_title' => 'required|string|max:255',
@@ -42,9 +47,13 @@ class InsigniaCatalogueController extends Controller
         ], 200);
     }
 
-    public function update(Request $request, InsigniaCatalogue$catalogue)
+    public function update(Request $request, InsigniaCatalogue $catalogue): JsonResponse
     {
-        abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
+        abort_unless(
+            auth()->user()?->can('manage_ranks'),
+            403,
+            lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.')
+        );
 
         $request->validate([
             'catalogue_title' => 'sometimes|required|string|max:255',
@@ -52,8 +61,10 @@ class InsigniaCatalogueController extends Controller
         ]);
 
         $catalogue->update([
-            'catalogue_title' => $request->input('catalogue_title',$catalogue->catalogue_title),
-            'is_visible'      => $request->boolean('is_visible',$catalogue->is_visible),
+            'catalogue_title' => $request->input('catalogue_title', $catalogue->catalogue_title),
+            'is_visible'      => $request->has('is_visible')
+                ? $request->boolean('is_visible')
+                : (bool) $catalogue->is_visible,
         ]);
 
         $this->clearRankCaches();
@@ -66,9 +77,13 @@ class InsigniaCatalogueController extends Controller
         ], 200);
     }
 
-    public function destroy(InsigniaCatalogue $catalogue)
+    public function destroy(InsigniaCatalogue $catalogue): JsonResponse
     {
-        abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
+        abort_unless(
+            auth()->user()?->can('manage_ranks'),
+            403,
+            lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.')
+        );
 
         $catalogue->delete();
 
@@ -82,14 +97,23 @@ class InsigniaCatalogueController extends Controller
         ], 200);
     }
 
-    public function assignSections(Request $request, InsigniaCatalogue$catalogue)
+    public function assignSections(Request $request, InsigniaCatalogue $catalogue): JsonResponse
     {
-        abort_unless(auth()->user()->can('manage_ranks'), 403, lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.'));
+        abort_unless(
+            auth()->user()?->can('manage_ranks'),
+            403,
+            lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.')
+        );
+
+        $validated = $request->validate([
+            'divisions'   => 'nullable|array',
+            'divisions.*' => 'exists:divisions,id',
+        ]);
 
         Division::where('insignia_catalogue_id', $catalogue->id)->update(['insignia_catalogue_id' => null]);
 
-        if ($request->has('divisions') && is_array($request->input('divisions'))) {
-            Division::whereIn('id', $request->input('divisions'))->update(['insignia_catalogue_id' =>$catalogue->id]);
+        if (! empty($validated['divisions']) && is_array($validated['divisions'])) {
+            Division::whereIn('id', $validated['divisions'])->update(['insignia_catalogue_id' => $catalogue->id]);
         }
 
         $this->clearRankCaches();

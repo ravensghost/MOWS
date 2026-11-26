@@ -9,10 +9,13 @@ use App\Models\Division;
 use App\Models\DivisionCatalogue;
 use App\Models\InsigniaCatalogue;
 use App\Services\AILoreService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DivisionController extends Controller
 {
@@ -27,9 +30,13 @@ class DivisionController extends Controller
         Cache::forget('widget_manifest_sections');
     }
 
-    public function index()
+    public function index(): View
     {
-        abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
+        abort_unless(
+            auth()->user()?->can('manage_sections'),
+            403,
+            lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.')
+        );
 
         $systemBook = Book::where('book_url', 'admin/sections')
             ->where('is_published', true)
@@ -49,86 +56,123 @@ class DivisionController extends Controller
         return view('admin.divisions', compact('sections', 'catalogues', 'systemBook'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
+        abort_unless(
+            auth()->user()?->can('manage_sections'),
+            403,
+            lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.')
+        );
 
         $validated = $request->validate([
-            'division_title' => 'required|string|max:255',
-            'division_base_colour' => 'nullable|string|max:9',
-            'division_description' => 'nullable|string',
-            'division_sort_order' => 'nullable|integer',
-            'is_visible' => 'nullable|boolean',
+            'division_title'        => 'required|string|max:255',
+            'division_base_colour'  => 'nullable|string|max:9',
+            'division_synopsis'     => 'nullable|string',
+            'division_description'  => 'nullable|string',
+            'division_sort_order'   => 'nullable|integer',
+            'is_visible'            => 'nullable|boolean',
             'division_catalogue_id' => 'nullable|exists:division_catalogues,id',
             'insignia_catalogue_id' => 'nullable|exists:insignia_catalogues,id',
         ]);
 
+        $synopsis = $validated['division_synopsis'] ?? $validated['division_description'] ?? null;
+
         $model = Division::create([
-            'division_title' => $validated['division_title'],
-            'division_description' => $validated['division_description'] ?? null,
-            'division_base_colour' => $validated['division_base_colour'] ?? '#374151',
-            'division_sort_order' => $validated['division_sort_order'] ?? 0,
-            'is_visible' => $request->boolean('is_visible', false),
+            'division_title'        => $validated['division_title'],
+            'division_synopsis'     => $synopsis,
+            'division_base_colour'  => $validated['division_base_colour'] ?? '#374151',
+            'division_sort_order'   => $validated['division_sort_order'] ?? 0,
+            'is_visible'            => $request->boolean('is_visible', false),
             'division_catalogue_id' => $validated['division_catalogue_id'] ?? null,
             'insignia_catalogue_id' => $validated['insignia_catalogue_id'] ?? null,
         ]);
 
         $this->clearDivisionCaches();
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_SectionsPositions_SectionCreated', 'Section created successfully.'), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_SectionsPositions_SectionCreated', 'Section created successfully.'),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 
-    public function update(Request $request, Division $division)
+    public function update(Request $request, Division $division): JsonResponse
     {
-        abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
+        abort_unless(
+            auth()->user()?->can('manage_sections'),
+            403,
+            lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.')
+        );
 
         $validated = $request->validate([
-            'division_title' => 'required|string|max:255',
-            'division_base_colour' => 'required|string|max:9',
-            'division_description' => 'nullable|string',
-            'division_sort_order' => 'required|integer',
-            'is_visible' => 'nullable|boolean',
+            'division_title'        => 'required|string|max:255',
+            'division_base_colour'  => 'required|string|max:9',
+            'division_synopsis'     => 'nullable|string',
+            'division_description'  => 'nullable|string',
+            'division_sort_order'   => 'required|integer',
+            'is_visible'            => 'nullable|boolean',
             'division_catalogue_id' => 'nullable|exists:division_catalogues,id',
             'insignia_catalogue_id' => 'nullable|exists:insignia_catalogues,id',
         ]);
 
+        $synopsis = array_key_exists('division_synopsis', $validated)
+            ? $validated['division_synopsis']
+            : ($validated['division_description'] ?? $division->division_synopsis);
+
         $division->update([
-            'division_title' => $validated['division_title'],
-            'division_description' => $validated['division_description'] ?? null,
-            'division_base_colour' => $validated['division_base_colour'],
-            'division_sort_order' => $validated['division_sort_order'],
-            'is_visible' => $request->boolean('is_visible', false),
+            'division_title'        => $validated['division_title'],
+            'division_synopsis'     => $synopsis,
+            'division_base_colour'  => $validated['division_base_colour'],
+            'division_sort_order'   => $validated['division_sort_order'],
+            'is_visible'            => $request->boolean('is_visible', false),
             'division_catalogue_id' => $validated['division_catalogue_id'] ?? null,
             'insignia_catalogue_id' => $validated['insignia_catalogue_id'] ?? $division->insignia_catalogue_id,
         ]);
 
-        $model = $division;
-
         $this->clearDivisionCaches();
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_SectionsPositions_SectionUpdated', 'Section updated successfully.'), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_SectionsPositions_SectionUpdated', 'Section updated successfully.'),
+            'data'     => $division,
+            'redirect' => null,
+        ], 200);
     }
 
-    public function destroy(Division $division)
+    public function destroy(Division $division): JsonResponse
     {
-        abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
+        abort_unless(
+            auth()->user()?->can('manage_sections'),
+            403,
+            lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.')
+        );
 
         $model = $division;
         $division->delete();
 
         $this->clearDivisionCaches();
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_SectionsPositions_SectionDeleted', 'Section deleted successfully.'), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_SectionsPositions_SectionDeleted', 'Section deleted successfully.'),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 
-    public function generateDescription(Request $request, AILoreService $aiLoreService)
+    public function generateDescription(Request $request, AILoreService $aiLoreService): JsonResponse
     {
-        abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
+        abort_unless(
+            auth()->user()?->can('manage_sections'),
+            403,
+            lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.')
+        );
 
         $divisionTitle = trim((string) $request->input('division_title', $request->input('name', '')));
         $hint = trim((string) $request->input('prompt_hint', ''));
 
-        if (empty($divisionTitle)) {
+        if ($divisionTitle === '') {
             throw ValidationException::withMessages([
                 'division_title' => [lexicon('msg_SectionsPositions_EnterNameFirst', 'Please enter a Section Name first.')],
             ]);
@@ -136,49 +180,52 @@ class DivisionController extends Controller
 
         try {
             $generatedText = $aiLoreService->generateSectionDescription($divisionTitle, $hint);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $generatedText = "The {$divisionTitle} division is responsible for maintaining operational integrity and strategic objectives.";
         }
 
         $model = (object) [
-            'division_description' => $generatedText,
-            'description' => $generatedText,
+            'division_synopsis' => $generatedText,
+            'synopsis'          => $generatedText,
         ];
 
         return response()->json([
-            'status' => 'success',
-            'message' => lexicon('msg_SectionsPositions_DescGenerated', 'Section description generated successfully.'),
-            'data' => $model,
-            'division_description' => $generatedText,
-            'description' => $generatedText,
+            'status'   => 'success',
+            'message'  => lexicon('msg_SectionsPositions_DescGenerated', 'Section synopsis generated successfully.'),
+            'data'     => $model,
             'redirect' => null,
         ], 200);
     }
 
-    public function export()
+    public function export(): StreamedResponse
     {
-        abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
+        abort_unless(
+            auth()->user()?->can('manage_sections'),
+            403,
+            lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.')
+        );
 
         $divisions = Division::with(['insigniaCatalogue', 'divisionCatalogue', 'assignments'])
             ->orderBy('division_sort_order')
             ->get()
-            ->map(function ($division) {
+            ->map(function (Division $division) {
                 return [
-                    'division_title' => $division->division_title,
-                    'division_description' => $division->division_description,
-                    'division_base_colour' => $division->division_base_colour,
-                    'division_sort_order' => $division->division_sort_order,
-                    'is_visible' => (bool) $division->is_visible,
+                    'division_title'        => $division->division_title,
+                    'division_synopsis'     => $division->division_synopsis,
+                    'division_base_colour'  => $division->division_base_colour,
+                    'division_sort_order'   => $division->division_sort_order,
+                    'is_visible'            => (bool) $division->is_visible,
                     'division_catalogue_id' => $division->division_catalogue_id,
                     'insignia_catalogue_id' => $division->insignia_catalogue_id,
                     'insignia_catalogue_code' => $division->insigniaCatalogue?->catalogue_code,
-                    'assignments' => $division->assignments->map(function ($assignment) {
+                    'assignments'           => $division->assignments->map(function (Assignment $assignment) {
                         return [
-                            'assignment_title' => $assignment->assignment_title,
-                            'assignment_description' => $assignment->assignment_description,
-                            'maximum_occupants' => $assignment->maximum_occupants,
-                            'is_recruitment_open' => (bool) $assignment->is_recruitment_open,
-                            'is_visible' => (bool) $assignment->is_visible,
+                            'assignment_title'      => $assignment->assignment_title,
+                            'assignment_synopsis'   => $assignment->assignment_synopsis,
+                            'assignment_sort_order' => $assignment->assignment_sort_order,
+                            'maximum_occupants'     => $assignment->maximum_occupants,
+                            'is_recruitment_open'   => (bool) $assignment->is_recruitment_open,
+                            'is_visible'            => (bool) $assignment->is_visible,
                         ];
                     })->all(),
                 ];
@@ -186,9 +233,9 @@ class DivisionController extends Controller
 
         $manifest = [
             'meta' => [
-                'engine' => 'MOWS Engine',
-                'type' => 'divisions_assignments_manifest',
-                'version' => '2.0',
+                'engine'      => 'MOWS Engine',
+                'type'        => 'divisions_assignments_manifest',
+                'version'     => '2.0',
                 'exported_at' => now()->toIso8601String(),
             ],
             'divisions' => $divisions->all(),
@@ -201,34 +248,39 @@ class DivisionController extends Controller
         ]);
     }
 
-    public function template()
+    public function template(): StreamedResponse
     {
-        abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
+        abort_unless(
+            auth()->user()?->can('manage_sections'),
+            403,
+            lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.')
+        );
 
         $template = [
             'meta' => [
-                'engine' => 'MOWS Engine',
-                'type' => 'divisions_assignments_manifest',
-                'version' => '2.0',
+                'engine'      => 'MOWS Engine',
+                'type'        => 'divisions_assignments_manifest',
+                'version'     => '2.0',
                 'exported_at' => now()->toIso8601String(),
             ],
             'divisions' => [
                 [
-                    'division_title' => 'Command',
-                    'division_description' => 'Station command and executive management.',
-                    'division_base_colour' => '#dc2626',
-                    'division_sort_order' => 1,
-                    'is_visible' => true,
-                    'division_catalogue_id' => null,
-                    'insignia_catalogue_id' => null,
+                    'division_title'          => 'Command',
+                    'division_synopsis'       => 'Station command and executive management.',
+                    'division_base_colour'    => '#dc2626',
+                    'division_sort_order'     => 1,
+                    'is_visible'              => true,
+                    'division_catalogue_id'   => null,
+                    'insignia_catalogue_id'   => null,
                     'insignia_catalogue_code' => 'writers',
-                    'assignments' => [
+                    'assignments'             => [
                         [
-                            'assignment_title' => 'Commanding Officer',
-                            'assignment_description' => 'Overall station command.',
-                            'maximum_occupants' => 1,
-                            'is_recruitment_open' => true,
-                            'is_visible' => true,
+                            'assignment_title'      => 'Commanding Officer',
+                            'assignment_synopsis'   => 'Overall station command.',
+                            'assignment_sort_order' => 1,
+                            'maximum_occupants'     => 1,
+                            'is_recruitment_open'   => true,
+                            'is_visible'            => true,
                         ],
                     ],
                 ],
@@ -242,9 +294,13 @@ class DivisionController extends Controller
         ]);
     }
 
-    public function import(Request $request)
+    public function import(Request $request): JsonResponse
     {
-        abort_unless(auth()->user()?->can('manage_sections'), 403, lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.'));
+        abort_unless(
+            auth()->user()?->can('manage_sections'),
+            403,
+            lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.')
+        );
 
         $request->validate([
             'file' => 'required|file|mimes:json,txt|max:2048',
@@ -253,7 +309,7 @@ class DivisionController extends Controller
 
         $path = $request->file('file')->getRealPath();
         $content = file_get_contents($path);
-        $data = json_decode($content, true);
+        $data = json_decode((string) $content, true);
 
         if (! isset($data['divisions']) || ! is_array($data['divisions'])) {
             throw ValidationException::withMessages([
@@ -278,27 +334,28 @@ class DivisionController extends Controller
                 $division = Division::updateOrCreate(
                     ['division_title' => $divData['division_title']],
                     [
-                        'division_description' => $divData['division_description'] ?? null,
-                        'division_base_colour' => $divData['division_base_colour'] ?? '#374151',
-                        'division_sort_order' => $divData['division_sort_order'] ?? 0,
-                        'is_visible' => $divData['is_visible'] ?? true,
+                        'division_synopsis'     => $divData['division_synopsis'] ?? ($divData['division_description'] ?? null),
+                        'division_base_colour'  => $divData['division_base_colour'] ?? '#374151',
+                        'division_sort_order'   => $divData['division_sort_order'] ?? 0,
+                        'is_visible'            => $divData['is_visible'] ?? true,
                         'division_catalogue_id' => $divData['division_catalogue_id'] ?? null,
                         'insignia_catalogue_id' => $insigniaCatalogueId,
                     ]
                 );
 
                 if (! empty($divData['assignments']) && is_array($divData['assignments'])) {
-                    foreach ($divData['assignments'] as $assignData) {
+                    foreach ($divData['assignments'] as $index => $assignData) {
                         Assignment::updateOrCreate(
                             [
-                                'division_id' => $division->id,
+                                'division_id'      => $division->id,
                                 'assignment_title' => $assignData['assignment_title'],
                             ],
                             [
-                                'assignment_description' => $assignData['assignment_description'] ?? null,
-                                'maximum_occupants' => $assignData['maximum_occupants'] ?? 1,
-                                'is_recruitment_open' => $assignData['is_recruitment_open'] ?? true,
-                                'is_visible' => $assignData['is_visible'] ?? true,
+                                'assignment_synopsis'   => $assignData['assignment_synopsis'] ?? ($assignData['assignment_description'] ?? null),
+                                'assignment_sort_order' => $assignData['assignment_sort_order'] ?? ($index + 1),
+                                'maximum_occupants'     => $assignData['maximum_occupants'] ?? 1,
+                                'is_recruitment_open'   => $assignData['is_recruitment_open'] ?? true,
+                                'is_visible'            => $assignData['is_visible'] ?? true,
                             ]
                         );
                     }
@@ -308,10 +365,13 @@ class DivisionController extends Controller
             }
         });
 
-        $model = $importedDivisions;
-
         $this->clearDivisionCaches();
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_SectionsPositions_ImportSuccess', 'Divisions and assignments imported successfully.'), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_SectionsPositions_ImportSuccess', 'Divisions and assignments imported successfully.'),
+            'data'     => $importedDivisions,
+            'redirect' => null,
+        ], 200);
     }
 }

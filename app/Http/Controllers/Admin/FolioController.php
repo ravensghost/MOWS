@@ -9,9 +9,22 @@ use Illuminate\Http\Request;
 
 class FolioController extends Controller
 {
-    public function move(Request $request,$id): JsonResponse
+    private function authoriseFolioAdminAccess(): void
     {
-        $validated =$request->validate([
+        $user = auth()->user();
+
+        abort_unless(
+            $user && ($user->can('manage_stories') || $user->can('access-admin')),
+            403,
+            lexicon('msg_Folio_Unauthorised', 'Unauthorised access to Folio Management.')
+        );
+    }
+
+    public function move(Request $request, int|string $id): JsonResponse
+    {
+        $this->authoriseFolioAdminAccess();
+
+        $validated = $request->validate([
             'volume_id' => 'required|exists:volumes,id',
         ]);
 
@@ -26,9 +39,12 @@ class FolioController extends Controller
         ], 200);
     }
 
-    public function destroy($id): JsonResponse
+    public function destroy(int|string $id): JsonResponse
     {
-        $folio = Folio::findOrFail($id);$folio->delete();
+        $this->authoriseFolioAdminAccess();
+
+        $folio = Folio::findOrFail($id);
+        $folio->delete();
 
         return response()->json([
             'status'   => 'success',
@@ -40,7 +56,15 @@ class FolioController extends Controller
 
     public function reorder(Request $request): JsonResponse
     {
-        foreach ($request->input('items', []) as$item) {
+        $this->authoriseFolioAdminAccess();
+
+        $validated = $request->validate([
+            'items'                    => 'nullable|array',
+            'items.*.id'               => 'required|exists:folios,id',
+            'items.*.folio_sort_order' => 'required|integer',
+        ]);
+
+        foreach ($validated['items'] ?? [] as $item) {
             Folio::where('id', $item['id'])->update([
                 'folio_sort_order' => $item['folio_sort_order'],
             ]);
@@ -56,7 +80,9 @@ class FolioController extends Controller
 
     public function aiGenerate(Request $request): JsonResponse
     {
-        $validated =$request->validate([
+        $this->authoriseFolioAdminAccess();
+
+        $validated = $request->validate([
             'prompt'    => 'required|string',
             'folio_id'  => 'nullable|exists:folios,id',
             'volume_id' => 'nullable|exists:volumes,id',
