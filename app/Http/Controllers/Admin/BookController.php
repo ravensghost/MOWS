@@ -10,6 +10,7 @@ use App\Models\Module;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\View\View;
 use Spatie\Permission\Models\Permission;
 use Stevebauman\Purify\Facades\Purify;
 
@@ -18,13 +19,13 @@ class BookController extends Controller
     /**
      * Display a listing of books and grid configurations.
      */
-    public function index()
+    public function index(): View
     {
         $systemBook = Book::with([
             'grid.gridModules',
             'modules' => function ($query) {
                 $query->orderBy('book_modules.module_sort_order');
-            }
+            },
         ])
             ->where('book_url', 'admin/books')
             ->where('is_published', true)
@@ -51,13 +52,13 @@ class BookController extends Controller
     /**
      * Show the form for creating a new book.
      */
-    public function create()
+    public function create(): View
     {
         $systemBook = Book::with([
             'grid.gridModules',
             'modules' => function ($query) {
                 $query->orderBy('book_modules.module_sort_order');
-            }
+            },
         ])
             ->where('book_url', 'admin/books-grid-builder')
             ->where('is_published', true)
@@ -85,13 +86,13 @@ class BookController extends Controller
     /**
      * Show the form for editing the specified book.
      */
-    public function edit(Book $book)
+    public function edit(Book $book): View
     {
         $systemBook = Book::with([
             'grid.gridModules',
             'modules' => function ($query) {
                 $query->orderBy('book_modules.module_sort_order');
-            }
+            },
         ])
             ->where('book_url', 'admin/books-grid-builder')
             ->where('is_published', true)
@@ -120,8 +121,17 @@ class BookController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $rawUrl = $request->filled('book_url') ? $request->book_url : $request->book_title;
-        $bookUrl = $rawUrl === '/' ? '/' : collect(explode('/', $rawUrl))->map(fn($s) => Str::slug($s))->filter()->implode('/');
+        $validated = $request->validate([
+            'book_title'   => 'required|string|max:255',
+            'book_url'     => 'nullable|string|max:255',
+            'grid_id'      => 'nullable|exists:grids,id',
+            'is_published' => 'nullable|boolean',
+        ]);
+
+        $rawUrl = $request->filled('book_url') ? $validated['book_url'] : $validated['book_title'];
+        $bookUrl = $rawUrl === '/'
+            ? '/'
+            : collect(explode('/', $rawUrl))->map(fn (string $segment) => Str::slug($segment))->filter()->implode('/');
 
         if (Book::where('book_url', $bookUrl)->exists()) {
             return response()->json([
@@ -133,17 +143,22 @@ class BookController extends Controller
         }
 
         $book = Book::create([
-            'book_title'   => $request->book_title,
+            'book_title'   => $validated['book_title'],
             'book_url'     => $bookUrl,
             'is_published' => $request->boolean('is_published', false),
-            'grid_id'      => $request->grid_id,
+            'grid_id'      => $validated['grid_id'] ?? null,
         ]);
 
         $this->syncBookModules($book, $request);
 
         $model = $book->load('modules');
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_Book_Created', 'Book created successfully.'), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Book_Created', 'Book created successfully.'),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 
     /**
@@ -151,8 +166,17 @@ class BookController extends Controller
      */
     public function update(Request $request, Book $book): JsonResponse
     {
-        $rawUrl = $request->filled('book_url') ? $request->book_url : $request->book_title;
-        $bookUrl = $rawUrl === '/' ? '/' : collect(explode('/', $rawUrl))->map(fn($s) => Str::slug($s))->filter()->implode('/');
+        $validated = $request->validate([
+            'book_title'   => 'required|string|max:255',
+            'book_url'     => 'nullable|string|max:255',
+            'grid_id'      => 'nullable|exists:grids,id',
+            'is_published' => 'nullable|boolean',
+        ]);
+
+        $rawUrl = $request->filled('book_url') ? $validated['book_url'] : $validated['book_title'];
+        $bookUrl = $rawUrl === '/'
+            ? '/'
+            : collect(explode('/', $rawUrl))->map(fn (string $segment) => Str::slug($segment))->filter()->implode('/');
 
         if (Book::where('book_url', $bookUrl)->where('id', '!=', $book->id)->exists()) {
             return response()->json([
@@ -164,17 +188,22 @@ class BookController extends Controller
         }
 
         $book->update([
-            'book_title'   => $request->book_title,
+            'book_title'   => $validated['book_title'],
             'book_url'     => $bookUrl,
             'is_published' => $request->boolean('is_published', false),
-            'grid_id'      => $request->grid_id,
+            'grid_id'      => $validated['grid_id'] ?? null,
         ]);
 
         $this->syncBookModules($book, $request);
 
         $model = $book->load('modules');
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_Book_Updated', 'Book updated successfully.'), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Book_Updated', 'Book updated successfully.'),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 
     /**
@@ -185,7 +214,12 @@ class BookController extends Controller
         $model = $book;
         $book->delete();
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_Book_Deleted', 'Book deleted successfully.'), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Book_Deleted', 'Book deleted successfully.'),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 
     /**
@@ -198,7 +232,7 @@ class BookController extends Controller
 
         if (is_array($modulesInput)) {
             foreach ($modulesInput as $moduleId => $data) {
-                if (isset($data['selected']) && $data['selected'] == '1') {
+                if (isset($data['selected']) && (string) $data['selected'] === '1') {
                     $payloads = $data['book_config'] ?? [];
 
                     if (isset($payloads['content'])) {

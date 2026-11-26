@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -12,31 +13,34 @@ class AssetController extends Controller
     /**
      * List all images available in /public/images/general/
      */
-    public function index()
+    public function index(): JsonResponse
     {
-        abort_unless(auth()->user()->can('manage_themes') || auth()->user()->can('manage_pages'), 403, 'Unauthorised action.');
+        abort_unless(
+            auth()->user()?->can('manage_themes') || auth()->user()?->can('manage_pages'),
+            403,
+            lexicon('msg_GeneralImage_Unauthorised', 'Unauthorised access to Asset Management.')
+        );
 
         $path = public_path('images/general');
-        if (!File::exists($path)) {
+        if (! File::exists($path)) {
             File::makeDirectory($path, 0755, true);
         }
 
-        $files = File::files($path);$images = [];
+        $files = File::files($path);
+        $images = [];
 
-        foreach ($files as $file) {$images[] = [
+        foreach ($files as $file) {
+            $images[] = [
                 'filename' => $file->getFilename(),
                 'url'      => asset('images/general/' . $file->getFilename()),
                 'size'     => round($file->getSize() / 1024, 1) . ' KB',
             ];
         }
 
-        $model =$images;
-
         return response()->json([
             'status'   => 'success',
             'message'  => lexicon('msg_GeneralImage_Loaded', 'Assets loaded successfully.'),
-            'data'     => $model,
-            'images'   => $images,
+            'data'     => $images,
             'redirect' => null,
         ], 200);
     }
@@ -44,26 +48,31 @@ class AssetController extends Controller
     /**
      * Upload a new general site asset into /public/images/general/
      */
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        abort_unless(auth()->user()->can('manage_themes') || auth()->user()->can('manage_pages'), 403, 'Unauthorised action.');
+        abort_unless(
+            auth()->user()?->can('manage_themes') || auth()->user()?->can('manage_pages'),
+            403,
+            lexicon('msg_GeneralImage_Unauthorised', 'Unauthorised access to Asset Management.')
+        );
 
         $request->validate([
             'file' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp,svg', 'max:10240'], // Capped at 10 MB per hosting limit
         ]);
 
         $destinationPath = public_path('images/general');
-        if (!File::exists($destinationPath)) {
+        if (! File::exists($destinationPath)) {
             File::makeDirectory($destinationPath, 0755, true);
         }
 
-        $file =$request->file('file');
+        $file = $request->file('file');
         $extension = strtolower($file->getClientOriginalExtension() ?: 'webp');
         $filename = 'gen_' . time() . '_' . Str::lower(Str::random(5)) . '.' . $extension;
 
-        $file->move($destinationPath,$filename);
+        $file->move($destinationPath, $filename);
 
-        $url = asset('images/general/' . $filename);$model = [
+        $url = asset('images/general/' . $filename);
+        $model = [
             'filename' => $filename,
             'url'      => $url,
         ];
@@ -72,8 +81,6 @@ class AssetController extends Controller
             'status'   => 'success',
             'message'  => lexicon('msg_GeneralImage_UploadSuccess', 'General site asset uploaded successfully.'),
             'data'     => $model,
-            'url'      => $url,
-            'filename' => $filename,
             'redirect' => null,
         ], 200);
     }
@@ -81,22 +88,30 @@ class AssetController extends Controller
     /**
      * Delete a general site asset from /public/images/general/
      */
-    public function destroy(Request $request)
+    public function destroy(Request $request): JsonResponse
     {
-        abort_unless(auth()->user()->can('manage_themes') || auth()->user()->can('manage_pages'), 403, 'Unauthorised action.');
+        abort_unless(
+            auth()->user()?->can('manage_themes') || auth()->user()?->can('manage_pages'),
+            403,
+            lexicon('msg_GeneralImage_Unauthorised', 'Unauthorised access to Asset Management.')
+        );
 
         $request->validate([
             'filename' => ['required', 'string'],
         ]);
 
-        $filename = basename($request->filename);
-        $filePath = public_path('images/general/' .$filename);
+        $filename = basename((string) $request->input('filename'));
+        $filePath = public_path('images/general/' . $filename);
 
         if (File::exists($filePath)) {
             File::delete($filePath);
-            $model = ['filename' =>$filename];
 
-            return response()->json(['status' => 'success', 'message' => lexicon('msg_GeneralImage_Deleted', 'Asset removed successfully.'), 'data' => $model, 'redirect' => null], 200);
+            return response()->json([
+                'status'   => 'success',
+                'message'  => lexicon('msg_GeneralImage_Deleted', 'Asset removed successfully.'),
+                'data'     => ['filename' => $filename],
+                'redirect' => null,
+            ], 200);
         }
 
         return response()->json([
