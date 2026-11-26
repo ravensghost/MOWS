@@ -4,13 +4,18 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\DistinctionCatalogue;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DistinctionCatalogueController extends Controller
 {
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorised action.');
+        abort_unless(
+            auth()->user()?->can('issue_awards'),
+            403,
+            lexicon('msg_Awards_Unauthorised', 'Unauthorised action.')
+        );
 
         $validated = $request->validate([
             'catalogue_title' => 'required|string|max:255',
@@ -26,9 +31,13 @@ class DistinctionCatalogueController extends Controller
         ], 200);
     }
 
-    public function update(Request $request, DistinctionCatalogue $catalogue)
+    public function update(Request $request, DistinctionCatalogue $catalogue): JsonResponse
     {
-        abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorised action.');
+        abort_unless(
+            auth()->user()?->can('issue_awards'),
+            403,
+            lexicon('msg_Awards_Unauthorised', 'Unauthorised action.')
+        );
 
         $validated = $request->validate([
             'catalogue_title' => 'required|string|max:255',
@@ -44,9 +53,13 @@ class DistinctionCatalogueController extends Controller
         ], 200);
     }
 
-    public function destroy(DistinctionCatalogue $catalogue)
+    public function destroy(DistinctionCatalogue $catalogue): JsonResponse
     {
-        abort_unless(auth()->user()->can('issue_awards'), 403, 'Unauthorised action.');
+        abort_unless(
+            auth()->user()?->can('issue_awards'),
+            403,
+            lexicon('msg_Awards_Unauthorised', 'Unauthorised action.')
+        );
 
         $catalogue->delete();
 

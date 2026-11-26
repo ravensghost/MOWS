@@ -6,14 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Models\Book;
 use App\Models\ChronologicalEngine;
 use App\Models\Configuration;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\View\View;
 
 class ConfigurationController extends Controller
 {
-    public function index()
+    public function index(): View
     {
-        abort_unless(auth()->user()?->can('manage_settings'), 403, lexicon('msg_Settings_Unauthorised', 'Unauthorised access to Global Settings.'));
+        abort_unless(
+            auth()->user()?->can('manage_settings'),
+            403,
+            lexicon('msg_Settings_Unauthorised', 'Unauthorised access to Global Settings.')
+        );
 
         $systemBook = Book::where('book_url', 'admin/settings')
             ->where('is_published', true)
@@ -28,7 +34,7 @@ class ConfigurationController extends Controller
         $timeSystems = ChronologicalEngine::all();
         $customLanguages = Configuration::where('configuration_token', 'like', 'lexicon_label_%')
             ->get()
-            ->mapWithKeys(function ($setting) {
+            ->mapWithKeys(function (Configuration $setting) {
                 $code = str_replace('lexicon_label_', '', $setting->configuration_token);
 
                 return [$code => $setting->configuration_payload];
@@ -38,9 +44,13 @@ class ConfigurationController extends Controller
         return view('admin.configurations', compact('globalSettings', 'systemBook', 'timeSystems', 'customLanguages'));
     }
 
-    public function update(Request $request)
+    public function update(Request $request): JsonResponse
     {
-        abort_unless(auth()->user()?->can('manage_settings'), 403, lexicon('msg_Settings_Unauthorised', 'Unauthorised access to Global Settings.'));
+        abort_unless(
+            auth()->user()?->can('manage_settings'),
+            403,
+            lexicon('msg_Settings_Unauthorised', 'Unauthorised access to Global Settings.')
+        );
 
         $settings = $request->input('settings', []);
 
@@ -67,9 +77,9 @@ class ConfigurationController extends Controller
         Cache::forget('mows_lexicon');
 
         return response()->json([
-            'status' => 'success',
-            'message' => lexicon('msg_Settings_Updated', 'Global settings updated successfully.'),
-            'data' => $updatedConfigurations,
+            'status'   => 'success',
+            'message'  => lexicon('msg_Settings_Updated', 'Global settings updated successfully.'),
+            'data'     => $updatedConfigurations,
             'redirect' => null,
         ], 200);
     }

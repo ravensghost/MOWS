@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CandidatePetition;
 use App\Models\CouncilEvaluation;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CouncilEvaluationController extends Controller
@@ -35,7 +36,7 @@ class CouncilEvaluationController extends Controller
     /**
      * Store or update a council evaluation for a candidate petition.
      */
-    public function store(Request $request, $petitionId)
+    public function store(Request $request, int|string $petitionId): JsonResponse
     {
         $this->authoriseVoteAccess();
 
@@ -46,8 +47,13 @@ class CouncilEvaluationController extends Controller
 
         $petition = CandidatePetition::findOrFail($petitionId);
 
-        if (strtolower($petition->petition_status) !== 'pending') {
-            return response()->json(['status' => 'error', 'message' => lexicon('msg_Applications_NoLongerPending', 'This candidate petition is no longer pending.'), 'data' => $petition, 'redirect' => null], 422);
+        if (strtolower((string) $petition->petition_status) !== 'pending') {
+            return response()->json([
+                'status'   => 'error',
+                'message'  => lexicon('msg_Applications_NoLongerPending', 'This candidate petition is no longer pending.'),
+                'data'     => $petition,
+                'redirect' => null,
+            ], 422);
         }
 
         $model = CouncilEvaluation::updateOrCreate(
@@ -62,6 +68,11 @@ class CouncilEvaluationController extends Controller
             ]
         );
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_Applications_VoteCastSuccess', 'Your council evaluation has been successfully cast.'), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Applications_VoteCastSuccess', 'Your council evaluation has been successfully cast.'),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 }
