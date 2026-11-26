@@ -7,13 +7,28 @@ use App\Models\Book;
 use App\Models\PublicationState;
 use App\Models\Shelf;
 use App\Models\Volume;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\View\View;
 
 class PublicationController extends Controller
 {
-    public function storyManager()
+    private function authorisePublicationAccess(): void
     {
+        $user = auth()->user();
+
+        abort_unless(
+            $user && ($user->can('manage_stories') || $user->can('access-admin')),
+            403,
+            lexicon('msg_Story_Unauthorised', 'Unauthorised access to Publication Management.')
+        );
+    }
+
+    public function storyManager(): View
+    {
+        $this->authorisePublicationAccess();
+
         $systemBook = Book::whereIn('book_url', ['admin/volumes', 'admin/story'])
             ->where('is_published', true)
             ->with(['grid.gridModules', 'modules'])
@@ -58,8 +73,10 @@ class PublicationController extends Controller
         return view('admin.publication', compact('systemBook', 'shelves', 'looseVolumes', 'statuses'));
     }
 
-    public function storeStatus(Request $request)
+    public function storeStatus(Request $request): JsonResponse
     {
+        $this->authorisePublicationAccess();
+
         $validated = $request->validate([
             'state_title' => 'required|string|max:255',
         ]);
@@ -67,21 +84,23 @@ class PublicationController extends Controller
         $maxOrder = PublicationState::max('state_sort_order') ?? 0;
 
         $status = PublicationState::create([
-            'state_title' => $validated['state_title'],
-            'book_url' => Str::slug($validated['state_title']),
+            'state_title'      => $validated['state_title'],
+            'book_url'         => Str::slug($validated['state_title']),
             'state_sort_order' => $maxOrder + 1,
         ]);
 
         return response()->json([
-            'status' => 'success',
-            'message' => lexicon('msg_Story_StatusCreated', 'Publication state created successfully.'),
-            'data' => $status,
+            'status'   => 'success',
+            'message'  => lexicon('msg_Story_StatusCreated', 'Publication state created successfully.'),
+            'data'     => $status,
             'redirect' => null,
         ], 200);
     }
 
-    public function updateStatus(Request $request, $id)
+    public function updateStatus(Request $request, int|string $id): JsonResponse
     {
+        $this->authorisePublicationAccess();
+
         $validated = $request->validate([
             'state_title' => 'required|string|max:255',
         ]);
@@ -89,25 +108,27 @@ class PublicationController extends Controller
         $status = PublicationState::findOrFail($id);
         $status->update([
             'state_title' => $validated['state_title'],
-            'book_url' => Str::slug($validated['state_title']),
+            'book_url'    => Str::slug($validated['state_title']),
         ]);
 
         return response()->json([
-            'status' => 'success',
-            'message' => lexicon('msg_Story_StatusUpdated', 'Publication state updated successfully.'),
-            'data' => $status,
+            'status'   => 'success',
+            'message'  => lexicon('msg_Story_StatusUpdated', 'Publication state updated successfully.'),
+            'data'     => $status,
             'redirect' => null,
         ], 200);
     }
 
-    public function destroyStatus($id)
+    public function destroyStatus(int|string $id): JsonResponse
     {
+        $this->authorisePublicationAccess();
+
         PublicationState::findOrFail($id)->delete();
 
         return response()->json([
-            'status' => 'success',
-            'message' => lexicon('msg_Story_StatusDeleted', 'Publication state deleted successfully.'),
-            'data' => null,
+            'status'   => 'success',
+            'message'  => lexicon('msg_Story_StatusDeleted', 'Publication state deleted successfully.'),
+            'data'     => null,
             'redirect' => null,
         ], 200);
     }

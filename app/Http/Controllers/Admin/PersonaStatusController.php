@@ -5,20 +5,30 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ChronologicalRegister;
 use App\Models\Persona;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
 class PersonaStatusController extends Controller
 {
-    public function __invoke(Request $request)
+    public function __invoke(Request $request): JsonResponse
     {
-        $validated =$request->validate([
+        $user = auth()->user();
+        abort_unless(
+            $user && ($user->can('manage_character_status') || $user->can('manage_applications') || $user->can('access-admin')),
+            403,
+            lexicon('msg_PersonaStatus_Unauthorised', 'Unauthorised access to Persona Status Management.')
+        );
+
+        $validated = $request->validate([
             'persona_id'     => 'required|exists:personae,id',
             'persona_status' => 'required|in:active,loa,eloa,honoured_dead,memorial',
             'chronicle_text' => 'required|string',
         ]);
 
-        $persona = Persona::findOrFail($validated['persona_id']);$persona->persona_status = $validated['persona_status'];$persona->save();
+        $persona = Persona::findOrFail($validated['persona_id']);
+        $persona->persona_status = $validated['persona_status'];
+        $persona->save();
 
         Cache::forget('widget_roster_sections');
         Cache::forget('widget_personae_table_sections');
@@ -31,7 +41,7 @@ class PersonaStatusController extends Controller
             'memorial'      => 'Memorial',
         ];
 
-        $statusName =$statusLabels[$validated['persona_status']] ?? $validated['persona_status'];
+        $statusName = $statusLabels[$validated['persona_status']] ?? $validated['persona_status'];
 
         ChronologicalRegister::create([
             'user_id'             => $persona->user_id,
@@ -42,6 +52,11 @@ class PersonaStatusController extends Controller
             'scope_target'        => 'BOTH',
         ]);
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_PersonaStatus_Updated', 'Persona status updated and logged in chronological register!'), 'data' => $persona, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_PersonaStatus_Updated', 'Persona status updated and logged in chronological register!'),
+            'data'     => $persona,
+            'redirect' => null,
+        ], 200);
     }
 }

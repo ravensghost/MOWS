@@ -7,6 +7,7 @@ use App\Models\Assignment;
 use App\Models\ChronologicalRegister;
 use App\Models\Insignia;
 use App\Models\Persona;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
@@ -15,8 +16,15 @@ class PersonaAssignmentController extends Controller
     /**
      * Reassign an active persona's duty assignment and insignia rank.
      */
-    public function __invoke(Request $request, $id)
+    public function __invoke(Request $request, int|string $id): JsonResponse
     {
+        $user = auth()->user();
+        abort_unless(
+            $user && ($user->can('manage_applications') || $user->can('manage_ranks') || $user->can('manage_sections') || $user->can('access-admin')),
+            403,
+            lexicon('msg_Roster_Unauthorised', 'Unauthorised access to Roster Reassignment.')
+        );
+
         $validated = $request->validate([
             'assignment_id' => 'required|exists:assignments,id',
             'insignia_id'   => 'required|exists:insignia,id',
@@ -85,6 +93,11 @@ class PersonaAssignmentController extends Controller
         Cache::forget('widget_roster_sections');
         Cache::forget('widget_personae_table_sections');
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_Roster_PersonaReassigned', "Persona '{$model->persona_name}' successfully reassigned."), 'data' => $model, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Roster_PersonaReassigned', "Persona '{$model->persona_name}' successfully reassigned."),
+            'data'     => $model,
+            'redirect' => null,
+        ], 200);
     }
 }

@@ -6,14 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Models\Configuration;
 use App\Models\LexiconCodex;
 use App\Services\AiTranslationService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SemanticLanguageController extends Controller
 {
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
+        abort_unless(
+            auth()->user()?->can('manage_lexicon'),
+            403,
+            lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.')
+        );
 
         $request->validate([
             'lang_type'        => 'required|in:common,custom',
@@ -22,27 +28,27 @@ class SemanticLanguageController extends Controller
             'custom_lang_name' => 'nullable|string|max:255',
         ]);
 
-        $locale = strtolower(trim($request->lang_type === 'common'
-            ? $request->common_lang_code
-            : $request->custom_lang_code));
+        $locale = strtolower(trim((string) ($request->input('lang_type') === 'common'
+            ? $request->input('common_lang_code')
+            : $request->input('custom_lang_code'))));
 
         $model = ['locale' => $locale];
 
-        if ($request->lang_type === 'custom' && $request->filled('custom_lang_name')) {
+        if ($request->input('lang_type') === 'custom' && $request->filled('custom_lang_name')) {
             $model = Configuration::updateOrCreate(
                 ['configuration_token' => 'lexicon_label_' . $locale],
-                ['configuration_payload' => trim($request->custom_lang_name)]
+                ['configuration_payload' => trim((string) $request->input('custom_lang_name'))]
             );
             Cache::forget('global_settings');
         }
 
-        if ($request->lang_type === 'common') {
+        if ($request->input('lang_type') === 'common') {
             $baseEntries = LexiconCodex::pluck('translation_payloads', 'semantic_token')
-                ->map(fn($t) => $t['gb'] ?? '')
+                ->map(fn ($t) => $t['gb'] ?? '')
                 ->toArray();
 
             try {
-                $aiService = new AiTranslationService();
+                $aiService = new AiTranslationService;
                 $translatedEntries = $aiService->translate($baseEntries, $locale);
 
                 foreach ($translatedEntries as $semanticToken => $translatedString) {
@@ -53,7 +59,7 @@ class SemanticLanguageController extends Controller
                         $entry->update(['translation_payloads' => $payloads]);
                     }
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $errorMsg = 'AI Translation Failed: ' . $e->getMessage();
 
                 return response()->json([
@@ -86,9 +92,13 @@ class SemanticLanguageController extends Controller
         ], 200);
     }
 
-    public function update(Request $request)
+    public function update(Request $request): JsonResponse
     {
-        abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
+        abort_unless(
+            auth()->user()?->can('manage_lexicon'),
+            403,
+            lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.')
+        );
 
         $request->validate([
             'lang_code'  => 'required|string',
@@ -96,8 +106,8 @@ class SemanticLanguageController extends Controller
         ]);
 
         $model = Configuration::updateOrCreate(
-            ['configuration_token' => 'lexicon_label_' . strtolower(trim($request->lang_code))],
-            ['configuration_payload' => $request->lang_label]
+            ['configuration_token' => 'lexicon_label_' . strtolower(trim((string) $request->input('lang_code')))],
+            ['configuration_payload' => $request->input('lang_label')]
         );
 
         Cache::forget('global_settings');
@@ -110,9 +120,13 @@ class SemanticLanguageController extends Controller
         ], 200);
     }
 
-    public function destroy($code)
+    public function destroy(string $code): JsonResponse
     {
-        abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
+        abort_unless(
+            auth()->user()?->can('manage_lexicon'),
+            403,
+            lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.')
+        );
 
         $code = strtolower(trim($code));
 
@@ -155,16 +169,20 @@ class SemanticLanguageController extends Controller
         ], 200);
     }
 
-    public function clear($code)
+    public function clear(string $code): JsonResponse
     {
-        abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
+        abort_unless(
+            auth()->user()?->can('manage_lexicon'),
+            403,
+            lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.')
+        );
 
         $code = strtolower(trim($code));
 
         if ($code === 'gb') {
             LexiconCodex::truncate();
         } else {
-            LexiconCodex::all()->each(function ($entry) use ($code) {
+            LexiconCodex::all()->each(function (LexiconCodex $entry) use ($code) {
                 $payloads = $entry->translation_payloads ?? [];
                 unset($payloads[$code]);
                 if (empty($payloads)) {
@@ -186,13 +204,17 @@ class SemanticLanguageController extends Controller
         ], 200);
     }
 
-    public function export($locale = 'gb')
+    public function export(string $locale = 'gb'): StreamedResponse
     {
-        abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
+        abort_unless(
+            auth()->user()?->can('manage_lexicon'),
+            403,
+            lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.')
+        );
 
         $locale = strtolower(trim($locale));
 
-        $entries = LexiconCodex::all()->mapWithKeys(function ($entry) use ($locale) {
+        $entries = LexiconCodex::all()->mapWithKeys(function (LexiconCodex $entry) use ($locale) {
             $payloads = $entry->translation_payloads ?? [];
             $value = $payloads[$locale] ?? ($payloads['gb'] ?? '');
 
@@ -215,9 +237,13 @@ class SemanticLanguageController extends Controller
         }, $filename);
     }
 
-    public function import(Request $request)
+    public function import(Request $request): JsonResponse
     {
-        abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
+        abort_unless(
+            auth()->user()?->can('manage_lexicon'),
+            403,
+            lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.')
+        );
 
         try {
             $request->validate([
@@ -226,8 +252,8 @@ class SemanticLanguageController extends Controller
             ]);
 
             $file = $request->file('import_file');
-            $fileContent = file_get_contents($file->getRealPath());
-            $importedData = json_decode($fileContent, true);
+            $fileContent = file_get_contents((string) $file->getRealPath());
+            $importedData = json_decode((string) $fileContent, true);
 
             if (json_last_error() !== JSON_ERROR_NONE) {
                 $parseErrMsg = 'JSON Parse Error: ' . json_last_error_msg();
@@ -253,11 +279,11 @@ class SemanticLanguageController extends Controller
             $langName = null;
 
             if (isset($importedData['_lang'])) {
-                $langCode = strtolower(trim($importedData['_lang']));
+                $langCode = strtolower(trim((string) $importedData['_lang']));
                 unset($importedData['_lang']);
             }
             if (isset($importedData['_lang_name'])) {
-                $langName = trim($importedData['_lang_name']);
+                $langName = trim((string) $importedData['_lang_name']);
                 unset($importedData['_lang_name']);
             }
 
@@ -319,7 +345,7 @@ class SemanticLanguageController extends Controller
                         'semantic_token'         => $semanticToken,
                         'prefix_group_title'     => $prefixGroupTitle,
                         'group_title'            => $groupTitle,
-                        'default_lexicon_string' => $incomingTranslation ?: $semanticToken,
+                        'default_lexicon_string' => $incomingTranslation !== '' ? $incomingTranslation : $semanticToken,
                         'translation_payloads'   => [$langCode => $incomingTranslation],
                     ]);
                     $createdCount++;
@@ -345,7 +371,7 @@ class SemanticLanguageController extends Controller
                 'data'     => $model,
                 'redirect' => null,
             ], 200);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $exceptionMsg = 'Import Exception: ' . $e->getMessage();
 
             return response()->json([
@@ -357,11 +383,15 @@ class SemanticLanguageController extends Controller
         }
     }
 
-    public function exportBlank()
+    public function exportBlank(): StreamedResponse
     {
-        abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
+        abort_unless(
+            auth()->user()?->can('manage_lexicon'),
+            403,
+            lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.')
+        );
 
-        $entries = LexiconCodex::all()->mapWithKeys(function ($entry) {
+        $entries = LexiconCodex::all()->mapWithKeys(function (LexiconCodex $entry) {
             return [$entry->semantic_token => ''];
         })->toArray();
 
