@@ -6,14 +6,21 @@ use App\Http\Controllers\Controller;
 use App\Models\Book;
 use App\Models\Configuration;
 use App\Models\LexiconCodex;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class LexiconCodexController extends Controller
 {
-    public function index()
+    public function index(): View
     {
-        abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
+        abort_unless(
+            auth()->user()?->can('manage_lexicon'),
+            403,
+            lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.')
+        );
 
         $systemBook = Book::where('book_url', 'admin/lexicon')
             ->where('is_published', true)
@@ -37,8 +44,8 @@ class LexiconCodexController extends Controller
                     if ($langCode === 'gb') {
                         $locales[$langCode] = 'English';
                     } else {
-                        $settingKey = 'lexicon_label_'.$langCode;
-                        $locales[$langCode] = $customLabels[$settingKey] ?? strtoupper($langCode);
+                        $settingKey = 'lexicon_label_' . $langCode;
+                        $locales[$langCode] = $customLabels[$settingKey] ?? strtoupper((string) $langCode);
                     }
                 }
             }
@@ -55,9 +62,13 @@ class LexiconCodexController extends Controller
         return view('admin.lexicon', compact('groupedTerms', 'locales', 'activeSkin', 'systemBook'));
     }
 
-    public function update(Request $request)
+    public function update(Request $request): JsonResponse
     {
-        abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
+        abort_unless(
+            auth()->user()?->can('manage_lexicon'),
+            403,
+            lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.')
+        );
 
         $data = $request->input('lexicon_entries');
         $model = null;
@@ -71,7 +82,7 @@ class LexiconCodexController extends Controller
                 if ($entry && is_array($localeData)) {
                     $payloads = $entry->translation_payloads ?? [];
                     foreach ($localeData as $locale => $value) {
-                        $payloads[strtolower($locale)] = $value;
+                        $payloads[strtolower((string) $locale)] = $value;
                     }
                     $entry->translation_payloads = $payloads;
                     if (isset($payloads['gb']) && $payloads['gb'] !== '') {
@@ -86,7 +97,7 @@ class LexiconCodexController extends Controller
         }
         // 2. Single Entry Create / Edit Modal Support
         elseif ($request->filled('semantic_token')) {
-            $semanticToken = trim($request->input('semantic_token'));
+            $semanticToken = trim((string) $request->input('semantic_token'));
             $incomingPayloads = $request->input('translation_payloads', []);
 
             if (str_starts_with($semanticToken, 'public_label_')) {
@@ -117,7 +128,7 @@ class LexiconCodexController extends Controller
             $payloads = $entry ? ($entry->translation_payloads ?? []) : [];
             if (is_array($incomingPayloads)) {
                 foreach ($incomingPayloads as $locale => $val) {
-                    $payloads[strtolower($locale)] = $val ?? '';
+                    $payloads[strtolower((string) $locale)] = $val ?? '';
                 }
             }
 
@@ -127,19 +138,19 @@ class LexiconCodexController extends Controller
 
             if ($entry) {
                 $entry->update([
-                    'semantic_token' => $semanticToken,
-                    'prefix_group_title' => $request->input('prefix_group_title') ?: $defaultPrefixGroup,
-                    'group_title' => $request->input('group_title') ?: $defaultGroup,
+                    'semantic_token'         => $semanticToken,
+                    'prefix_group_title'     => $request->input('prefix_group_title') ?: $defaultPrefixGroup,
+                    'group_title'            => $request->input('group_title') ?: $defaultGroup,
                     'default_lexicon_string' => $defaultLexiconString,
-                    'translation_payloads' => $payloads,
+                    'translation_payloads'   => $payloads,
                 ]);
             } else {
                 $entry = LexiconCodex::create([
-                    'semantic_token' => $semanticToken,
-                    'prefix_group_title' => $request->input('prefix_group_title') ?: $defaultPrefixGroup,
-                    'group_title' => $request->input('group_title') ?: $defaultGroup,
+                    'semantic_token'         => $semanticToken,
+                    'prefix_group_title'     => $request->input('prefix_group_title') ?: $defaultPrefixGroup,
+                    'group_title'            => $request->input('group_title') ?: $defaultGroup,
                     'default_lexicon_string' => $defaultLexiconString,
-                    'translation_payloads' => $payloads,
+                    'translation_payloads'   => $payloads,
                 ]);
             }
 
@@ -148,59 +159,75 @@ class LexiconCodexController extends Controller
         }
 
         return response()->json([
-            'status' => 'success',
-            'message' => lexicon('msg_Lexicon_TermUpdated', 'Lexicon term updated successfully.'),
-            'data' => $model,
+            'status'   => 'success',
+            'message'  => lexicon('msg_Lexicon_TermUpdated', 'Lexicon term updated successfully.'),
+            'data'     => $model,
             'redirect' => null,
         ], 200);
     }
 
-    public function destroyTerm($id)
+    public function destroyTerm(int|string $id): JsonResponse
     {
-        abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
+        abort_unless(
+            auth()->user()?->can('manage_lexicon'),
+            403,
+            lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.')
+        );
 
         $model = LexiconCodex::findOrFail($id);
         $model->delete();
         Cache::forget('lexicon_codex');
 
         return response()->json([
-            'status' => 'success',
-            'message' => lexicon('msg_Lexicon_TermDeleted', 'Lexicon term deleted successfully.'),
-            'data' => $model,
+            'status'   => 'success',
+            'message'  => lexicon('msg_Lexicon_TermDeleted', 'Lexicon term deleted successfully.'),
+            'data'     => $model,
             'redirect' => null,
         ], 200);
     }
 
-    public function destroyGroup($groupName)
+    public function destroyGroup(string $groupName): JsonResponse
     {
-        abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
+        abort_unless(
+            auth()->user()?->can('manage_lexicon'),
+            403,
+            lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.')
+        );
 
         $deletedCount = LexiconCodex::where('prefix_group_title', $groupName)->delete();
         Cache::forget('lexicon_codex');
         $model = ['prefix_group_title' => $groupName, 'deleted_count' => $deletedCount];
 
         return response()->json([
-            'status' => 'success',
-            'message' => lexicon('msg_Lexicon_GroupDeleted', 'Lexicon prefix group deleted successfully.'),
-            'data' => $model,
+            'status'   => 'success',
+            'message'  => lexicon('msg_Lexicon_GroupDeleted', 'Lexicon prefix group deleted successfully.'),
+            'data'     => $model,
             'redirect' => null,
         ], 200);
     }
 
-    public function destroySubgroup($prefixGroupTitle, $groupTitle)
+    public function destroySubgroup(string $prefixGroupTitle, string $groupTitle): JsonResponse
     {
-        abort_unless(auth()->user()->can('manage_lexicon'), 403, lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.'));
+        abort_unless(
+            auth()->user()?->can('manage_lexicon'),
+            403,
+            lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.')
+        );
 
         $deletedCount = LexiconCodex::where('prefix_group_title', $prefixGroupTitle)
             ->where('group_title', $groupTitle)
             ->delete();
         Cache::forget('lexicon_codex');
-        $model = ['prefix_group_title' => $prefixGroupTitle, 'group_title' => $groupTitle, 'deleted_count' => $deletedCount];
+        $model = [
+            'prefix_group_title' => $prefixGroupTitle,
+            'group_title'        => $groupTitle,
+            'deleted_count'      => $deletedCount,
+        ];
 
         return response()->json([
-            'status' => 'success',
-            'message' => lexicon('msg_Lexicon_SubgroupDeleted', 'Lexicon subgroup deleted successfully.'),
-            'data' => $model,
+            'status'   => 'success',
+            'message'  => lexicon('msg_Lexicon_SubgroupDeleted', 'Lexicon subgroup deleted successfully.'),
+            'data'     => $model,
             'redirect' => null,
         ], 200);
     }

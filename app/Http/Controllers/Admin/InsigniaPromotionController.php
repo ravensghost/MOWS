@@ -6,14 +6,22 @@ use App\Http\Controllers\Controller;
 use App\Models\ChronologicalRegister;
 use App\Models\Insignia;
 use App\Models\Persona;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
 class InsigniaPromotionController extends Controller
 {
-    public function __invoke(Request $request)
+    public function __invoke(Request $request): JsonResponse
     {
-        $validated =$request->validate([
+        $user = auth()->user();
+        abort_unless(
+            $user && ($user->can('manage_ranks') || $user->can('manage_awards') || $user->can('manage_applications') || $user->can('access-admin')),
+            403,
+            lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.')
+        );
+
+        $validated = $request->validate([
             'persona_id'     => 'required|exists:personae,id',
             'insignia_id'    => 'required|exists:insignia,id',
             'chronicle_text' => 'required|string',
@@ -21,16 +29,18 @@ class InsigniaPromotionController extends Controller
 
         $persona = Persona::findOrFail($validated['persona_id']);
         $newInsignia = Insignia::findOrFail($validated['insignia_id']);
-        $oldInsignia =$persona->insignia;
+        $oldInsignia = $persona->insignia;
 
         $actionText = 'Rank changed to';
         if ($oldInsignia) {
-            if ($newInsignia->insignia_sort_order > $oldInsignia->insignia_sort_order) {$actionText = 'Promoted to';
-            } elseif ($newInsignia->insignia_sort_order < $oldInsignia->insignia_sort_order) {$actionText = 'Demoted to';
+            if ($newInsignia->insignia_sort_order > $oldInsignia->insignia_sort_order) {
+                $actionText = 'Promoted to';
+            } elseif ($newInsignia->insignia_sort_order < $oldInsignia->insignia_sort_order) {
+                $actionText = 'Demoted to';
             }
         }
 
-        $persona->insignia_id =$newInsignia->id;
+        $persona->insignia_id = $newInsignia->id;
         $persona->save();
 
         Cache::forget('widget_roster_sections');
@@ -45,6 +55,11 @@ class InsigniaPromotionController extends Controller
             'scope_target'        => 'IC',
         ]);
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_Ranks_Promoted', 'Rank updated and logged in chronological register!'), 'data' => $persona, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Ranks_Promoted', 'Rank updated and logged in chronological register!'),
+            'data'     => $persona,
+            'redirect' => null,
+        ], 200);
     }
 }
