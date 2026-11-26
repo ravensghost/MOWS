@@ -1,5 +1,5 @@
 {{-- resources/views/modules/manifest_descriptions.blade.php --}}
-{{-- @WidgetManifest({ "name": "Manifest Descriptions", "description": "Used internally. Displays division and assignment descriptions.", "hidden": true, "fields": { "division_catalogue_id": { "type": "number", "label": "Division Catalogue ID (Optional)", "default": "" } } }) --}}
+{{-- @WidgetManifest({ "name": "Manifest Descriptions", "description": "Used internally. Displays division and assignment synopses.", "hidden": true, "fields": { "division_catalogue_id": { "type": "number", "label": "Division Catalogue ID (Optional)", "default": "" } } }) --}}
 @php
     $rawOptions = $moduleSettings
         ?? $module?->pivot?->book_config
@@ -8,14 +8,14 @@
         ?? [];
     $options = is_string($rawOptions) ? (json_decode($rawOptions, true) ?: []) : (is_array($rawOptions) ? $rawOptions : []);
 
-    $divisionCatalogueId = !empty($options['division_catalogue_id']) ? (int) $options['division_catalogue_id'] : null;
+    $divisionCatalogueId = ! empty($options['division_catalogue_id']) ? (int) $options['division_catalogue_id'] : null;
 
     $divisions = \App\Models\Division::where('is_visible', true)
         ->when($divisionCatalogueId, function ($query) use ($divisionCatalogueId) {
             $query->where('division_catalogue_id', $divisionCatalogueId);
         })
         ->with(['assignments' => function ($query) {
-            $query->where('is_visible', true);
+            $query->where('is_visible', true)->orderBy('assignment_sort_order');
         }])
         ->orderBy('division_sort_order')
         ->get();
@@ -23,21 +23,27 @@
 
 <div class="flex flex-col gap-md w-full">
     @forelse($divisions as $division)
+        @php
+            $divisionSynopsis = $division->division_synopsis ?? $division->division_description ?? '';
+        @endphp
         <x-tab type="accordion"
                :title="$division->division_title"
                icon="bi-diagram-3"
                :open="true"
                :style="'--section-color: ' . ($division->division_base_colour ?? '#374151FF') . ';'"
                headerClass="border-l-divisions">
-            @if(!empty($division->division_description))
+            @if(! empty($divisionSynopsis))
                 <p class="text-sm text-p leading-relaxed m-0 pb-2 border-b-panel">
-                    {{ $division->division_description }}
+                    {{ $divisionSynopsis }}
                 </p>
             @endif
 
             @if($division->assignments && $division->assignments->isNotEmpty())
                 <div class="grid grid-cols-1 md-grid-cols-2 gap-md w-full">
                     @foreach($division->assignments as $assignment)
+                        @php
+                            $assignmentSynopsis = $assignment->assignment_synopsis ?? $assignment->assignment_description ?? '';
+                        @endphp
                         <x-tab type="sub"
                                :title="$assignment->assignment_title"
                                icon="bi-person-workspace">
@@ -49,10 +55,10 @@
                                 </x-badge>
                             </x-slot:top>
 
-                            @if(!empty($assignment->assignment_description))
-                                <span class="text-sm text-p block leading-relaxed">{{ $assignment->assignment_description }}</span>
+                            @if(! empty($assignmentSynopsis))
+                                <span class="text-sm text-p block leading-relaxed">{{ $assignmentSynopsis }}</span>
                             @else
-                                <span class="text-sm text-muted font-italic block">{{ lexicon('msg_common_NoPositionDescription', 'No description available for this position.') }}</span>
+                                <span class="text-sm text-muted font-italic block">{{ lexicon('msg_common_NoPositionDescription', 'No synopsis available for this position.') }}</span>
                             @endif
                         </x-tab>
                     @endforeach
