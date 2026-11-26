@@ -6,15 +6,21 @@ use App\Http\Controllers\Controller;
 use App\Models\Book;
 use App\Models\User;
 use App\Services\NotificationService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(): View
     {
-        abort_unless(auth()->user()->can('manage_users'), 403, lexicon('msg_Users_Unauthorised', 'Unauthorised access to User Management.'));
+        abort_unless(
+            auth()->user()?->can('manage_users'),
+            403,
+            lexicon('msg_Users_Unauthorised', 'Unauthorised access to User Management.')
+        );
 
         $systemBook = Book::where('book_url', 'admin/users')
             ->where('is_published', true)
@@ -27,15 +33,19 @@ class UserController extends Controller
         return view('admin.users', compact('users', 'roles', 'systemBook'));
     }
 
-    public function updateRole(Request $request, User $user)
+    public function updateRole(Request $request, User $user): JsonResponse
     {
-        abort_unless(auth()->user()->can('manage_users'), 403, lexicon('msg_Users_Unauthorised', 'Unauthorised access to User Management.'));
+        abort_unless(
+            auth()->user()?->can('manage_users'),
+            403,
+            lexicon('msg_Users_Unauthorised', 'Unauthorised access to User Management.')
+        );
 
         $validated = $request->validate([
             'role' => 'required|string|max:255',
         ]);
 
-        if ($user->id === auth()->id()) {
+        if ((int) $user->id === (int) auth()->id()) {
             throw ValidationException::withMessages([
                 'role' => [lexicon('msg_Users_CannotChangeOwnRole', 'You cannot change your own role.')],
             ]);
@@ -49,21 +59,26 @@ class UserController extends Controller
 
         $user->load('roles');
 
-        return response()->json(['status' => 'success', 'message' => lexicon('msg_Users_RoleUpdated', 'Role updated successfully.')." ({$user->name})", 'data' => $user, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => lexicon('msg_Users_RoleUpdated', 'Role updated successfully.') . " ({$user->name})",
+            'data'     => $user,
+            'redirect' => null,
+        ], 200);
     }
 
-    public function updateLoa(Request $request, User $user)
+    public function updateLoa(Request $request, User $user): JsonResponse
     {
         abort_unless(
-            auth()->user()->can('manage_users') || auth()->user()->can('access-admin'),
+            auth()->user()?->can('manage_users') || auth()->user()?->can('access-admin'),
             403,
             lexicon('msg_Users_Unauthorised', 'Unauthorised access to User Management.')
         );
 
         $validated = $request->validate([
-            'is_on_loa' => 'required|boolean',
-            'loa_return_date' => 'nullable|required_if:is_on_loa,1,true|date',
-            'reason' => 'nullable|string|max:255',
+            'is_on_loa'        => 'required|boolean',
+            'loa_return_date'  => 'nullable|required_if:is_on_loa,1,true|date',
+            'reason'           => 'nullable|string|max:255',
         ]);
 
         $isOnLoa = (bool) $validated['is_on_loa'];
@@ -77,23 +92,28 @@ class UserController extends Controller
 
         $user->load('attributes');
 
-        return response()->json(['status' => 'success', 'message' => "{$user->name}: {$statusLabel}.", 'data' => $user, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => "{$user->name}: {$statusLabel}.",
+            'data'     => $user,
+            'redirect' => null,
+        ], 200);
     }
 
     /**
      * Send an administrative check-in ping to a player regarding inactivity or expired LOA.
      */
-    public function pingPlayer(Request $request, User $user)
+    public function pingPlayer(Request $request, User $user): JsonResponse
     {
         abort_unless(
-            auth()->user()->can('manage_users') || auth()->user()->can('access-admin'),
+            auth()->user()?->can('manage_users') || auth()->user()?->can('access-admin'),
             403,
             lexicon('msg_Users_Unauthorised', 'Unauthorised access to User Management.')
         );
 
         $validated = $request->validate([
             'context' => 'nullable|string|in:loa,inactivity',
-            'note' => 'nullable|string|max:500',
+            'note'    => 'nullable|string|max:500',
         ]);
 
         $context = $validated['context'] ?? 'inactivity';
@@ -116,9 +136,9 @@ class UserController extends Controller
         }
 
         if (! empty($user->email) && NotificationService::sendEmail($user->email, $subject, 'emails.notification', [
-            'title' => $subject,
+            'title'   => $subject,
             'content' => $body,
-            'url' => url('/dashboard'),
+            'url'     => url('/dashboard'),
         ])) {
             $channelsDispatched[] = 'Email';
         }
@@ -129,9 +149,14 @@ class UserController extends Controller
         }
 
         $channelSummary = ! empty($channelsDispatched)
-            ? ' ('.implode(', ', $channelsDispatched).')'
+            ? ' (' . implode(', ', $channelsDispatched) . ')'
             : ' (All notification channels currently disabled in Global Settings)';
 
-        return response()->json(['status' => 'success', 'message' => "Check-in ping processed for {$user->name}{$channelSummary}.", 'data' => $user, 'redirect' => null], 200);
+        return response()->json([
+            'status'   => 'success',
+            'message'  => "Check-in ping processed for {$user->name}{$channelSummary}.",
+            'data'     => $user,
+            'redirect' => null,
+        ], 200);
     }
 }

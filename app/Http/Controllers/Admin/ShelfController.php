@@ -3,14 +3,28 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Shelf;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ShelfController extends Controller
 {
-    public function store(Request $request)
+    private function authoriseShelfAccess(): void
     {
-        $validated =$request->validate([
+        $user = auth()->user();
+
+        abort_unless(
+            $user && ($user->can('manage_stories') || $user->can('access-admin')),
+            403,
+            lexicon('msg_Story_Unauthorised', 'Unauthorised access to Shelf Management.')
+        );
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $this->authoriseShelfAccess();
+
+        $validated = $request->validate([
             'shelf_title' => 'required|string|max:255',
         ]);
 
@@ -26,9 +40,11 @@ class ShelfController extends Controller
         ], 200);
     }
 
-    public function update(Request $request,$id)
+    public function update(Request $request, int|string $id): JsonResponse
     {
-        $validated =$request->validate([
+        $this->authoriseShelfAccess();
+
+        $validated = $request->validate([
             'shelf_title' => 'required|string|max:255',
         ]);
 
@@ -43,9 +59,12 @@ class ShelfController extends Controller
         ], 200);
     }
 
-    public function destroy($id)
+    public function destroy(int|string $id): JsonResponse
     {
-        Shelf::findOrFail($id)->delete();
+        $this->authoriseShelfAccess();
+
+        $shelf = Shelf::findOrFail($id);
+        $shelf->delete();
 
         return response()->json([
             'status'   => 'success',
@@ -55,9 +74,17 @@ class ShelfController extends Controller
         ], 200);
     }
 
-    public function reorder(Request $request)
+    public function reorder(Request $request): JsonResponse
     {
-        foreach ($request->input('items', []) as$item) {
+        $this->authoriseShelfAccess();
+
+        $validated = $request->validate([
+            'items'                    => 'nullable|array',
+            'items.*.id'               => 'required|exists:shelves,id',
+            'items.*.shelf_sort_order' => 'required|integer',
+        ]);
+
+        foreach ($validated['items'] ?? [] as $item) {
             Shelf::where('id', $item['id'])->update([
                 'shelf_sort_order' => $item['shelf_sort_order'],
             ]);
