@@ -25,10 +25,7 @@ class CommandCentreController extends Controller
             lexicon('msg_CommandCentre_Unauthorised', 'Unauthorised access to the Command Centre.')
         );
 
-        $systemBook = Book::where('book_url', 'command-centre')
-            ->where('is_published', true)
-            ->with(['grid.gridModules', 'modules'])
-            ->firstOrFail();
+        $systemBook = Book::forUrl('/admin/command-centre')->publishedWithLayout()->firstOrFail()
 
         $assignments = Assignment::where('is_recruitment_open', true)
             ->withCount(['personae' => function ($query) {

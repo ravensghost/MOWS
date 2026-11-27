@@ -21,9 +21,7 @@ class BookController extends Controller
      */
      public function index()
     {
-        $systemBook = Book::forUrl(['/admin/books', '/admin/pages'])
-            ->publishedWithLayout()
-            ->firstOrFail();
+        $systemBook = Book::forUrl('/admin/books')->publishedWithLayout()->firstOrFail()
 
         $books = Book::with(['modules', 'grid'])->orderBy('book_title')->get();
         $grids = Grid::with('gridModules')->orderBy('grid_title')->get();
@@ -45,9 +43,7 @@ class BookController extends Controller
 
     public function create()
     {
-        $systemBook = Book::forUrl(['/admin/books-grid-builder', '/admin/page-builder'])
-            ->publishedWithLayout()
-            ->firstOrFail();
+        $systemBook = Book::forUrl('/admin/books-grid-builder')->publishedWithLayout()->firstOrFail()
 
         $grids = Grid::with('gridModules')->orderBy('grid_title')->get();
         $modules = Module::orderBy('module_title')->get();

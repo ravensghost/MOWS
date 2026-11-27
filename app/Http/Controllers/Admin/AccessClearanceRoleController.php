@@ -22,10 +22,7 @@ class AccessClearanceRoleController extends Controller
             lexicon('msg_Roles_Unauthorised', 'Unauthorised access to Role Management.')
         );
 
-        $systemBook = Book::where('book_url', 'admin/roles')
-            ->where('is_published', true)
-            ->with(['grid.gridModules', 'modules'])
-            ->firstOrFail();
+        $systemBook = Book::forUrl('/admin/access-clearance-roles')->publishedWithLayout()->firstOrFail()
 
         $roles = Role::with('permissions')->orderBy('name')->get();
         $allPermissions = Permission::orderBy('name')->get();

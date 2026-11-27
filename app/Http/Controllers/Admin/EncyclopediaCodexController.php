@@ -21,10 +21,7 @@ class EncyclopediaCodexController extends Controller
             lexicon('msg_Wiki_Unauthorised', 'Unauthorised access to the Encyclopedia Codex.')
         );
 
-        $systemBook = Book::where('book_url', 'admin/wiki')
-            ->where('is_published', true)
-            ->with(['grid.gridModules', 'modules'])
-            ->firstOrFail();
+        $systemBook = Book::forUrl('/admin/encyclopedia-codex')->publishedWithLayout()->firstOrFail()
 
         $articles = EncyclopediaCodex::orderBy('article_category')
             ->orderBy('article_title')

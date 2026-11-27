@@ -32,10 +32,7 @@ class ChronologicalRegisterController extends Controller
     {
         $this->authoriseRegisterAccess();
 
-        $systemBook = Book::with(['grid.gridModules', 'modules'])
-            ->where('book_url', 'admin/service-records')
-            ->where('is_published', true)
-            ->firstOrFail();
+        $systemBook = Book::forUrl('/admin/chronological-registers')->publishedWithLayout()->firstOrFail()
 
         $awards = Distinction::with('catalogue')->orderBy('distinction_title')->get();
         $users = User::orderBy('name')->get();

@@ -22,10 +22,7 @@ class UserController extends Controller
             lexicon('msg_Users_Unauthorised', 'Unauthorised access to User Management.')
         );
 
-        $systemBook = Book::where('book_url', 'admin/users')
-            ->where('is_published', true)
-            ->with(['grid.gridModules', 'modules'])
-            ->firstOrFail();
+        $systemBook = Book::forUrl('/admin/users')->publishedWithLayout()->firstOrFail()
 
         $users = User::with(['roles', 'attributes'])->orderBy('name')->get();
         $roles = Role::orderBy('name')->get();

@@ -23,10 +23,7 @@ class ThematicBindingController extends Controller
             lexicon('msg_Themes_Unauthorised', 'Unauthorised access to the Theme & Skin Engine.')
         );
 
-        $systemBook = Book::where('book_url', 'admin/themes')
-            ->where('is_published', true)
-            ->with(['grid.gridModules', 'modules'])
-            ->firstOrFail();
+        $systemBook = Book::forUrl('/admin/thematic-bindings')->publishedWithLayout()->firstOrFail();
 
         $skins = ThematicBinding::orderBy('binding_title')->get();
 
@@ -52,7 +49,7 @@ class ThematicBindingController extends Controller
                 if (preg_match_all('/(--[a-zA-Z0-9\-]+)\s*:\s*([^;]+);/', (string) $cleanContent, $matches)) {
                     foreach ($matches[1] as $index => $key) {
                         $rawVal = trim($matches[2][$index]);
-                        if (preg_match('/^url\([\'"']?(.*?)[\'"']?\)$/i', $rawVal, $urlMatches)) {
+                        if (preg_match('/^url\([\'"]?(.*?)[\'"]?\)$/i', $rawVal, $urlMatches)) {
                             $savedVariables[trim($key)] = $urlMatches[1];
                         } else {
                             $savedVariables[trim($key)] = $rawVal;
@@ -61,7 +58,7 @@ class ThematicBindingController extends Controller
                 }
             }
         }
-
+    
         // 3. Merge active variables with saved values or CSS fallbacks
         $themeVariables = [];
         foreach ($discoveredDefaults as $varName => $defaultFallback) {
@@ -323,7 +320,7 @@ class ThematicBindingController extends Controller
                             $usage[$varName][$fileName][] = $selector;
 
                             if (! isset($defaults[$varName]) && $fallback !== '' && ! str_starts_with($fallback, 'var(')) {
-                                if (preg_match('/^url\([\'"']?(.*?)[\'"']?\)$/i', $fallback, $urlMatches)) {
+                                if (preg_match('/^url\([\'"]?(.*?)[\'"]?\)$/i', $fallback, $urlMatches)) {
                                     $defaults[$varName] = $urlMatches[1];
                                 } else {
                                     $defaults[$varName] = $fallback;

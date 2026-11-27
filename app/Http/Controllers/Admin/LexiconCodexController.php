@@ -22,10 +22,7 @@ class LexiconCodexController extends Controller
             lexicon('msg_Lexicon_Unauthorised', 'Unauthorised access to Lexicon Manager.')
         );
 
-        $systemBook = Book::where('book_url', 'admin/lexicon')
-            ->where('is_published', true)
-            ->with(['grid.gridModules', 'modules'])
-            ->firstOrFail();
+        $systemBook = Book::forUrl('/admin/lexicon-codex')->publishedWithLayout()->firstOrFail()
 
         $locales = [];
         $codexEntries = LexiconCodex::orderBy('prefix_group_title')

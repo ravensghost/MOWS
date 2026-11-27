@@ -22,10 +22,7 @@ class TableOfContentsController extends Controller
             lexicon('msg_Navigation_Unauthorised', 'Unauthorised access to Navigation Management.')
         );
 
-        $systemBook = Book::where('book_url', 'admin/navigation')
-            ->where('is_published', true)
-            ->with(['grid.gridModules', 'modules'])
-            ->firstOrFail();
+        $systemBook = Book::forUrl('/admin/table-of-contents')->publishedWithLayout()->firstOrFail()
 
         $entries = TableOfContent::whereNull('parent_entry_id')
             ->with('children')
@@ -171,10 +168,7 @@ class TableOfContentsController extends Controller
             lexicon('msg_Navigation_Unauthorised', 'Unauthorised access to Navigation Management.')
         );
 
-        $systemBook = Book::where('book_url', 'admin/navigation/options')
-            ->where('is_published', true)
-            ->with(['grid.gridModules', 'modules'])
-            ->firstOrFail();
+        $systemBook = Book::forUrl('/admin/table-of-contents/options')->publishedWithLayout()->firstOrFail()
 
         $parameters = TableOfContentParameter::orderBy('parameter_mode')
             ->orderBy('parameter_sort_order')

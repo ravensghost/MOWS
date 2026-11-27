@@ -38,10 +38,7 @@ class DivisionController extends Controller
             lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.')
         );
 
-        $systemBook = Book::where('book_url', 'admin/sections')
-            ->where('is_published', true)
-            ->with(['grid.gridModules', 'modules'])
-            ->firstOrFail();
+        $systemBook = Book::forUrl('/admin/divisions')->publishedWithLayout()->firstOrFail()
 
         $sections = Division::with([
             'insigniaCatalogue',

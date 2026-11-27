@@ -26,11 +26,7 @@ class MetadataController extends Controller
     {
         $this->authoriseMetadataAccess();
 
-        $systemBook = Book::with(['grid.gridModules', 'modules'])
-            ->where('book_url', 'admin/forms')
-            ->where('is_published', true)
-            ->firstOrFail();
-
+        $systemBook = Book::forUrl('/admin/metadata')->publishedWithLayout()->firstOrFail()
         $forms = Metadata::where('meta_mode', 'form')->orderBy('metadata_title')->get();
         $fields = Metadata::where('meta_mode', 'application')->orderBy('metadata_sort_order')->get();
 

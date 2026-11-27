@@ -28,10 +28,7 @@ class BulletinController extends Controller
     {
         $this->authoriseBulletinAccess();
 
-        $systemBook = Book::with(['grid.gridModules', 'modules'])
-            ->where('book_url', 'admin/news')
-            ->where('is_published', true)
-            ->firstOrFail();
+        $systemBook = Book::forUrl('/admin/bulletins')->publishedWithLayout()->firstOrFail()
 
         $news = Bulletin::orderBy('created_at', 'desc')->get();
 

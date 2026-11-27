@@ -52,10 +52,7 @@ class CandidatePetitionController extends Controller
     {
         $this->authoriseAccess('applications_vote');
 
-        $systemBook = Book::whereIn('book_url', ['admin/candidate-petitions', 'admin/applications'])
-            ->where('is_published', true)
-            ->with(['grid.gridModules', 'modules'])
-            ->firstOrFail();
+        $systemBook = Book::forUrl('/admin/candidate-petitions')->publishedWithLayout()->firstOrFail()
 
         $reviewMode = Configuration::where('configuration_token', 'approval_review_mode')
             ->value('configuration_payload') ?? 'single';

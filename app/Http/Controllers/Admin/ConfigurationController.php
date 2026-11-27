@@ -21,10 +21,7 @@ class ConfigurationController extends Controller
             lexicon('msg_Settings_Unauthorised', 'Unauthorised access to Global Settings.')
         );
 
-        $systemBook = Book::where('book_url', 'admin/settings')
-            ->where('is_published', true)
-            ->with(['grid.gridModules', 'modules'])
-            ->firstOrFail();
+        $systemBook = Book::forUrl('/admin/configurations')->publishedWithLayout()->firstOrFail()
 
         $globalSettings = Configuration::all()->pluck('configuration_payload', 'configuration_token')->toArray();
         if (! isset($globalSettings['mail_mailer'])) {

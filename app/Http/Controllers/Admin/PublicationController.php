@@ -29,10 +29,7 @@ class PublicationController extends Controller
     {
         $this->authorisePublicationAccess();
 
-        $systemBook = Book::whereIn('book_url', ['admin/volumes', 'admin/story'])
-            ->where('is_published', true)
-            ->with(['grid.gridModules', 'modules'])
-            ->firstOrFail();
+        $systemBook = Book::forUrl('/admin/volumes')->publishedWithLayout()->firstOrFail()
 
         $shelves = Shelf::with([
             'volumes' => function ($q) {
