@@ -28,7 +28,7 @@ class BulletinController extends Controller
     {
         $this->authoriseBulletinAccess();
 
-        $systemBook = Book::forUrl('/admin/bulletins')->publishedWithLayout()->firstOrFail()
+        $systemBook = Book::forUrl('/admin/bulletins')->publishedWithLayout()->firstOrFail();
 
         $news = Bulletin::orderBy('created_at', 'desc')->get();
 

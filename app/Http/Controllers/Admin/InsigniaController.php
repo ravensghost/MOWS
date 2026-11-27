@@ -35,7 +35,7 @@ class InsigniaController extends Controller
             lexicon('msg_Ranks_Unauthorised', 'Unauthorised access to Rank Management.')
         );
 
-        $systemBook = Book::forUrl('/admin/insignia')->publishedWithLayout()->firstOrFail()
+        $systemBook = Book::forUrl('/admin/insignia')->publishedWithLayout()->firstOrFail();
 
         $rankSets = InsigniaCatalogue::with([
             'insignia' => function ($q) {

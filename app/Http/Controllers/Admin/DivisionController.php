@@ -38,7 +38,7 @@ class DivisionController extends Controller
             lexicon('msg_SectionsPositions_Unauthorised', 'Unauthorised access to Sections & Positions.')
         );
 
-        $systemBook = Book::forUrl('/admin/divisions')->publishedWithLayout()->firstOrFail()
+        $systemBook = Book::forUrl('/admin/divisions')->publishedWithLayout()->firstOrFail();
 
         $sections = Division::with([
             'insigniaCatalogue',

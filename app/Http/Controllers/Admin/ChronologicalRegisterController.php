@@ -32,7 +32,7 @@ class ChronologicalRegisterController extends Controller
     {
         $this->authoriseRegisterAccess();
 
-        $systemBook = Book::forUrl('/admin/chronological-registers')->publishedWithLayout()->firstOrFail()
+        $systemBook = Book::forUrl('/admin/chronological-registers')->publishedWithLayout()->firstOrFail();
 
         $awards = Distinction::with('catalogue')->orderBy('distinction_title')->get();
         $users = User::orderBy('name')->get();

@@ -22,7 +22,7 @@ class DistinctionController extends Controller
             lexicon('msg_Awards_Unauthorised', 'Unauthorised action.')
         );
 
-        $systemBook = Book::forUrl('/admin/distinctions')->publishedWithLayout()->firstOrFail()
+        $systemBook = Book::forUrl('/admin/distinctions')->publishedWithLayout()->firstOrFail();
 
         $distinctions = Distinction::with('catalogue')->orderBy('distinction_title')->get();
         $catalogues = DistinctionCatalogue::orderBy('catalogue_title')->get();

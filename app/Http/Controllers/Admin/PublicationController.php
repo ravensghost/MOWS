@@ -29,7 +29,7 @@ class PublicationController extends Controller
     {
         $this->authorisePublicationAccess();
 
-        $systemBook = Book::forUrl('/admin/volumes')->publishedWithLayout()->firstOrFail()
+        $systemBook = Book::forUrl('/admin/volumes')->publishedWithLayout()->firstOrFail();
 
         $shelves = Shelf::with([
             'volumes' => function ($q) {
