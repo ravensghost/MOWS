@@ -22,7 +22,7 @@
             ->get()
             ->filter(function ($thread) use ($userId) {$participant = $thread->participants->firstWhere('user_id',$userId);
                 $latestMessage =$thread->messages->first();
-                if (!$participant \vert{}\vert{} !$latestMessage) {
+                if (!$participant || !$latestMessage) {
                     return false;
                 }
                 if ((int) $latestMessage->user_id === (int)$userId) {
