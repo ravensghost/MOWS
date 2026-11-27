@@ -10,11 +10,64 @@
     $activeBook = $book ?? $volume;
     $grid = $activeBook?->grid;
     $gridModules = $grid ? $grid->gridModules : collect();
-    $bookModules = $activeBook ? $activeBook->modules->where('pivot.is_visible', true) : collect();
+    $bookModules = $activeBook
+        ? $activeBook->modules->filter(fn ($m) => (bool) ($m->pivot->is_visible ?? true))
+        : collect();
+
     $normaliseSlotName = static fn (string $name): string => strtolower(preg_replace('/[^a-z0-9]/i', '', $name) ?? '');
+
     $namedSlots = collect(get_defined_vars())
         ->filter(fn ($value, $name) => $name !== 'slot' && $value instanceof \Illuminate\View\ComponentSlot)
         ->mapWithKeys(fn ($value, $name) => [$normaliseSlotName($name) => $value]);
+
+    $decodeSettings = static function ($raw): array {
+        $value = $raw;
+        // Unwrap single or double-encoded JSON strings safely
+        while (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return [];
+            }
+            $value = $decoded;
+        }
+        return is_array($value) ? $value : [];
+    };
+
+    $moduleAliases = [
+        'news'                   => 'bulletins',
+        'posts'                  => 'folio',
+        'folios'                 => 'folio',
+        'roster'                 => 'personae_table',
+        'user_drafts'            => 'user_folio_drafts',
+        'awards'                 => 'distinctions',
+        'service_records'        => 'chronological_registers',
+        'character_demographics' => 'persona_metadata_summary',
+        'character_biography'    => 'persona_biography',
+        'character_avatar'       => 'persona_portrait',
+    ];
+
+    $renderModule = static function ($module) use ($decodeSettings, $moduleAliases): ?array {
+        $clearance = $module->pivot->access_clearance ?? null;
+        $canView = empty($clearance) || (auth()->check() && auth()->user()->can($clearance));
+
+        if (! $canView) {
+            return null;
+        }
+
+        $moduleView = $moduleAliases[$module->module_token] ?? $module->module_token;
+
+        if (! view()->exists('modules.' . $moduleView)) {
+            return null;
+        }
+
+        $defaultSettings = $decodeSettings($module->module_default_settings ?? []);
+        $bookConfig = $decodeSettings($module->pivot->book_config ?? []);
+
+        return [
+            'view'     => 'modules.' . $moduleView,
+            'settings' => array_merge($defaultSettings, $bookConfig),
+        ];
+    };
 @endphp
 
 <div {{ $attributes->merge(['class' => 'mows-books-grid-wrapper max-w-container mx-auto px-container grid grid-cols-12 gap-4']) }}>
@@ -34,28 +87,12 @@
             @endif
 
             @foreach($assignedModules as $module)
-                @php
-                    $clearance = $module->pivot->access_clearance ?? null;
-                    $canView = empty($clearance) || (auth()->check() && auth()->user()->can($clearance));
-                    $bookConfig = is_array($module->pivot->book_config)
-                        ? $module->pivot->book_config
-                        : (json_decode($module->pivot->book_config ?? '{}', true) ?: []);
-                    $defaultSettings = is_array($module->module_default_settings)
-                        ? $module->module_default_settings
-                        : (json_decode($module->module_default_settings ?? '{}', true) ?: []);
-                    $moduleSettings = array_merge($defaultSettings, $bookConfig);
-                    $moduleAliases = [
-                        'news' => 'bulletins',
-                        'posts' => 'folio',
-                    ];
-                    $moduleView = $moduleAliases[$module->module_token] ?? $module->module_token;
-                @endphp
-
-                @if($canView && view()->exists('modules.' . $moduleView))
-                    @include('modules.' . $moduleView, [
+                @php $resolved = $renderModule($module); @endphp
+                @if($resolved)
+                    @include($resolved['view'], [
                         'book'           => $activeBook,
                         'module'         => $module,
-                        'moduleSettings' => $moduleSettings,
+                        'moduleSettings' => $resolved['settings'],
                         'newsItems'      => $newsItems,
                         'storyPosts'     => $storyPosts,
                     ])
@@ -71,28 +108,12 @@
             @endforeach
 
             @foreach($bookModules->sortBy('pivot.module_sort_order') as $module)
-                @php
-                    $clearance = $module->pivot->access_clearance ?? null;
-                    $canView = empty($clearance) || (auth()->check() && auth()->user()->can($clearance));
-                    $bookConfig = is_array($module->pivot->book_config)
-                        ? $module->pivot->book_config
-                        : (json_decode($module->pivot->book_config ?? '{}', true) ?: []);
-                    $defaultSettings = is_array($module->module_default_settings)
-                        ? $module->module_default_settings
-                        : (json_decode($module->module_default_settings ?? '{}', true) ?: []);
-                    $moduleSettings = array_merge($defaultSettings, $bookConfig);
-                    $moduleAliases = [
-                        'news' => 'bulletins',
-                        'posts' => 'folio',
-                    ];
-                    $moduleView = $moduleAliases[$module->module_token] ?? $module->module_token;
-                @endphp
-
-                @if($canView && view()->exists('modules.' . $moduleView))
-                    @include('modules.' . $moduleView, [
+                @php $resolved = $renderModule($module); @endphp
+                @if($resolved)
+                    @include($resolved['view'], [
                         'book'           => $activeBook,
                         'module'         => $module,
-                        'moduleSettings' => $moduleSettings,
+                        'moduleSettings' => $resolved['settings'],
                         'newsItems'      => $newsItems,
                         'storyPosts'     => $storyPosts,
                     ])

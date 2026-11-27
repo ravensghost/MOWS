@@ -25,11 +25,10 @@ class CandidatePetitionSubmissionController extends Controller
             abort(404, lexicon('msg_FormsHub_FormNotFound', 'Form not found or has no active fields.'));
         }
 
-        $slug = $metaMode === 'application' ? 'apply' : $metaMode;
+        $slug = $metaMode === 'application' ? '/apply' : '/' . ltrim((string) $metaMode, '/');
 
-        $systemBook = Book::with(['grid.gridModules', 'modules'])
-            ->where('book_url', $slug)
-            ->where('is_published', true)
+        $systemBook = Book::forUrl($slug)
+            ->publishedWithLayout()
             ->first();
 
         return view('petition_metadata', [

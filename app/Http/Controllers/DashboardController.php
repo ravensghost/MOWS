@@ -28,9 +28,8 @@ class DashboardController extends Controller
             ->take(10)
             ->get();
 
-        $systemBook = Book::where('book_url', 'dashboard')
-            ->where('is_published', true)
-            ->with(['grid.gridModules', 'modules'])
+        $systemBook = Book::forUrl('/dashboard')
+            ->publishedWithLayout()
             ->first();
 
         $user = auth()->user();

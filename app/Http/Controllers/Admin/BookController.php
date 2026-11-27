@@ -19,16 +19,10 @@ class BookController extends Controller
     /**
      * Display a listing of books and grid configurations.
      */
-    public function index(): View
+     public function index()
     {
-        $systemBook = Book::with([
-            'grid.gridModules',
-            'modules' => function ($query) {
-                $query->orderBy('book_modules.module_sort_order');
-            },
-        ])
-            ->where('book_url', 'admin/books')
-            ->where('is_published', true)
+        $systemBook = Book::forUrl(['/admin/books', '/admin/pages'])
+            ->publishedWithLayout()
             ->firstOrFail();
 
         $books = Book::with(['modules', 'grid'])->orderBy('book_title')->get();
@@ -49,19 +43,10 @@ class BookController extends Controller
         ));
     }
 
-    /**
-     * Show the form for creating a new book.
-     */
-    public function create(): View
+    public function create()
     {
-        $systemBook = Book::with([
-            'grid.gridModules',
-            'modules' => function ($query) {
-                $query->orderBy('book_modules.module_sort_order');
-            },
-        ])
-            ->where('book_url', 'admin/books-grid-builder')
-            ->where('is_published', true)
+        $systemBook = Book::forUrl(['/admin/books-grid-builder', '/admin/page-builder'])
+            ->publishedWithLayout()
             ->firstOrFail();
 
         $grids = Grid::with('gridModules')->orderBy('grid_title')->get();
@@ -69,7 +54,6 @@ class BookController extends Controller
         $availableModules = get_widget_manifest();
         $permissions = Permission::orderBy('name')->get();
         $forms = Metadata::where('meta_mode', 'form')->orderBy('metadata_title')->get();
-
         $book = new Book();
 
         return view('admin.books_grid_builder', compact(
@@ -83,19 +67,10 @@ class BookController extends Controller
         ));
     }
 
-    /**
-     * Show the form for editing the specified book.
-     */
-    public function edit(Book $book): View
+    public function edit(Book $book)
     {
-        $systemBook = Book::with([
-            'grid.gridModules',
-            'modules' => function ($query) {
-                $query->orderBy('book_modules.module_sort_order');
-            },
-        ])
-            ->where('book_url', 'admin/books-grid-builder')
-            ->where('is_published', true)
+        $systemBook = Book::forUrl(['/admin/books-grid-builder', '/admin/page-builder'])
+            ->publishedWithLayout()
             ->firstOrFail();
 
         $book->load('modules');
@@ -128,11 +103,13 @@ class BookController extends Controller
             'is_published' => 'nullable|boolean',
         ]);
 
-        $rawUrl = $request->filled('book_url') ? $validated['book_url'] : $validated['book_title'];
-        $bookUrl = $rawUrl === '/'
-            ? '/'
-            : collect(explode('/', $rawUrl))->map(fn (string $segment) => Str::slug($segment))->filter()->implode('/');
-
+        $rawUrl = $request->filled('book_url') ? $request->book_url : $request->book_title;
+        $slugPath = collect(explode('/', (string) $rawUrl))
+            ->map(fn ($s) => Str::slug($s))
+            ->filter()
+            ->implode('/');
+        $bookUrl = $rawUrl === '/' || $slugPath === '' ? '/' : '/' . $slugPath;
+        
         if (Book::where('book_url', $bookUrl)->exists()) {
             return response()->json([
                 'status'   => 'error',
@@ -173,10 +150,12 @@ class BookController extends Controller
             'is_published' => 'nullable|boolean',
         ]);
 
-        $rawUrl = $request->filled('book_url') ? $validated['book_url'] : $validated['book_title'];
-        $bookUrl = $rawUrl === '/'
-            ? '/'
-            : collect(explode('/', $rawUrl))->map(fn (string $segment) => Str::slug($segment))->filter()->implode('/');
+        $rawUrl = $request->filled('book_url') ? $request->book_url : $request->book_title;
+        $slugPath = collect(explode('/', (string) $rawUrl))
+            ->map(fn ($s) => Str::slug($s))
+            ->filter()
+            ->implode('/');
+        $bookUrl = $rawUrl === '/' || $slugPath === '' ? '/' : '/' . $slugPath;
 
         if (Book::where('book_url', $bookUrl)->where('id', '!=', $book->id)->exists()) {
             return response()->json([
