@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+    Route::redirect('/', '/admin/command-centre')->name('index');
     /*
     |--------------------------------------------------------------------------
     | 1. COMMAND CENTRE & SYSTEM INFRASTRUCTURE

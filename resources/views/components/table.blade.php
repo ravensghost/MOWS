@@ -14,7 +14,7 @@
 ])
 
 @php
-    $type =$type ?? (($label !== null \vert{}\vert{}$editClick !== null) ? 'config' : 'admin');
+    $type =$type ?? (($label !== null ||$editClick !== null) ? 'config' : 'admin');
 @endphp
 
 @switch($type)

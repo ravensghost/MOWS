@@ -119,7 +119,7 @@
                                 data-username="{{ $loaUser->name }}"
                                 x-show="isItemVisible({{ $loaUser->id }})">
                                 <td class="p-4 font-bold text-h">{{ $loaUser->name }}</td>
-                                <td class="p-4 text-muted">{{ $loaUser->character_names }}</td>
+                                <td class="p-4 text-muted">{{ $loaUser->persona_names }}</td>
                                 <td class="p-4">
                                     <x-badge type="pill" :variant="$loaUser->leave_type === 'ELOA' ? 'danger' : 'warning'">
                                         {{ $loaUser->leave_type }}
@@ -209,7 +209,7 @@
                                     <span>{{ $player->name }}</span>
                                     <span class="text-xs text-muted font-normal ml-1">({{ ucfirst($player->role) }})</span>
                                 </td>
-                                <td class="p-4 text-muted">{{ $player->character_names }}</td>
+                                <td class="p-4 text-muted">{{ $player->persona_names }}</td>
                                 <td class="p-4">
                                     @if($player->is_inactive)
                                         <x-badge type="pill" variant="danger" icon="bi-exclamation-triangle">
@@ -272,7 +272,7 @@
                         @foreach($currentMonthMetrics ?? [] as $metric)
                             <tr class="border-b-table-row hover-bg-panel-hover transition-colors">
                                 <td class="p-4 font-bold text-h">{{ $metric->user_name }}</td>
-                                <td class="p-4 text-muted">{{ $metric->character_name ?? lexicon('label_common_UnassignedOoc', 'Unassigned / OOC') }}</td>
+                                <td class="p-4 text-muted">{{ $metric->persona_name ?? lexicon('label_common_UnassignedOoc', 'Unassigned / OOC') }}</td>
                                 <td class="p-4">
                                     <x-badge type="pill" variant="primary">{{ $metric->post_count }}</x-badge>
                                 </td>
@@ -319,7 +319,7 @@
                             :tooltip="lexicon('tooltip_Dashboard_LoaReason', 'Optional note logged in the chronological service register')" />
             </div>
 
-            <x-slot:footer>
+            <x-slot:bottom>
                 <x-button type="button"
                           variant="secondary"
                           :tooltip="lexicon('tooltip_common_Cancel', 'Cancel and close modal')"
