@@ -1,4 +1,27 @@
-/**
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Book;
+use App\Models\Bulletin;
+use App\Models\Configuration;
+use App\Models\Folio;
+use App\Models\Persona;
+use App\Models\PersonaMetadata;
+use App\Services\AiPortraitService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\Str;
+use Illuminate\View\View as ViewContract;
+use Throwable;
+
+class PortalController extends Controller
+{
+    /**
      * Display a published Book by its URL slug.
      */
     public function showBook(string $bookUrl = '/'): ViewContract
@@ -108,3 +131,4 @@
             'folios'    => $folios,
         ];
     }
+}
